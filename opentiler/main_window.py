@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QIcon, QKeySequence, QAction
+from PySide6.QtWidgets import QApplication
 import os
 
 from .viewer.viewer import DocumentViewer
@@ -141,10 +142,17 @@ class MainWindow(QMainWindow):
     def create_toolbars(self):
         """Create application toolbars."""
         toolbar = QToolBar("Main Toolbar")
+        toolbar.setIconSize(QSize(24, 24))  # Set consistent icon size
         self.addToolBar(toolbar)
+
+        # Get standard icon theme
+        style = QApplication.style()
 
         # Open file action
         open_action = QAction("Open", self)
+        open_action.setIcon(style.standardIcon(style.StandardPixmap.SP_DialogOpenButton))
+        open_action.setToolTip("Open document (Ctrl+O)")
+        open_action.setShortcut(QKeySequence.Open)
         open_action.triggered.connect(self.open_file)
         toolbar.addAction(open_action)
 
@@ -152,14 +160,23 @@ class MainWindow(QMainWindow):
 
         # Zoom actions
         zoom_in_action = QAction("Zoom In", self)
+        zoom_in_action.setIcon(style.standardIcon(style.StandardPixmap.SP_ArrowUp))
+        zoom_in_action.setToolTip("Zoom in (+)")
+        zoom_in_action.setShortcut(QKeySequence.ZoomIn)
         zoom_in_action.triggered.connect(self.document_viewer.zoom_in)
         toolbar.addAction(zoom_in_action)
 
         zoom_out_action = QAction("Zoom Out", self)
+        zoom_out_action.setIcon(style.standardIcon(style.StandardPixmap.SP_ArrowDown))
+        zoom_out_action.setToolTip("Zoom out (-)")
+        zoom_out_action.setShortcut(QKeySequence.ZoomOut)
         zoom_out_action.triggered.connect(self.document_viewer.zoom_out)
         toolbar.addAction(zoom_out_action)
 
         zoom_fit_action = QAction("Fit to Window", self)
+        zoom_fit_action.setIcon(style.standardIcon(style.StandardPixmap.SP_ComputerIcon))
+        zoom_fit_action.setToolTip("Fit document to window (Ctrl+0)")
+        zoom_fit_action.setShortcut("Ctrl+0")
         zoom_fit_action.triggered.connect(self.document_viewer.zoom_fit)
         toolbar.addAction(zoom_fit_action)
 
@@ -167,8 +184,43 @@ class MainWindow(QMainWindow):
 
         # Scaling tool action
         scale_action = QAction("Scale Tool", self)
+        scale_action.setIcon(style.standardIcon(style.StandardPixmap.SP_FileDialogDetailedView))
+        scale_action.setToolTip("Open scaling tool to set real-world measurements")
         scale_action.triggered.connect(self.show_scaling_dialog)
         toolbar.addAction(scale_action)
+
+        toolbar.addSeparator()
+
+        # Rotation actions
+        rotate_left_action = QAction("Rotate Left", self)
+        rotate_left_action.setIcon(style.standardIcon(style.StandardPixmap.SP_ArrowLeft))
+        rotate_left_action.setToolTip("Rotate document 90° counterclockwise")
+        rotate_left_action.triggered.connect(self.document_viewer.rotate_counterclockwise)
+        toolbar.addAction(rotate_left_action)
+
+        rotate_right_action = QAction("Rotate Right", self)
+        rotate_right_action.setIcon(style.standardIcon(style.StandardPixmap.SP_ArrowRight))
+        rotate_right_action.setToolTip("Rotate document 90° clockwise")
+        rotate_right_action.triggered.connect(self.document_viewer.rotate_clockwise)
+        toolbar.addAction(rotate_right_action)
+
+        toolbar.addSeparator()
+
+        # Export action
+        export_action = QAction("Export", self)
+        export_action.setIcon(style.standardIcon(style.StandardPixmap.SP_DialogSaveButton))
+        export_action.setToolTip("Export document as tiles (Ctrl+E)")
+        export_action.setShortcut("Ctrl+E")
+        export_action.triggered.connect(self.export_document)
+        toolbar.addAction(export_action)
+
+        # Settings action
+        settings_action = QAction("Settings", self)
+        settings_action.setIcon(style.standardIcon(style.StandardPixmap.SP_ComputerIcon))
+        settings_action.setToolTip("Open application settings (Ctrl+,)")
+        settings_action.setShortcut("Ctrl+,")
+        settings_action.triggered.connect(self.show_settings)
+        toolbar.addAction(settings_action)
 
     def create_status_bar(self):
         """Create status bar."""
