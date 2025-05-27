@@ -122,8 +122,8 @@ class PDFExporter(BaseExporter):
                     pdf_rect = painter.viewport()
                     scaled_pixmap = page_pixmap.scaled(
                         pdf_rect.size(),
-                        aspectRatioMode=1,  # Qt.KeepAspectRatio
-                        transformMode=1     # Qt.SmoothTransformation
+                        Qt.KeepAspectRatio,
+                        Qt.SmoothTransformation
                     )
 
                     # Center the image on the page
@@ -250,8 +250,8 @@ class PDFExporter(BaseExporter):
                 # Scale to fit PDF page
                 scaled_metadata = metadata_pixmap.scaled(
                     pdf_rect.size(),
-                    aspectRatioMode=1,  # Qt.KeepAspectRatio
-                    transformMode=1     # Qt.SmoothTransformation
+                    Qt.KeepAspectRatio,
+                    Qt.SmoothTransformation
                 )
 
                 # Center on page
