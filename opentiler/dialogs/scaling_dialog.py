@@ -5,7 +5,7 @@ Scaling dialog for OpenTiler.
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
     QLabel, QLineEdit, QPushButton, QComboBox,
-    QGroupBox, QMessageBox
+    QGroupBox, QMessageBox, QApplication
 )
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QDoubleValidator
@@ -99,6 +99,12 @@ class ScalingDialog(QDialog):
         self.clear_button.clicked.connect(self.clear_points)
         button_layout.addWidget(self.clear_button)
 
+        self.copy_scale_button = QPushButton("Copy Scale Factor")
+        self.copy_scale_button.clicked.connect(self.copy_scale_factor)
+        self.copy_scale_button.setEnabled(False)
+        self.copy_scale_button.setToolTip("Copy scale factor to clipboard for reuse")
+        button_layout.addWidget(self.copy_scale_button)
+
         button_layout.addStretch()
 
         self.apply_button = QPushButton("Apply Scale")
@@ -166,6 +172,7 @@ class ScalingDialog(QDialog):
 
                 self.scale_preview_label.setText(f"Scale: {scale_text}")
                 self.apply_button.setEnabled(True)
+                self.copy_scale_button.setEnabled(True)
 
                 # Update measurement text in viewer
                 measurement_text = f"{real_distance} {units}"
@@ -174,6 +181,7 @@ class ScalingDialog(QDialog):
             else:
                 self.scale_preview_label.setText("Scale: Invalid values")
                 self.apply_button.setEnabled(False)
+                self.copy_scale_button.setEnabled(False)
                 # Clear measurement text from viewer
                 if hasattr(self.parent(), 'document_viewer'):
                     self.parent().document_viewer.set_measurement_text("")
@@ -181,6 +189,7 @@ class ScalingDialog(QDialog):
         except ValueError:
             self.scale_preview_label.setText("Scale: Invalid distance")
             self.apply_button.setEnabled(False)
+            self.copy_scale_button.setEnabled(False)
             # Clear measurement text from viewer
             if hasattr(self.parent(), 'document_viewer'):
                 self.parent().document_viewer.set_measurement_text("")
@@ -210,6 +219,41 @@ class ScalingDialog(QDialog):
         except ValueError:
             QMessageBox.warning(self, "Warning", "Please enter a valid distance.")
 
+    def copy_scale_factor(self):
+        """Copy the calculated scale factor to clipboard."""
+        if not (self.point1 and self.point2 and self.distance_input.text()):
+            QMessageBox.warning(self, "Warning", "Please calculate a scale first.")
+            return
+
+        try:
+            # Calculate pixel distance
+            dx = self.point2[0] - self.point1[0]
+            dy = self.point2[1] - self.point1[1]
+            pixel_distance = (dx**2 + dy**2)**0.5
+
+            # Get real-world distance
+            real_distance = float(self.distance_input.text())
+
+            if pixel_distance > 0 and real_distance > 0:
+                scale = real_distance / pixel_distance
+                units = self.units_combo.currentText()
+
+                # Copy scale factor to clipboard
+                clipboard = QApplication.clipboard()
+                clipboard.setText(f"{scale:.6f}")
+
+                QMessageBox.information(
+                    self,
+                    "Scale Factor Copied",
+                    f"Scale factor {scale:.6f} {units}/pixel copied to clipboard.\n\n"
+                    f"You can paste this value when scaling other documents."
+                )
+            else:
+                QMessageBox.warning(self, "Warning", "Invalid scale calculation.")
+
+        except ValueError:
+            QMessageBox.warning(self, "Warning", "Please enter a valid distance.")
+
     def on_point_selected(self, x, y):
         """Handle point selection from the document viewer."""
         if self.point_count == 0:
@@ -234,6 +278,7 @@ class ScalingDialog(QDialog):
         self.distance_label.setText("0.0 pixels")
         self.scale_preview_label.setText("Scale: Not calculated")
         self.apply_button.setEnabled(False)
+        self.copy_scale_button.setEnabled(False)
 
         # Clear points in the viewer if parent has document viewer
         if hasattr(self.parent(), 'document_viewer'):

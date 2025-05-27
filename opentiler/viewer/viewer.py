@@ -332,17 +332,22 @@ class DocumentViewer(QWidget):
 
         # Draw line between points if we have two
         if len(self.selected_points) == 2:
+            # Import config here to avoid circular imports
+            from ..settings.config import config
+
             p1_x = self.selected_points[0][0] * self.zoom_factor
             p1_y = self.selected_points[0][1] * self.zoom_factor
             p2_x = self.selected_points[1][0] * self.zoom_factor
             p2_y = self.selected_points[1][1] * self.zoom_factor
 
-            pen.setStyle(Qt.DashLine)
-            painter.setPen(pen)
-            painter.drawLine(int(p1_x), int(p1_y), int(p2_x), int(p2_y))
+            # Draw scale line if enabled
+            if config.get_scale_line_display():
+                pen.setStyle(Qt.DashLine)
+                painter.setPen(pen)
+                painter.drawLine(int(p1_x), int(p1_y), int(p2_x), int(p2_y))
 
-            # Draw measurement text above the line if available
-            if self.measurement_text:
+            # Draw measurement text above the line if available and enabled
+            if self.measurement_text and config.get_scale_text_display():
                 # Calculate midpoint of the line
                 mid_x = (p1_x + p2_x) / 2
                 mid_y = (p1_y + p2_y) / 2

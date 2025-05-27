@@ -82,6 +82,19 @@ class Config:
         if not self.settings.contains("crop_marks_print"):
             self.settings.setValue("crop_marks_print", True)
 
+        # Scale line and text settings
+        if not self.settings.contains("scale_line_display"):
+            self.settings.setValue("scale_line_display", True)
+
+        if not self.settings.contains("scale_line_print"):
+            self.settings.setValue("scale_line_print", True)
+
+        if not self.settings.contains("scale_text_display"):
+            self.settings.setValue("scale_text_display", True)
+
+        if not self.settings.contains("scale_text_print"):
+            self.settings.setValue("scale_text_print", True)
+
         # Recent files settings
         if not self.settings.contains("recent_files"):
             self.settings.setValue("recent_files", [])
@@ -270,6 +283,43 @@ class Config:
     def set_crop_marks_print(self, print_enabled):
         """Set whether to print crop marks."""
         self.set("crop_marks_print", bool(print_enabled))
+
+    # Scale line and text settings
+    def get_scale_line_display(self):
+        """Get whether to display scale line."""
+        value = self.get("scale_line_display", True)
+        return str(value).lower() == 'true' if isinstance(value, str) else bool(value)
+
+    def set_scale_line_display(self, display):
+        """Set whether to display scale line."""
+        self.set("scale_line_display", bool(display))
+
+    def get_scale_line_print(self):
+        """Get whether to print scale line."""
+        value = self.get("scale_line_print", True)
+        return str(value).lower() == 'true' if isinstance(value, str) else bool(value)
+
+    def set_scale_line_print(self, print_enabled):
+        """Set whether to print scale line."""
+        self.set("scale_line_print", bool(print_enabled))
+
+    def get_scale_text_display(self):
+        """Get whether to display scale text."""
+        value = self.get("scale_text_display", True)
+        return str(value).lower() == 'true' if isinstance(value, str) else bool(value)
+
+    def set_scale_text_display(self, display):
+        """Set whether to display scale text."""
+        self.set("scale_text_display", bool(display))
+
+    def get_scale_text_print(self):
+        """Get whether to print scale text."""
+        value = self.get("scale_text_print", True)
+        return str(value).lower() == 'true' if isinstance(value, str) else bool(value)
+
+    def set_scale_text_print(self, print_enabled):
+        """Set whether to print scale text."""
+        self.set("scale_text_print", bool(print_enabled))
 
     # Recent files settings
     def get_recent_files(self):

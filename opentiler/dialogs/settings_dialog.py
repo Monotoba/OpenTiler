@@ -86,7 +86,8 @@ class SettingsDialog(QDialog):
         # Default input directory
         input_dir_layout = QHBoxLayout()
         self.input_dir_edit = QLineEdit()
-        self.input_dir_edit.setReadOnly(True)
+        self.input_dir_edit.setPlaceholderText("Enter path or use Browse button...")
+        self.input_dir_edit.setToolTip("Enter directory path manually or use Browse button")
         input_dir_layout.addWidget(self.input_dir_edit)
 
         input_dir_button = QPushButton("Browse...")
@@ -98,7 +99,8 @@ class SettingsDialog(QDialog):
         # Default output directory
         output_dir_layout = QHBoxLayout()
         self.output_dir_edit = QLineEdit()
-        self.output_dir_edit.setReadOnly(True)
+        self.output_dir_edit.setPlaceholderText("Enter path or use Browse button...")
+        self.output_dir_edit.setToolTip("Enter directory path manually or use Browse button")
         output_dir_layout.addWidget(self.output_dir_edit)
 
         output_dir_button = QPushButton("Browse...")
@@ -160,6 +162,25 @@ class SettingsDialog(QDialog):
 
         crop_group.setLayout(crop_layout)
         layout.addWidget(crop_group)
+
+        # Scale line and text group
+        scale_group = QGroupBox("Scale Line and Text (Red)")
+        scale_layout = QFormLayout()
+
+        self.scale_line_display_check = QCheckBox("Show scale line on screen")
+        scale_layout.addRow(self.scale_line_display_check)
+
+        self.scale_line_print_check = QCheckBox("Include scale line when printing")
+        scale_layout.addRow(self.scale_line_print_check)
+
+        self.scale_text_display_check = QCheckBox("Show scale text on screen")
+        scale_layout.addRow(self.scale_text_display_check)
+
+        self.scale_text_print_check = QCheckBox("Include scale text when printing")
+        scale_layout.addRow(self.scale_text_print_check)
+
+        scale_group.setLayout(scale_layout)
+        layout.addWidget(scale_group)
 
         layout.addStretch()
         widget.setLayout(layout)
@@ -262,6 +283,12 @@ class SettingsDialog(QDialog):
         self.crop_display_check.setChecked(config.get_crop_marks_display())
         self.crop_print_check.setChecked(config.get_crop_marks_print())
 
+        # Scale line and text settings
+        self.scale_line_display_check.setChecked(config.get_scale_line_display())
+        self.scale_line_print_check.setChecked(config.get_scale_line_print())
+        self.scale_text_display_check.setChecked(config.get_scale_text_display())
+        self.scale_text_print_check.setChecked(config.get_scale_text_print())
+
         # Page indicator settings
         self.indicator_display_check.setChecked(config.get_page_indicator_display())
         self.indicator_print_check.setChecked(config.get_page_indicator_print())
@@ -309,6 +336,12 @@ class SettingsDialog(QDialog):
         config.set_gutter_lines_print(self.gutter_print_check.isChecked())
         config.set_crop_marks_display(self.crop_display_check.isChecked())
         config.set_crop_marks_print(self.crop_print_check.isChecked())
+
+        # Scale line and text settings
+        config.set_scale_line_display(self.scale_line_display_check.isChecked())
+        config.set_scale_line_print(self.scale_line_print_check.isChecked())
+        config.set_scale_text_display(self.scale_text_display_check.isChecked())
+        config.set_scale_text_print(self.scale_text_print_check.isChecked())
 
         # Page indicator settings
         config.set_page_indicator_display(self.indicator_display_check.isChecked())
