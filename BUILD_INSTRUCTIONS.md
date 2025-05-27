@@ -39,9 +39,16 @@ python build_windows_installer.py
 python build_installer.py --platform windows --method cx_freeze
 ```
 
-### macOS Package
+### macOS Application (Recommended)
 ```bash
-python build_installer.py --platform macos
+# Simple method - creates .app bundle and DMG
+python create_macos_app.py
+```
+
+### macOS Installation from Source
+```bash
+# Install from source with full setup
+./install_macos.sh
 ```
 
 ### Linux Packages
@@ -80,8 +87,18 @@ makensis installer.nsi
 python build_windows_installer.py
 ```
 
-### 2. macOS DMG Package
+### 2. macOS Application and DMG Package
 
+#### Method A: Using create_macos_app.py (Recommended)
+```bash
+# Install dependencies
+pip install py2app pyinstaller dmgbuild
+
+# Build app and DMG
+python create_macos_app.py
+```
+
+#### Method B: Manual py2app Build
 ```bash
 # Install py2app
 pip install py2app
@@ -91,6 +108,12 @@ python setup.py py2app
 
 # Create DMG
 hdiutil create -volname "OpenTiler" -srcfolder dist/OpenTiler.app -ov -format UDZO OpenTiler-1.0.0.dmg
+```
+
+#### Method C: Installation from Source
+```bash
+# Install from source with full environment setup
+./install_macos.sh
 ```
 
 ### 3. Linux Packages

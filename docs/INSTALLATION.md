@@ -5,6 +5,7 @@
 ### Prerequisites
 - Python 3.10 or higher
 - Operating System: Windows 10+, macOS 10.14+, or Linux
+- May run on earlier versions of Windows and macOS, but not tested.
 
 ### Basic Installation
 ```bash

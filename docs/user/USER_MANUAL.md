@@ -45,11 +45,17 @@ pip install -r requirements.txt
 python main.py
 ```
 
-#### Method 3: Platform-Specific Installers (Coming Soon)
-- **Windows**: MSI installer (use build scripts in project)
-- **macOS**: DMG package (use build scripts in project)
+#### Method 3: Platform-Specific Installers
+- **Windows**: MSI installer (use `create_windows_exe.py`)
+- **macOS**: DMG package (use `create_macos_app.py`)
 - **Linux**: DEB/RPM packages (use build scripts in project)
 - **Note**: See `BUILD_INSTRUCTIONS.md` for creating installers
+
+#### Method 4: macOS Installation Script
+```bash
+# Automated macOS installation from source
+./install_macos.sh
+```
 
 ### Optional Dependencies
 
