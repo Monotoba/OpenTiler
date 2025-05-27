@@ -4,9 +4,8 @@ Metadata page generator for OpenTiler exports.
 
 import os
 from datetime import datetime
-from PySide6.QtCore import QSize
+from PySide6.QtCore import QSize, QPoint, Qt
 from PySide6.QtGui import QPixmap, QPainter, QFont, QColor, QPen, QBrush
-from PySide6.QtCore import Qt
 
 
 class MetadataPageGenerator:
@@ -161,135 +160,156 @@ class MetadataPageGenerator:
 
     def _draw_plan_view(self, painter: QPainter, info: dict):
         """Draw a scaled-down plan view with page layout overlay."""
-        y = self.margin + 950
+        try:
+            y = self.margin + 950
 
-        # Section header
-        self._draw_section_header(painter, "Page Assembly Map", y)
-        y += 50
+            # Section header
+            self._draw_section_header(painter, "Page Assembly Map", y)
+            y += 50
 
-        # Get source pixmap and page grid from document info
-        source_pixmap = info.get('source_pixmap')
-        page_grid = info.get('page_grid', [])
+            # Get source pixmap and page grid from document info
+            source_pixmap = info.get('source_pixmap')
+            page_grid = info.get('page_grid', [])
 
-        if not source_pixmap or not page_grid:
-            # Draw placeholder text if no plan view available
-            painter.setPen(QColor(100, 100, 100))
-            painter.drawText(self.margin, y + 20, "Plan view not available for preview")
-            return
+            if not source_pixmap or not page_grid:
+                # Draw placeholder text if no plan view available
+                painter.setPen(QColor(100, 100, 100))
+                painter.drawText(self.margin, y + 20, "Plan view not available for preview")
+                return
 
-        # Calculate available space for plan view
-        available_width = self.page_size.width() - (2 * self.margin)
-        available_height = 300  # Fixed height for plan view section
+            # Validate source pixmap
+            if source_pixmap.isNull():
+                painter.setPen(QColor(100, 100, 100))
+                painter.drawText(self.margin, y + 20, "Plan view: Invalid source document")
+                return
 
-        # Calculate the total area covered by all pages
-        if page_grid:
-            min_x = min(page['x'] for page in page_grid)
-            max_x = max(page['x'] + page['width'] for page in page_grid)
-            min_y = min(page['y'] for page in page_grid)
-            max_y = max(page['y'] + page['height'] for page in page_grid)
+            # Calculate available space for plan view
+            available_width = self.page_size.width() - (2 * self.margin)
+            available_height = 300  # Fixed height for plan view section
 
-            total_width = max_x - min_x
-            total_height = max_y - min_y
-        else:
-            total_width = source_pixmap.width()
-            total_height = source_pixmap.height()
-            min_x = min_y = 0
+            # Calculate the total area covered by all pages
+            if page_grid:
+                min_x = min(page['x'] for page in page_grid)
+                max_x = max(page['x'] + page['width'] for page in page_grid)
+                min_y = min(page['y'] for page in page_grid)
+                max_y = max(page['y'] + page['height'] for page in page_grid)
 
-        # Calculate scale factor to fit in available space
-        scale_x = available_width / total_width if total_width > 0 else 1.0
-        scale_y = available_height / total_height if total_height > 0 else 1.0
-        scale_factor = min(scale_x, scale_y, 1.0)  # Don't scale up
+                total_width = max_x - min_x
+                total_height = max_y - min_y
+            else:
+                total_width = source_pixmap.width()
+                total_height = source_pixmap.height()
+                min_x = min_y = 0
 
-        # Calculate scaled dimensions
-        scaled_width = int(total_width * scale_factor)
-        scaled_height = int(total_height * scale_factor)
+            # Calculate scale factor to fit in available space
+            scale_x = available_width / total_width if total_width > 0 else 1.0
+            scale_y = available_height / total_height if total_height > 0 else 1.0
+            scale_factor = min(scale_x, scale_y, 1.0)  # Don't scale up
 
-        # Center the plan view horizontally
-        plan_x = self.margin + (available_width - scaled_width) // 2
-        plan_y = y
+            # Calculate scaled dimensions
+            scaled_width = int(total_width * scale_factor)
+            scaled_height = int(total_height * scale_factor)
 
-        # Create a composite image showing the document with page overlays
-        composite = self._create_plan_view_composite(source_pixmap, page_grid, total_width, total_height, min_x, min_y)
+            # Center the plan view horizontally
+            plan_x = self.margin + (available_width - scaled_width) // 2
+            plan_y = y
 
-        if composite and not composite.isNull():
-            # Scale the composite to fit
-            scaled_composite = composite.scaled(
-                scaled_width, scaled_height,
-                Qt.KeepAspectRatio,
-                Qt.SmoothTransformation
-            )
+            # Create a composite image showing the document with page overlays
+            composite = self._create_plan_view_composite(source_pixmap, page_grid, total_width, total_height, min_x, min_y)
 
-            # Draw the scaled plan view
-            painter.drawPixmap(plan_x, plan_y, scaled_composite)
+            if composite and not composite.isNull():
+                # Scale the composite to fit
+                scaled_composite = composite.scaled(
+                    scaled_width, scaled_height,
+                    Qt.KeepAspectRatio,
+                    Qt.SmoothTransformation
+                )
 
-            # Draw border around plan view
-            painter.setPen(QPen(QColor(100, 100, 100), 1))
-            painter.drawRect(plan_x, plan_y, scaled_composite.width(), scaled_composite.height())
+                # Draw the scaled plan view
+                painter.drawPixmap(plan_x, plan_y, scaled_composite)
 
-            # Add legend below the plan view
-            legend_y = plan_y + scaled_composite.height() + 20
-            self._draw_plan_view_legend(painter, legend_y)
+                # Draw border around plan view
+                painter.setPen(QPen(QColor(100, 100, 100), 1))
+                painter.drawRect(plan_x, plan_y, scaled_composite.width(), scaled_composite.height())
+
+                # Add legend below the plan view
+                legend_y = plan_y + scaled_composite.height() + 20
+                self._draw_plan_view_legend(painter, legend_y)
+
+        except Exception as e:
+            print(f"Error drawing plan view: {str(e)}")
+            # Draw error message
+            painter.setPen(QColor(255, 0, 0))
+            painter.drawText(self.margin, y + 20, f"Plan view error: {str(e)}")
 
     def _create_plan_view_composite(self, source_pixmap, page_grid, total_width, total_height, offset_x, offset_y):
         """Create a composite image showing the document with page boundaries."""
-        # Create canvas for the composite
-        composite = QPixmap(int(total_width), int(total_height))
-        composite.fill(QColor(240, 240, 240))  # Light gray background
+        try:
+            # Create canvas for the composite
+            composite = QPixmap(int(total_width), int(total_height))
+            composite.fill(QColor(240, 240, 240))  # Light gray background
 
-        painter = QPainter(composite)
+            painter = QPainter(composite)
 
-        # Draw the source document, positioned relative to the page grid
-        doc_x = -offset_x
-        doc_y = -offset_y
-        painter.drawPixmap(int(doc_x), int(doc_y), source_pixmap)
+            try:
+                # Draw the source document, positioned relative to the page grid
+                doc_x = -offset_x
+                doc_y = -offset_y
+                painter.drawPixmap(int(doc_x), int(doc_y), source_pixmap)
 
-        # Draw page boundaries and numbers
-        for i, page in enumerate(page_grid):
-            page_x = page['x'] - offset_x
-            page_y = page['y'] - offset_y
-            page_width = page['width']
-            page_height = page['height']
-            gutter = page.get('gutter', 0)
+                # Draw page boundaries and numbers
+                for i, page in enumerate(page_grid):
+                    page_x = page['x'] - offset_x
+                    page_y = page['y'] - offset_y
+                    page_width = page['width']
+                    page_height = page['height']
+                    gutter = page.get('gutter', 0)
 
-            # Draw page boundary (red)
-            painter.setPen(QPen(QColor(255, 0, 0), 2))
-            painter.drawRect(int(page_x), int(page_y), int(page_width), int(page_height))
+                    # Draw page boundary (red)
+                    painter.setPen(QPen(QColor(255, 0, 0), 2))
+                    painter.drawRect(int(page_x), int(page_y), int(page_width), int(page_height))
 
-            # Draw gutter boundary (blue) if gutter exists
-            if gutter > 1:
-                painter.setPen(QPen(QColor(0, 100, 255), 1))
-                gutter_x = page_x + gutter
-                gutter_y = page_y + gutter
-                gutter_width = page_width - (2 * gutter)
-                gutter_height = page_height - (2 * gutter)
+                    # Draw gutter boundary (blue) if gutter exists
+                    if gutter > 1:
+                        painter.setPen(QPen(QColor(0, 100, 255), 1))
+                        gutter_x = page_x + gutter
+                        gutter_y = page_y + gutter
+                        gutter_width = page_width - (2 * gutter)
+                        gutter_height = page_height - (2 * gutter)
 
-                if gutter_width > 0 and gutter_height > 0:
-                    painter.drawRect(int(gutter_x), int(gutter_y), int(gutter_width), int(gutter_height))
+                        if gutter_width > 0 and gutter_height > 0:
+                            painter.drawRect(int(gutter_x), int(gutter_y), int(gutter_width), int(gutter_height))
 
-            # Draw page number
-            painter.setPen(QPen(QColor(255, 255, 255), 2))
-            font = painter.font()
-            font.setPointSize(max(8, int(min(page_width, page_height) / 20)))  # Scale font with page size
-            font.setBold(True)
-            painter.setFont(font)
+                    # Draw page number
+                    painter.setPen(QPen(QColor(255, 255, 255), 2))
+                    font = painter.font()
+                    font.setPointSize(max(8, int(min(page_width, page_height) / 20)))  # Scale font with page size
+                    font.setBold(True)
+                    painter.setFont(font)
 
-            # Calculate text position (center of page)
-            text = f"P{i + 1}"
-            text_rect = painter.fontMetrics().boundingRect(text)
-            text_x = page_x + (page_width - text_rect.width()) / 2
-            text_y = page_y + (page_height + text_rect.height()) / 2
+                    # Calculate text position (center of page)
+                    text = f"P{i + 1}"
+                    text_rect = painter.fontMetrics().boundingRect(text)
+                    text_x = page_x + (page_width - text_rect.width()) / 2
+                    text_y = page_y + (page_height + text_rect.height()) / 2
 
-            # Draw text background for visibility
-            bg_rect = text_rect.adjusted(-3, -1, 3, 1)
-            bg_rect.moveCenter(QPoint(int(text_x + text_rect.width()/2), int(text_y - text_rect.height()/2)))
-            painter.fillRect(bg_rect, QColor(0, 0, 0, 150))
+                    # Draw text background for visibility
+                    bg_rect = text_rect.adjusted(-3, -1, 3, 1)
+                    bg_rect.moveCenter(QPoint(int(text_x + text_rect.width()/2), int(text_y - text_rect.height()/2)))
+                    painter.fillRect(bg_rect, QColor(0, 0, 0, 150))
 
-            # Draw page number
-            painter.setPen(QPen(QColor(255, 255, 255), 1))
-            painter.drawText(int(text_x), int(text_y), text)
+                    # Draw page number
+                    painter.setPen(QPen(QColor(255, 255, 255), 1))
+                    painter.drawText(int(text_x), int(text_y), text)
 
-        painter.end()
-        return composite
+            finally:
+                painter.end()
+
+            return composite
+
+        except Exception as e:
+            print(f"Error creating plan view composite: {str(e)}")
+            return QPixmap()  # Return empty pixmap on error
 
     def _draw_plan_view_legend(self, painter: QPainter, y: int):
         """Draw legend for the plan view."""
