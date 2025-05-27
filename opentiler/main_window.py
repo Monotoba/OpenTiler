@@ -7,9 +7,10 @@ from PySide6.QtWidgets import (
     QMenuBar, QToolBar, QStatusBar, QSplitter,
     QFileDialog, QMessageBox
 )
-from PySide6.QtCore import Qt, QSize
-from PySide6.QtGui import QIcon, QKeySequence, QAction
+from PySide6.QtCore import Qt, QSize, QRect
+from PySide6.QtGui import QIcon, QKeySequence, QAction, QPainter, QPixmap
 from PySide6.QtWidgets import QApplication
+from PySide6.QtPrintSupport import QPrinter, QPrintDialog, QPrintPreviewDialog
 import os
 
 from .viewer.viewer import DocumentViewer
@@ -98,6 +99,11 @@ class MainWindow(QMainWindow):
         export_action.setShortcut(QKeySequence("Ctrl+E"))
         export_action.triggered.connect(self.export_document)
         file_menu.addAction(export_action)
+
+        print_action = QAction("&Print Tiles...", self)
+        print_action.setShortcut(QKeySequence("Ctrl+P"))
+        print_action.triggered.connect(self.print_tiles)
+        file_menu.addAction(print_action)
 
         file_menu.addSeparator()
 
@@ -214,6 +220,14 @@ class MainWindow(QMainWindow):
         export_action.triggered.connect(self.export_document)
         toolbar.addAction(export_action)
 
+        # Print action
+        print_action = QAction("Print", self)
+        print_action.setIcon(style.standardIcon(style.StandardPixmap.SP_FileDialogDetailedView))  # Use detailed view as print icon
+        print_action.setToolTip("Print tiles directly (Ctrl+P)")
+        print_action.setShortcut("Ctrl+P")
+        print_action.triggered.connect(self.print_tiles)
+        toolbar.addAction(print_action)
+
         # Settings action
         settings_action = QAction("Settings", self)
         settings_action.setIcon(style.standardIcon(style.StandardPixmap.SP_FileDialogDetailedView))  # Best available gear-like icon
@@ -314,6 +328,181 @@ class MainWindow(QMainWindow):
 
         # Show dialog
         self.save_as_dialog.show()
+
+    def print_tiles(self):
+        """Print the current document tiles directly to printer."""
+        # Check if we have a document and page grid
+        if not self.document_viewer.current_pixmap:
+            QMessageBox.warning(self, "Print", "No document loaded. Please load a document first.")
+            return
+
+        if not hasattr(self.document_viewer, 'page_grid') or not self.document_viewer.page_grid:
+            QMessageBox.warning(self, "Print", "No tiles generated. Please apply scaling first to generate tiles.")
+            return
+
+        # Create printer
+        printer = QPrinter(QPrinter.HighResolution)
+        printer.setPageSize(QPrinter.A4)  # Default to A4, user can change in dialog
+        printer.setOrientation(QPrinter.Portrait)
+
+        # Show print dialog
+        print_dialog = QPrintDialog(printer, self)
+        print_dialog.setWindowTitle("Print Tiles")
+
+        if print_dialog.exec() == QPrintDialog.Accepted:
+            self._print_tiles_to_printer(printer)
+
+    def _print_tiles_to_printer(self, printer):
+        """Print tiles to the specified printer."""
+        try:
+            # Get page grid and source pixmap
+            page_grid = self.document_viewer.page_grid
+            source_pixmap = self.document_viewer.current_pixmap
+
+            # Create painter for printing
+            painter = QPainter()
+            if not painter.begin(printer):
+                QMessageBox.critical(self, "Print Error", "Failed to start printing.")
+                return
+
+            # Get printer page size
+            page_rect = printer.pageRect()
+
+            # Print each tile
+            for i, page in enumerate(page_grid):
+                if i > 0:
+                    printer.newPage()  # Start new page for each tile
+
+                # Create tile pixmap
+                tile_pixmap = self._create_tile_pixmap(source_pixmap, page)
+
+                if tile_pixmap and not tile_pixmap.isNull():
+                    # Scale tile to fit printer page while maintaining aspect ratio
+                    scaled_tile = tile_pixmap.scaled(
+                        page_rect.size(),
+                        Qt.KeepAspectRatio,
+                        Qt.SmoothTransformation
+                    )
+
+                    # Center the tile on the page
+                    x = (page_rect.width() - scaled_tile.width()) // 2
+                    y = (page_rect.height() - scaled_tile.height()) // 2
+
+                    # Draw the tile
+                    painter.drawPixmap(x, y, scaled_tile)
+
+                    # Add page information (optional)
+                    self._add_print_page_info(painter, page_rect, i + 1, len(page_grid))
+
+            painter.end()
+
+            # Show success message
+            QMessageBox.information(
+                self,
+                "Print Complete",
+                f"Successfully printed {len(page_grid)} tiles."
+            )
+
+        except Exception as e:
+            QMessageBox.critical(self, "Print Error", f"Failed to print tiles: {str(e)}")
+
+    def _create_tile_pixmap(self, source_pixmap, page):
+        """Create a pixmap for a single tile."""
+        try:
+            # Extract the tile area from source pixmap
+            tile_rect = QRect(
+                int(page['x']),
+                int(page['y']),
+                int(page['width']),
+                int(page['height'])
+            )
+
+            # Create tile pixmap
+            tile_pixmap = QPixmap(tile_rect.size())
+            tile_pixmap.fill(Qt.white)  # Fill with white background
+
+            # Paint the source area onto the tile
+            painter = QPainter(tile_pixmap)
+
+            # Calculate source rectangle (clamp to source pixmap bounds)
+            source_rect = QRect(
+                max(0, int(page['x'])),
+                max(0, int(page['y'])),
+                min(int(page['width']), source_pixmap.width() - max(0, int(page['x']))),
+                min(int(page['height']), source_pixmap.height() - max(0, int(page['y'])))
+            )
+
+            # Calculate destination position (offset if page extends beyond source)
+            dest_x = max(0, -int(page['x']))
+            dest_y = max(0, -int(page['y']))
+
+            # Draw the source area
+            painter.drawPixmap(dest_x, dest_y, source_pixmap, source_rect)
+
+            # Add gutter lines and page indicators if enabled
+            self._add_tile_overlays(painter, tile_pixmap.size(), page)
+
+            painter.end()
+            return tile_pixmap
+
+        except Exception as e:
+            print(f"Error creating tile pixmap: {str(e)}")
+            return QPixmap()
+
+    def _add_print_page_info(self, painter, page_rect, page_num, total_pages):
+        """Add page information to printed tile."""
+        from .settings.config import config
+
+        if not config.get_show_page_indicators():
+            return
+
+        # Save painter state
+        painter.save()
+
+        # Set font and color for page info
+        font = painter.font()
+        font.setPointSize(10)
+        painter.setFont(font)
+        painter.setPen(Qt.black)
+
+        # Add page number in corner
+        page_text = f"Page {page_num} of {total_pages}"
+        text_rect = painter.fontMetrics().boundingRect(page_text)
+
+        # Position in top-right corner with margin
+        margin = 20
+        x = page_rect.width() - text_rect.width() - margin
+        y = margin + text_rect.height()
+
+        painter.drawText(x, y, page_text)
+
+        # Restore painter state
+        painter.restore()
+
+    def _add_tile_overlays(self, painter, tile_size, page):
+        """Add gutter lines and indicators to tile."""
+        from .settings.config import config
+
+        # Save painter state
+        painter.save()
+
+        # Draw gutter lines if enabled
+        if config.get_show_crop_marks():
+            gutter = page.get('gutter', 0)
+            if gutter > 0:
+                painter.setPen(Qt.blue)
+                painter.setOpacity(0.5)
+
+                # Draw gutter rectangle (drawable area)
+                gutter_rect = QRect(
+                    int(gutter), int(gutter),
+                    int(tile_size.width() - 2 * gutter),
+                    int(tile_size.height() - 2 * gutter)
+                )
+                painter.drawRect(gutter_rect)
+
+        # Restore painter state
+        painter.restore()
 
     def show_scaling_dialog(self):
         """Show the scaling dialog."""
