@@ -408,7 +408,7 @@ class DocumentViewer(QWidget):
             painter.drawRect(int(x), int(y), int(width), int(height))
 
             # Draw blue gutter lines (printable area boundary) - if enabled
-            if config.get_crop_marks_display() and gutter > 1:
+            if config.get_gutter_lines_display() and gutter > 1:
                 gutter_pen = QPen(QColor(0, 100, 255), 1)  # Blue lines for gutters
                 painter.setPen(gutter_pen)
 

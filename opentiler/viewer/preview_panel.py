@@ -185,7 +185,7 @@ class PreviewPanel(QWidget):
         height = result.height()
 
         # Draw gutter lines (blue) - printable area boundary
-        if gutter_size > 1 and config.get_crop_marks_display():  # Only if gutter is visible and enabled
+        if gutter_size > 1 and config.get_gutter_lines_display():  # Only if gutter is visible and enabled
             gutter_pen = QPen(QColor(0, 100, 255), 2)  # Blue for gutter
             painter.setPen(gutter_pen)
 

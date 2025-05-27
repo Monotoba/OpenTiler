@@ -65,6 +65,13 @@ class Config:
         if not self.settings.contains("page_indicator_print"):
             self.settings.setValue("page_indicator_print", True)
 
+        # Gutter line settings
+        if not self.settings.contains("gutter_lines_display"):
+            self.settings.setValue("gutter_lines_display", True)
+
+        if not self.settings.contains("gutter_lines_print"):
+            self.settings.setValue("gutter_lines_print", True)
+
         # Crop mark settings
         if not self.settings.contains("crop_marks_display"):
             self.settings.setValue("crop_marks_display", True)
@@ -205,6 +212,23 @@ class Config:
     def set_page_indicator_print(self, print_enabled):
         """Set whether to print page indicators."""
         self.set("page_indicator_print", bool(print_enabled))
+
+    # Gutter line settings
+    def get_gutter_lines_display(self):
+        """Get whether to display gutter lines."""
+        return self.get("gutter_lines_display", True) == True
+
+    def set_gutter_lines_display(self, display):
+        """Set whether to display gutter lines."""
+        self.set("gutter_lines_display", bool(display))
+
+    def get_gutter_lines_print(self):
+        """Get whether to print gutter lines."""
+        return self.get("gutter_lines_print", True) == True
+
+    def set_gutter_lines_print(self, print_enabled):
+        """Set whether to print gutter lines."""
+        self.set("gutter_lines_print", bool(print_enabled))
 
     # Crop mark settings
     def get_crop_marks_display(self):

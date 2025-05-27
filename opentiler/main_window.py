@@ -15,6 +15,7 @@ from .viewer.preview_panel import PreviewPanel
 from .dialogs.scaling_dialog import ScalingDialog
 from .dialogs.unit_converter import UnitConverterDialog
 from .dialogs.scale_calculator import ScaleCalculatorDialog
+from .dialogs.settings_dialog import SettingsDialog
 from .settings.config import Config
 from .utils.helpers import calculate_tile_grid, get_page_size_mm, mm_to_pixels
 
@@ -26,6 +27,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.config = Config()
         self.scaling_dialog = None
+        self.settings_dialog = None
         self.init_ui()
 
     def init_ui(self):
@@ -111,6 +113,14 @@ class MainWindow(QMainWindow):
         about_action = QAction("&About", self)
         about_action.triggered.connect(self.show_about)
         help_menu.addAction(about_action)
+
+        # Settings menu
+        settings_menu = menubar.addMenu("&Settings")
+
+        preferences_action = QAction("&Preferences...", self)
+        preferences_action.setShortcut(QKeySequence("Ctrl+,"))
+        preferences_action.triggered.connect(self.show_settings)
+        settings_menu.addAction(preferences_action)
 
     def create_toolbars(self):
         """Create application toolbars."""
@@ -277,6 +287,31 @@ class MainWindow(QMainWindow):
         """Show the scale calculator dialog."""
         dialog = ScaleCalculatorDialog(self)
         dialog.exec()
+
+    def show_settings(self):
+        """Show the settings dialog."""
+        if not self.settings_dialog:
+            self.settings_dialog = SettingsDialog(self)
+            # Connect settings changed signal to refresh display
+            self.settings_dialog.settings_changed.connect(self.on_settings_changed)
+
+        self.settings_dialog.show()
+
+    def on_settings_changed(self):
+        """Handle when settings are changed - refresh display."""
+        # Refresh the document viewer display to apply new settings
+        self.document_viewer._update_display()
+
+        # If we have a page grid, regenerate the preview with new settings
+        if hasattr(self.document_viewer, 'page_grid') and self.document_viewer.page_grid:
+            if self.document_viewer.current_pixmap:
+                self.preview_panel.update_preview(
+                    self.document_viewer.current_pixmap,
+                    self.document_viewer.page_grid,
+                    self.document_viewer.scale_factor
+                )
+
+        self.status_bar.showMessage("Settings updated")
 
     def show_about(self):
         """Show about dialog."""
