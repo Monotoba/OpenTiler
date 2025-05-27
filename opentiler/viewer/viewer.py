@@ -7,8 +7,8 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QScrollArea, QLabel,
     QMessageBox, QSizePolicy
 )
-from PySide6.QtCore import Qt, QSize, Signal, QPoint
-from PySide6.QtGui import QPixmap, QPainter, QPen, QColor, QCursor, QWheelEvent
+from PySide6.QtCore import Qt, QSize, Signal, QPoint, QEvent
+from PySide6.QtGui import QPixmap, QPainter, QPen, QColor, QCursor
 
 try:
     import fitz  # PyMuPDF
@@ -116,6 +116,10 @@ class DocumentViewer(QWidget):
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setAlignment(Qt.AlignCenter)
 
+        # Install event filter on scroll area to capture mouse events
+        self.scroll_area.installEventFilter(self)
+        self.scroll_area.viewport().installEventFilter(self)
+
         # Create clickable image label
         self.image_label = ClickableLabel()
         self.image_label.setAlignment(Qt.AlignCenter)
@@ -132,6 +136,10 @@ class DocumentViewer(QWidget):
         layout.addWidget(self.scroll_area)
 
         self.setLayout(layout)
+
+        # Initialize panning state
+        self.panning = False
+        self.last_pan_point = QPoint()
 
     def load_document(self, file_path):
         """Load a document from file path."""
@@ -348,10 +356,12 @@ class DocumentViewer(QWidget):
         """Enable or disable point selection mode."""
         self.point_selection_mode = enabled
         if enabled:
+            self.scroll_area.viewport().setCursor(QCursor(Qt.CrossCursor))
             self.image_label.setCursor(QCursor(Qt.CrossCursor))
             self.selected_points.clear()
         else:
-            self.image_label.setCursor(QCursor(Qt.ArrowCursor))
+            self.scroll_area.viewport().setCursor(QCursor(Qt.OpenHandCursor))
+            self.image_label.setCursor(QCursor(Qt.OpenHandCursor))
 
     def on_image_clicked(self, pos):
         """Handle image click for point selection."""
@@ -381,3 +391,58 @@ class DocumentViewer(QWidget):
 
             # Update display to show selected points
             self._update_display()
+
+    def eventFilter(self, obj, event):
+        """Event filter to handle mouse events on scroll area."""
+        if obj == self.scroll_area.viewport():
+            if event.type() == QEvent.Type.MouseButtonPress:
+                if event.button() == Qt.MiddleButton:
+                    # Start panning with middle mouse button
+                    self.panning = True
+                    self.last_pan_point = event.pos()
+                    self.scroll_area.viewport().setCursor(QCursor(Qt.ClosedHandCursor))
+                    return True
+                elif event.button() == Qt.LeftButton and not self.point_selection_mode:
+                    # Start panning with left mouse button when not in point selection mode
+                    self.panning = True
+                    self.last_pan_point = event.pos()
+                    self.scroll_area.viewport().setCursor(QCursor(Qt.ClosedHandCursor))
+                    return True
+
+            elif event.type() == QEvent.Type.MouseMove:
+                if self.panning:
+                    # Handle panning
+                    delta = event.pos() - self.last_pan_point
+                    self.last_pan_point = event.pos()
+
+                    # Apply panning to scroll bars
+                    h_bar = self.scroll_area.horizontalScrollBar()
+                    v_bar = self.scroll_area.verticalScrollBar()
+
+                    h_bar.setValue(h_bar.value() - delta.x())
+                    v_bar.setValue(v_bar.value() - delta.y())
+                    return True
+                elif not self.point_selection_mode:
+                    # Show open hand cursor when hovering and not in point selection mode
+                    self.scroll_area.viewport().setCursor(QCursor(Qt.OpenHandCursor))
+
+            elif event.type() == QEvent.Type.MouseButtonRelease:
+                if event.button() in (Qt.LeftButton, Qt.MiddleButton):
+                    self.panning = False
+                    # Restore appropriate cursor
+                    if self.point_selection_mode:
+                        self.scroll_area.viewport().setCursor(QCursor(Qt.CrossCursor))
+                    else:
+                        self.scroll_area.viewport().setCursor(QCursor(Qt.OpenHandCursor))
+                    return True
+
+            elif event.type() == QEvent.Type.Wheel:
+                # Handle mouse wheel for zooming
+                delta = event.angleDelta().y()
+                if delta > 0:
+                    self.zoom_in()
+                else:
+                    self.zoom_out()
+                return True
+
+        return super().eventFilter(obj, event)
