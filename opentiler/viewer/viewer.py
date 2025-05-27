@@ -57,6 +57,7 @@ class PanScrollArea(QScrollArea):
 
             h_bar.setValue(h_bar.value() - delta.x())
             v_bar.setValue(v_bar.value() - delta.y())
+
             event.accept()
             return
         super().mouseMoveEvent(event)
@@ -94,51 +95,12 @@ class ClickableLabel(QLabel):
     def mousePressEvent(self, event):
         """Handle mouse press events."""
         if event.button() == Qt.LeftButton:
-            # Check if we should start panning or point selection
-            if self.parent_viewer and not self.parent_viewer.point_selection_mode:
-                # Start panning
-                self.panning = True
-                self.last_pan_point = event.pos()
-                self.setCursor(QCursor(Qt.ClosedHandCursor))
-            else:
-                # Point selection mode
+            # Point selection mode
+            if self.parent_viewer and self.parent_viewer.point_selection_mode:
                 self.clicked.emit(event.pos())
-        elif event.button() == Qt.MiddleButton:
-            # Middle mouse button always starts panning
-            self.panning = True
-            self.last_pan_point = event.pos()
-            self.setCursor(QCursor(Qt.ClosedHandCursor))
         super().mousePressEvent(event)
 
-    def mouseMoveEvent(self, event):
-        """Handle mouse move events for panning."""
-        if self.panning and self.parent_viewer:
-            # Calculate pan delta
-            delta = event.pos() - self.last_pan_point
-            self.last_pan_point = event.pos()
 
-            # Apply panning to scroll area
-            scroll_area = self.parent_viewer.scroll_area
-            h_bar = scroll_area.horizontalScrollBar()
-            v_bar = scroll_area.verticalScrollBar()
-
-            h_bar.setValue(h_bar.value() - delta.x())
-            v_bar.setValue(v_bar.value() - delta.y())
-        elif not self.panning and self.parent_viewer and not self.parent_viewer.point_selection_mode:
-            # Show open hand cursor when hovering and not in point selection mode
-            self.setCursor(QCursor(Qt.OpenHandCursor))
-        super().mouseMoveEvent(event)
-
-    def mouseReleaseEvent(self, event):
-        """Handle mouse release events."""
-        if event.button() in (Qt.LeftButton, Qt.MiddleButton):
-            self.panning = False
-            # Restore appropriate cursor
-            if self.parent_viewer and self.parent_viewer.point_selection_mode:
-                self.setCursor(QCursor(Qt.CrossCursor))
-            else:
-                self.setCursor(QCursor(Qt.OpenHandCursor))
-        super().mouseReleaseEvent(event)
 
 
 
@@ -168,7 +130,7 @@ class DocumentViewer(QWidget):
 
         # Create custom scroll area with panning support
         self.scroll_area = PanScrollArea()
-        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setWidgetResizable(False)  # Don't resize widget to fit - allow scrolling
         self.scroll_area.setAlignment(Qt.AlignCenter)
         self.scroll_area.set_parent_viewer(self)
 
@@ -328,6 +290,9 @@ class DocumentViewer(QWidget):
             scaled = self._draw_selected_points(scaled)
 
         self.image_label.setPixmap(scaled)
+
+        # Resize the label to match the pixmap size for proper scrolling
+        self.image_label.resize(scaled.size())
 
     def _draw_selected_points(self, pixmap):
         """Draw selected points on the pixmap."""
