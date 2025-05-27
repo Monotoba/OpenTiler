@@ -161,9 +161,31 @@ plans/
 *.plan
 *.dwg
 *.dxf
+*.FCStd
+*.pdf
+
+# Test files
+test_*.py
+simple_test.py
+verify_*.py
+
+# Output directories
+output/
+exports/
+tiles/
+screenshots/
 
 # Temporary files
 *.tmp
 *.temp
 *.bak
 *.backup
+
+# Build and distribution
+*.spec
+*.dmg
+*.pkg
+*.deb
+*.rpm
+*.exe
+*.msi

@@ -7,8 +7,19 @@ Pillow>=9.0.0
 # PDF handling
 PyMuPDF>=1.23.0
 
+# CAD file support (optional)
+ezdxf>=1.0.0
+
+# RAW image support (optional)
+rawpy>=0.18.0
+numpy>=1.21.0
+
 # Development dependencies (optional)
 pytest>=7.0.0
 black>=22.0.0
 flake8>=5.0.0
 mypy>=1.0.0
+
+# Documentation (optional)
+sphinx>=5.0.0
+sphinx-rtd-theme>=1.0.0
