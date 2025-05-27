@@ -1,0 +1,10 @@
+# Cross-Platform Screen Capture Tool Dependencies
+
+# Core dependencies
+pywinctl>=0.0.50        # Cross-platform window management
+mss>=9.0.1              # Fast cross-platform screen capture  
+Pillow>=10.0.0          # Image processing and format support
+
+# Optional dependencies for enhanced functionality
+# psutil>=5.9.0         # System and process utilities (for advanced window detection)
+# opencv-python>=4.8.0  # Computer vision library (for image processing features)
