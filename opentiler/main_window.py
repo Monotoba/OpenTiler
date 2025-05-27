@@ -307,18 +307,17 @@ class MainWindow(QMainWindow):
         self.settings_dialog.show()
 
     def on_settings_changed(self):
-        """Handle when settings are changed - refresh display."""
+        """Handle when settings are changed - refresh display and regenerate tiles if needed."""
         # Refresh the document viewer display to apply new settings
         self.document_viewer._update_display()
 
-        # If we have a page grid, regenerate the preview with new settings
-        if hasattr(self.document_viewer, 'page_grid') and self.document_viewer.page_grid:
-            if self.document_viewer.current_pixmap:
-                self.preview_panel.update_preview(
-                    self.document_viewer.current_pixmap,
-                    self.document_viewer.page_grid,
-                    self.document_viewer.scale_factor
-                )
+        # If we have a scale applied, regenerate the page grid with new settings
+        if (hasattr(self.document_viewer, 'scale_factor') and
+            self.document_viewer.scale_factor != 1.0 and
+            self.document_viewer.current_pixmap):
+
+            # Regenerate page grid with current scale and new settings
+            self.on_scale_applied(self.document_viewer.scale_factor)
 
         self.status_bar.showMessage("Settings updated")
 

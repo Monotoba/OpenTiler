@@ -420,8 +420,30 @@ class DocumentViewer(QWidget):
         # Import config here to avoid circular imports
         from ..settings.config import config
 
-        # Create a copy to draw on
-        result = QPixmap(pixmap)
+        # Calculate the canvas size needed to show all pages (including partial ones)
+        max_x = max_y = 0
+        for page in self.page_grid:
+            page_right = (page['x'] + page['width']) * self.zoom_factor
+            page_bottom = (page['y'] + page['height']) * self.zoom_factor
+            max_x = max(max_x, page_right)
+            max_y = max(max_y, page_bottom)
+
+        # Expand canvas if needed to show all page boundaries
+        canvas_width = max(pixmap.width(), int(max_x))
+        canvas_height = max(pixmap.height(), int(max_y))
+
+        # Create expanded canvas if needed
+        if canvas_width > pixmap.width() or canvas_height > pixmap.height():
+            result = QPixmap(canvas_width, canvas_height)
+            result.fill(Qt.white)  # Fill with white background
+
+            # Draw the original pixmap onto the expanded canvas
+            canvas_painter = QPainter(result)
+            canvas_painter.drawPixmap(0, 0, pixmap)
+            canvas_painter.end()
+        else:
+            result = QPixmap(pixmap)
+
         painter = QPainter(result)
 
         # Draw each page
