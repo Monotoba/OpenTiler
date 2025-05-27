@@ -56,6 +56,11 @@ class PDFExporter(BaseExporter):
                               **kwargs) -> bool:
         """Export as multi-page PDF (original functionality)."""
         try:
+            print(f"PDFExporter: Starting multi-page PDF export")
+            print(f"PDFExporter: Output path: {output_path}")
+            print(f"PDFExporter: Page size: {page_size}")
+            print(f"PDFExporter: Page grid count: {len(page_grid)}")
+            print(f"PDFExporter: Source pixmap: {source_pixmap.width()}x{source_pixmap.height()}")
             # Ensure output directory exists
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
@@ -133,10 +138,14 @@ class PDFExporter(BaseExporter):
                 self._add_metadata_page(painter, pdf_writer, source_pixmap, page_grid, **kwargs)
 
             painter.end()
+            print(f"PDFExporter: Multi-page PDF export completed successfully")
             return True
 
         except Exception as e:
-            print(f"PDF export error: {str(e)}")
+            import traceback
+            error_details = traceback.format_exc()
+            print(f"PDFExporter: Multi-page PDF export error: {str(e)}")
+            print(f"PDFExporter: Full traceback: {error_details}")
             return False
 
     def _create_page_pixmap(self, source_pixmap: QPixmap, page: dict) -> QPixmap:

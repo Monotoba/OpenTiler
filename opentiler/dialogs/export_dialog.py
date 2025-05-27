@@ -33,14 +33,28 @@ class ExportWorker(QThread):
     def run(self):
         """Run export in background thread."""
         try:
+            print(f"ExportWorker: Starting export to {self.output_path}")
+            print(f"ExportWorker: Page grid has {len(self.page_grid)} pages")
+            print(f"ExportWorker: Source pixmap size: {self.source_pixmap.width()}x{self.source_pixmap.height()}")
+            print(f"ExportWorker: Export kwargs: {self.kwargs}")
+
             success = self.exporter.export(
                 self.source_pixmap,
                 self.page_grid,
                 self.output_path,
                 **self.kwargs
             )
-            self.finished.emit(success, "Export completed successfully" if success else "Export failed")
+
+            print(f"ExportWorker: Export result: {success}")
+
+            if success:
+                self.finished.emit(True, f"Export completed successfully: {self.output_path}")
+            else:
+                self.finished.emit(False, "Export failed - check console for details")
         except Exception as e:
+            import traceback
+            error_details = traceback.format_exc()
+            print(f"ExportWorker: Exception occurred: {error_details}")
             self.finished.emit(False, f"Export error: {str(e)}")
 
 
@@ -217,14 +231,19 @@ class ExportDialog(QDialog):
         self.page_grid = page_grid
         self.document_info = document_info or {}
 
-        # Update status
-        self.status_text.append(f"Ready to export {len(page_grid)} pages")
-
-        # Show metadata page status
+        # Calculate total pages including metadata page
         from ..settings.config import config
-        if config.get_include_metadata_page():
+        tile_count = len(page_grid)
+        include_metadata = config.get_include_metadata_page()
+        total_pages = tile_count + (1 if include_metadata else 0)
+
+        # Update status
+        if include_metadata:
+            self.status_text.append(f"Ready to export {total_pages} pages ({tile_count} tiles + 1 metadata)")
             position = config.get_metadata_page_position()
             self.status_text.append(f"Metadata page will be included ({position})")
+        else:
+            self.status_text.append(f"Ready to export {tile_count} pages")
 
     def start_export(self):
         """Start the export process."""
