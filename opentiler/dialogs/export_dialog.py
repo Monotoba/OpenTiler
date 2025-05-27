@@ -52,6 +52,7 @@ class ExportDialog(QDialog):
         self.source_pixmap = None
         self.page_grid = None
         self.export_worker = None
+        self.document_info = {}
 
         self.setWindowTitle("Export Tiles")
         self.setModal(True)
@@ -204,13 +205,20 @@ class ExportDialog(QDialog):
                 if dir_path:
                     self.output_path_edit.setText(dir_path)
 
-    def set_export_data(self, source_pixmap, page_grid):
+    def set_export_data(self, source_pixmap, page_grid, document_info=None):
         """Set the data to export."""
         self.source_pixmap = source_pixmap
         self.page_grid = page_grid
+        self.document_info = document_info or {}
 
         # Update status
         self.status_text.append(f"Ready to export {len(page_grid)} pages")
+
+        # Show metadata page status
+        from ..settings.config import config
+        if config.get_include_metadata_page():
+            position = config.get_metadata_page_position()
+            self.status_text.append(f"Metadata page will be included ({position})")
 
     def start_export(self):
         """Start the export process."""
@@ -231,6 +239,8 @@ class ExportDialog(QDialog):
             kwargs = {
                 'page_size': self.page_size_combo.currentText()
             }
+            # Add document information for metadata page
+            kwargs.update(self.document_info)
         else:
             exporter = ImageExporter()
             if "PNG" in format_text:

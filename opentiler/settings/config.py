@@ -102,6 +102,13 @@ class Config:
         if not self.settings.contains("max_recent_files"):
             self.settings.setValue("max_recent_files", 10)
 
+        # Metadata page settings
+        if not self.settings.contains("include_metadata_page"):
+            self.settings.setValue("include_metadata_page", True)
+
+        if not self.settings.contains("metadata_page_position"):
+            self.settings.setValue("metadata_page_position", "first")  # first, last
+
     def get(self, key, default=None):
         """Get a configuration value."""
         return self.settings.value(key, default)
@@ -371,6 +378,23 @@ class Config:
     def set_max_recent_files(self, max_files):
         """Set maximum number of recent files to keep."""
         self.set("max_recent_files", int(max_files))
+
+    # Metadata page settings
+    def get_include_metadata_page(self):
+        """Get whether to include metadata page in exports."""
+        return bool(self.get("include_metadata_page", True))
+
+    def set_include_metadata_page(self, include):
+        """Set whether to include metadata page in exports."""
+        self.set("include_metadata_page", bool(include))
+
+    def get_metadata_page_position(self):
+        """Get metadata page position (first or last)."""
+        return self.get("metadata_page_position", "first")
+
+    def set_metadata_page_position(self, position):
+        """Set metadata page position."""
+        self.set("metadata_page_position", position)
 
 
 # Global configuration instance

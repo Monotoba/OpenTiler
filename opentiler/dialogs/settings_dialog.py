@@ -42,6 +42,7 @@ class SettingsDialog(QDialog):
         self.tab_widget.addTab(self.create_tiling_tab(), "Tiling")
         self.tab_widget.addTab(self.create_display_tab(), "Display")
         self.tab_widget.addTab(self.create_page_indicators_tab(), "Page Indicators")
+        self.tab_widget.addTab(self.create_export_tab(), "Export")
 
         layout.addWidget(self.tab_widget)
 
@@ -252,6 +253,32 @@ class SettingsDialog(QDialog):
         widget.setLayout(layout)
         return widget
 
+    def create_export_tab(self):
+        """Create the export settings tab."""
+        widget = QWidget()
+        layout = QVBoxLayout()
+
+        # Metadata page group
+        metadata_group = QGroupBox("Metadata Summary Page")
+        metadata_layout = QFormLayout()
+
+        self.metadata_include_check = QCheckBox("Include metadata page in tile exports")
+        self.metadata_include_check.setToolTip("Add a summary page with scale, DPI, timestamp, and document information")
+        metadata_layout.addRow(self.metadata_include_check)
+
+        # Position
+        self.metadata_position_combo = QComboBox()
+        self.metadata_position_combo.addItems(["first", "last"])
+        self.metadata_position_combo.setToolTip("Position of metadata page in the exported tile set")
+        metadata_layout.addRow("Position:", self.metadata_position_combo)
+
+        metadata_group.setLayout(metadata_layout)
+        layout.addWidget(metadata_group)
+
+        layout.addStretch()
+        widget.setLayout(layout)
+        return widget
+
     def choose_color(self):
         """Open color chooser dialog."""
         color = QColorDialog.getColor(self.current_color, self, "Choose Font Color")
@@ -308,6 +335,10 @@ class SettingsDialog(QDialog):
         self.input_dir_edit.setText(config.get_last_input_dir())
         self.output_dir_edit.setText(config.get_last_output_dir())
 
+        # Metadata page settings
+        self.metadata_include_check.setChecked(config.get_include_metadata_page())
+        self.metadata_position_combo.setCurrentText(config.get_metadata_page_position())
+
     def apply_settings(self):
         """Apply settings without closing dialog."""
         self.save_settings()
@@ -355,6 +386,10 @@ class SettingsDialog(QDialog):
         # Directory settings
         config.set_last_input_dir(self.input_dir_edit.text())
         config.set_last_output_dir(self.output_dir_edit.text())
+
+        # Metadata page settings
+        config.set_include_metadata_page(self.metadata_include_check.isChecked())
+        config.set_metadata_page_position(self.metadata_position_combo.currentText())
 
         # Sync to disk
         config.sync()

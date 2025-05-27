@@ -227,10 +227,14 @@ class MainWindow(QMainWindow):
         if not self.export_dialog:
             self.export_dialog = ExportDialog(self)
 
+        # Prepare document information for metadata page
+        document_info = self._get_document_info()
+
         # Set export data
         self.export_dialog.set_export_data(
             self.document_viewer.current_pixmap,
-            self.document_viewer.page_grid
+            self.document_viewer.page_grid,
+            document_info
         )
 
         # Show dialog
@@ -329,8 +333,11 @@ class MainWindow(QMainWindow):
         # Get scale info for preview
         scale_info = self._get_scale_info()
 
+        # Get document info for metadata page preview
+        document_info = self._get_document_info()
+
         # Update preview panel and document viewer
-        self.preview_panel.update_preview(pixmap, page_grid, scale_factor, scale_info)
+        self.preview_panel.update_preview(pixmap, page_grid, scale_factor, scale_info, document_info)
         self.document_viewer.set_page_grid(page_grid, gutter_pixels)
 
         # Update status
@@ -392,6 +399,36 @@ class MainWindow(QMainWindow):
             'point2': self.document_viewer.selected_points[1],
             'measurement_text': getattr(self.document_viewer, 'measurement_text', '')
         }
+
+    def _get_document_info(self):
+        """Get document information for metadata page."""
+        document_info = {}
+
+        # Get current document file path
+        current_file = getattr(self.document_viewer, 'current_file_path', '')
+        if current_file:
+            document_info['document_name'] = os.path.splitext(os.path.basename(current_file))[0]
+            document_info['original_file'] = current_file
+        else:
+            document_info['document_name'] = 'Untitled Document'
+            document_info['original_file'] = ''
+
+        # Get scale information
+        scale_factor = getattr(self.document_viewer, 'scale_factor', 1.0)
+        document_info['scale_factor'] = scale_factor
+
+        # Get units from config
+        document_info['units'] = self.config.get_default_units()
+
+        # Get page settings
+        document_info['page_size'] = self.config.get_default_page_size()
+        document_info['page_orientation'] = self.config.get_page_orientation()
+        document_info['gutter_size'] = self.config.get_gutter_size_mm()
+
+        # Get output directory from config
+        document_info['output_dir'] = self.config.get_last_output_dir()
+
+        return document_info
 
     def show_unit_converter(self):
         """Show the unit converter dialog."""

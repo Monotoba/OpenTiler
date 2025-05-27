@@ -10,6 +10,8 @@ from PySide6.QtCore import Qt, QRect, QPoint
 from PySide6.QtGui import QPixmap, QPainter, QPen, QColor, QFont
 
 from ..dialogs.page_viewer_dialog import ClickablePageThumbnail
+from ..utils.metadata_page import MetadataPageGenerator, create_document_info
+from ..settings.config import config
 
 
 class PreviewPanel(QWidget):
@@ -67,7 +69,7 @@ class PreviewPanel(QWidget):
         layout.addStretch()
         self.setLayout(layout)
 
-    def update_preview(self, pixmap, page_grid=None, scale_factor=1.0, scale_info=None):
+    def update_preview(self, pixmap, page_grid=None, scale_factor=1.0, scale_info=None, document_info=None):
         """Update the preview with individual page thumbnails."""
         # Clear existing thumbnails
         self._clear_thumbnails()
@@ -80,17 +82,42 @@ class PreviewPanel(QWidget):
 
         self.no_pages_label.hide()
 
-        # Generate thumbnail for each page
+        # Check if metadata page should be included and its position
+        include_metadata = config.get_include_metadata_page()
+        metadata_position = config.get_metadata_page_position()
+
+        page_number = 1
+
+        # Add metadata page at the beginning if configured
+        if include_metadata and metadata_position == "first":
+            metadata_thumbnail = self._create_metadata_thumbnail(pixmap, page_grid, scale_factor, document_info)
+            if metadata_thumbnail:
+                self.thumbnail_layout.addWidget(metadata_thumbnail)
+                page_number += 1
+
+        # Generate thumbnail for each tile page
         for i, page in enumerate(page_grid):
-            page_thumbnail = self._create_page_thumbnail(pixmap, page, i + 1, scale_info)
+            page_thumbnail = self._create_page_thumbnail(pixmap, page, page_number, scale_info)
             self.thumbnail_layout.addWidget(page_thumbnail)
+            page_number += 1
+
+        # Add metadata page at the end if configured
+        if include_metadata and metadata_position == "last":
+            metadata_thumbnail = self._create_metadata_thumbnail(pixmap, page_grid, scale_factor, document_info)
+            if metadata_thumbnail:
+                self.thumbnail_layout.addWidget(metadata_thumbnail)
 
         # Add stretch at the end
         self.thumbnail_layout.addStretch()
 
         # Update info
-        page_count = len(page_grid)
-        self.info_label.setText(f"Pages: {page_count}")
+        tile_count = len(page_grid)
+        total_pages = tile_count + (1 if include_metadata else 0)
+
+        if include_metadata:
+            self.info_label.setText(f"Pages: {total_pages} ({tile_count} tiles + 1 metadata)")
+        else:
+            self.info_label.setText(f"Pages: {tile_count}")
 
         if scale_factor != 1.0:
             self.scale_label.setText(f"Scale: {scale_factor:.6f} mm/px")
@@ -187,6 +214,89 @@ class PreviewPanel(QWidget):
         layout.addWidget(thumbnail_label)
 
         return thumbnail_widget
+
+    def _create_metadata_thumbnail(self, source_pixmap, page_grid, scale_factor, document_info):
+        """Create a thumbnail widget for the metadata page."""
+        try:
+            # Create metadata page generator
+            metadata_generator = MetadataPageGenerator()
+
+            # Calculate grid dimensions
+            if page_grid:
+                tiles_x = len(set(page['x'] for page in page_grid))
+                tiles_y = len(set(page['y'] for page in page_grid))
+            else:
+                tiles_x = tiles_y = 0
+
+            # Create document info for metadata page
+            if document_info:
+                doc_info = document_info.copy()
+                doc_info.update({
+                    'doc_width': source_pixmap.width(),
+                    'doc_height': source_pixmap.height(),
+                    'tiles_x': tiles_x,
+                    'tiles_y': tiles_y,
+                    'total_tiles': tiles_x * tiles_y,
+                    'scale_factor': scale_factor,
+                })
+            else:
+                doc_info = create_document_info(
+                    document_name='Preview Document',
+                    original_file='',
+                    scale_factor=scale_factor,
+                    units=config.get_default_units(),
+                    doc_width=source_pixmap.width(),
+                    doc_height=source_pixmap.height(),
+                    tiles_x=tiles_x,
+                    tiles_y=tiles_y,
+                    page_size=config.get_default_page_size(),
+                    gutter_size=config.get_gutter_size_mm(),
+                )
+
+            # Generate metadata page (A4 size for preview)
+            metadata_pixmap = metadata_generator.generate_metadata_page(doc_info)
+
+            # Create thumbnail widget
+            thumbnail_widget = QFrame()
+            thumbnail_widget.setFrameStyle(QFrame.Box)
+            thumbnail_widget.setStyleSheet("border: 2px solid #0078d4; margin: 2px; background-color: #f0f8ff;")
+
+            layout = QVBoxLayout(thumbnail_widget)
+            layout.setContentsMargins(5, 5, 5, 5)
+
+            # Metadata page label
+            page_label = QLabel("Metadata Page")
+            page_label.setAlignment(Qt.AlignCenter)
+            page_label.setStyleSheet("font-weight: bold; color: #0078d4;")
+            layout.addWidget(page_label)
+
+            # Clickable thumbnail image
+            max_width = 150
+            max_height = 200
+            scaled_thumbnail = metadata_pixmap.scaled(
+                max_width, max_height,
+                Qt.KeepAspectRatio,
+                Qt.SmoothTransformation
+            )
+
+            # Create clickable thumbnail for metadata page
+            thumbnail_label = ClickablePageThumbnail(
+                metadata_pixmap,  # Full-size metadata page for viewer
+                "Metadata",       # Page identifier
+                {'type': 'metadata', 'width': metadata_pixmap.width(), 'height': metadata_pixmap.height()},  # Page info
+                self,
+                None  # No scale info for metadata page
+            )
+            thumbnail_label.setPixmap(scaled_thumbnail)
+            thumbnail_label.setAlignment(Qt.AlignCenter)
+            thumbnail_label.setToolTip("Click to view Metadata Page in detail")
+            layout.addWidget(thumbnail_label)
+
+            return thumbnail_widget
+
+        except Exception as e:
+            print(f"Error creating metadata thumbnail: {str(e)}")
+            return None
 
     def _add_page_decorations(self, page_pixmap, page_number, gutter_size, page_info=None, scale_info=None):
         """Add crop marks, gutter lines, page number, and scale line/text to page thumbnail."""

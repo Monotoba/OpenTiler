@@ -140,9 +140,16 @@ class PageViewerDialog(QDialog):
         self.zoom_factor = 1.0
 
         # Update title
-        title = f"Page {page_number}"
-        if page_info:
+        if page_number == "Metadata":
+            title = "Metadata Summary Page"
+        else:
+            title = f"Page {page_number}"
+
+        if page_info and page_info.get('type') != 'metadata':
             title += f" - {page_info.get('width', 0):.0f}x{page_info.get('height', 0):.0f} pixels"
+        elif page_info and page_info.get('type') == 'metadata':
+            title += f" - {page_info.get('width', 0):.0f}x{page_info.get('height', 0):.0f} pixels"
+
         self.title_label.setText(title)
 
         self._update_display()
@@ -171,6 +178,10 @@ class PageViewerDialog(QDialog):
     def _add_scale_overlay(self, pixmap):
         """Add scale line and text overlay to the pixmap."""
         if not (self.scale_info and self.page_info):
+            return pixmap
+
+        # Skip scale overlay for metadata pages
+        if self.page_info.get('type') == 'metadata':
             return pixmap
 
         # Import config here to avoid circular imports
