@@ -69,17 +69,19 @@ class PDFExporter(BaseExporter):
 
             # Set page size
             if page_size == "A4":
-                pdf_writer.setPageSize(QPageSize(QPageSize.A4))
+                page_size_obj = QPageSize(QPageSize.A4)
             elif page_size == "Letter":
-                pdf_writer.setPageSize(QPageSize(QPageSize.Letter))
+                page_size_obj = QPageSize(QPageSize.Letter)
             elif page_size == "A3":
-                pdf_writer.setPageSize(QPageSize(QPageSize.A3))
+                page_size_obj = QPageSize(QPageSize.A3)
             else:
-                pdf_writer.setPageSize(QPageSize(QPageSize.A4))  # Default
+                page_size_obj = QPageSize(QPageSize.A4)  # Default
+
+            pdf_writer.setPageSize(page_size_obj)
 
             # Set page layout
             pdf_writer.setPageLayout(QPageLayout(
-                QPageSize(pdf_writer.pageSize()),
+                page_size_obj,
                 QPageLayout.Portrait,
                 QPageLayout.Margins()
             ))
@@ -303,17 +305,21 @@ class PDFExporter(BaseExporter):
             aspect_ratio = composite.width() / composite.height()
 
             if page_size == "A4":
-                if aspect_ratio > 1.414:  # Landscape
-                    pdf_writer.setPageSize(QPageSize(QPageSize.A4))
-                    pdf_writer.setPageOrientation(QPageLayout.Landscape)
-                else:  # Portrait
-                    pdf_writer.setPageSize(QPageSize(QPageSize.A4))
-                    pdf_writer.setPageOrientation(QPageLayout.Portrait)
+                page_size_obj = QPageSize(QPageSize.A4)
+                orientation = QPageLayout.Landscape if aspect_ratio > 1.414 else QPageLayout.Portrait
             elif page_size == "A3":
-                pdf_writer.setPageSize(QPageSize(QPageSize.A3))
-                pdf_writer.setPageOrientation(QPageLayout.Landscape if aspect_ratio > 1.414 else QPageLayout.Portrait)
+                page_size_obj = QPageSize(QPageSize.A3)
+                orientation = QPageLayout.Landscape if aspect_ratio > 1.414 else QPageLayout.Portrait
             else:
-                pdf_writer.setPageSize(QPageSize(QPageSize.A4))  # Default
+                page_size_obj = QPageSize(QPageSize.A4)  # Default
+                orientation = QPageLayout.Portrait
+
+            pdf_writer.setPageSize(page_size_obj)
+            pdf_writer.setPageLayout(QPageLayout(
+                page_size_obj,
+                orientation,
+                QPageLayout.Margins()
+            ))
 
             # Set resolution (300 DPI for high quality)
             pdf_writer.setResolution(300)
