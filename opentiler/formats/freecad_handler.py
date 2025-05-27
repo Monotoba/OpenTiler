@@ -25,13 +25,22 @@ try:
 
     for cmd in freecad_commands:
         try:
-            result = subprocess.run([cmd, '--version'],
-                                  capture_output=True, text=True, timeout=5)
-            if result.returncode == 0:
+            # Try console mode first to avoid GUI startup
+            result = subprocess.run([cmd, '--console', '--python-path'],
+                                  capture_output=True, text=True, timeout=10)
+            if result.returncode == 0 or 'FreeCAD' in result.stderr:
                 FREECAD_COMMAND = cmd
                 break
         except (subprocess.TimeoutExpired, FileNotFoundError):
-            continue
+            # Fallback: try just checking if command exists
+            try:
+                result = subprocess.run(['which', cmd],
+                                      capture_output=True, text=True, timeout=2)
+                if result.returncode == 0:
+                    FREECAD_COMMAND = cmd
+                    break
+            except:
+                continue
 
     # Common FreeCAD installation paths for Python module
     freecad_paths = [
