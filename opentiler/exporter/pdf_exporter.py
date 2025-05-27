@@ -213,6 +213,10 @@ class PDFExporter(BaseExporter):
                 output_dir=kwargs.get('output_dir', ''),
             )
 
+            # Add source pixmap and page grid for plan view
+            doc_info['source_pixmap'] = source_pixmap
+            doc_info['page_grid'] = page_grid
+
             # Generate metadata page
             pdf_rect = painter.viewport()
             metadata_pixmap = metadata_generator.generate_metadata_page(doc_info, pdf_rect.size())
