@@ -17,6 +17,7 @@ from .dialogs.scaling_dialog import ScalingDialog
 from .dialogs.unit_converter import UnitConverterDialog
 from .dialogs.scale_calculator import ScaleCalculatorDialog
 from .dialogs.settings_dialog import SettingsDialog
+from .dialogs.export_dialog import ExportDialog
 from .settings.config import Config
 from .utils.helpers import calculate_tile_grid, get_page_size_mm, mm_to_pixels
 
@@ -29,6 +30,7 @@ class MainWindow(QMainWindow):
         self.config = Config()
         self.scaling_dialog = None
         self.settings_dialog = None
+        self.export_dialog = None
         self.init_ui()
 
     def init_ui(self):
@@ -202,9 +204,28 @@ class MainWindow(QMainWindow):
             return False
 
     def export_document(self):
-        """Export the current document."""
-        # TODO: Implement export functionality
-        QMessageBox.information(self, "Export", "Export functionality will be implemented soon.")
+        """Export the current document as tiles."""
+        # Check if we have a document and page grid
+        if not self.document_viewer.current_pixmap:
+            QMessageBox.warning(self, "Export", "No document loaded. Please load a document first.")
+            return
+
+        if not hasattr(self.document_viewer, 'page_grid') or not self.document_viewer.page_grid:
+            QMessageBox.warning(self, "Export", "No tiles generated. Please apply scaling first to generate tiles.")
+            return
+
+        # Create and show export dialog
+        if not self.export_dialog:
+            self.export_dialog = ExportDialog(self)
+
+        # Set export data
+        self.export_dialog.set_export_data(
+            self.document_viewer.current_pixmap,
+            self.document_viewer.page_grid
+        )
+
+        # Show dialog
+        self.export_dialog.show()
 
     def show_scaling_dialog(self):
         """Show the scaling dialog."""
