@@ -4,7 +4,7 @@ PDF exporter for OpenTiler.
 
 import os
 from typing import List, Tuple, Optional
-from PySide6.QtCore import QRect, Qt
+from PySide6.QtCore import QRect, Qt, QMarginsF
 from PySide6.QtGui import QPixmap, QPainter, QPdfWriter, QPageSize, QPageLayout
 from PySide6.QtWidgets import QMessageBox
 
@@ -83,7 +83,7 @@ class PDFExporter(BaseExporter):
             pdf_writer.setPageLayout(QPageLayout(
                 page_size_obj,
                 QPageLayout.Portrait,
-                QPageLayout.Margins()
+                QMarginsF(10, 10, 10, 10)  # 10mm margins on all sides
             ))
 
             # Set resolution (300 DPI for high quality)
@@ -318,7 +318,7 @@ class PDFExporter(BaseExporter):
             pdf_writer.setPageLayout(QPageLayout(
                 page_size_obj,
                 orientation,
-                QPageLayout.Margins()
+                QMarginsF(10, 10, 10, 10)  # 10mm margins on all sides
             ))
 
             # Set resolution (300 DPI for high quality)
