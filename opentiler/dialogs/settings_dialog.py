@@ -6,10 +6,11 @@ from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QTabWidget, QWidget,
     QLabel, QSpinBox, QDoubleSpinBox, QComboBox, QCheckBox,
     QPushButton, QColorDialog, QSlider, QGroupBox, QFormLayout,
-    QDialogButtonBox
+    QDialogButtonBox, QLineEdit, QFileDialog
 )
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor
+import os
 
 from ..settings.config import config
 
@@ -81,6 +82,30 @@ class SettingsDialog(QDialog):
         self.max_recent_spin.setRange(1, 20)
         self.max_recent_spin.setSuffix(" files")
         layout.addRow("Max Recent Files:", self.max_recent_spin)
+
+        # Default input directory
+        input_dir_layout = QHBoxLayout()
+        self.input_dir_edit = QLineEdit()
+        self.input_dir_edit.setReadOnly(True)
+        input_dir_layout.addWidget(self.input_dir_edit)
+
+        input_dir_button = QPushButton("Browse...")
+        input_dir_button.clicked.connect(self.browse_input_dir)
+        input_dir_layout.addWidget(input_dir_button)
+
+        layout.addRow("Default Input Directory:", input_dir_layout)
+
+        # Default output directory
+        output_dir_layout = QHBoxLayout()
+        self.output_dir_edit = QLineEdit()
+        self.output_dir_edit.setReadOnly(True)
+        output_dir_layout.addWidget(self.output_dir_edit)
+
+        output_dir_button = QPushButton("Browse...")
+        output_dir_button.clicked.connect(self.browse_output_dir)
+        output_dir_layout.addWidget(output_dir_button)
+
+        layout.addRow("Default Output Directory:", output_dir_layout)
 
         widget.setLayout(layout)
         return widget
@@ -252,6 +277,10 @@ class SettingsDialog(QDialog):
         # Alpha
         self.alpha_slider.setValue(config.get_page_indicator_alpha())
 
+        # Directory settings
+        self.input_dir_edit.setText(config.get_last_input_dir())
+        self.output_dir_edit.setText(config.get_last_output_dir())
+
     def apply_settings(self):
         """Apply settings without closing dialog."""
         self.save_settings()
@@ -290,5 +319,31 @@ class SettingsDialog(QDialog):
         config.set_page_indicator_font_color(self.current_color.name())
         config.set_page_indicator_alpha(self.alpha_slider.value())
 
+        # Directory settings
+        config.set_last_input_dir(self.input_dir_edit.text())
+        config.set_last_output_dir(self.output_dir_edit.text())
+
         # Sync to disk
         config.sync()
+
+    def browse_input_dir(self):
+        """Browse for default input directory."""
+        current_dir = self.input_dir_edit.text() or os.path.expanduser("~")
+        directory = QFileDialog.getExistingDirectory(
+            self,
+            "Select Default Input Directory",
+            current_dir
+        )
+        if directory:
+            self.input_dir_edit.setText(directory)
+
+    def browse_output_dir(self):
+        """Browse for default output directory."""
+        current_dir = self.output_dir_edit.text() or os.path.expanduser("~")
+        directory = QFileDialog.getExistingDirectory(
+            self,
+            "Select Default Output Directory",
+            current_dir
+        )
+        if directory:
+            self.output_dir_edit.setText(directory)

@@ -248,9 +248,10 @@ class PreviewPanel(QWidget):
             alpha = config.get_page_indicator_alpha()
             position = config.get_page_indicator_position()
 
-            # Set up font
+            # Set up font - use larger size for thumbnails to ensure visibility
             font = QFont()
-            font.setPointSize(max(6, font_size // 2))  # Scale down for thumbnail
+            thumbnail_font_size = max(8, min(font_size, 14))  # Ensure readable size for thumbnails
+            font.setPointSize(thumbnail_font_size)
             if font_style == "bold":
                 font.setBold(True)
             elif font_style == "italic":

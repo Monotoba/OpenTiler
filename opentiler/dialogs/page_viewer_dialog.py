@@ -74,6 +74,9 @@ class PageViewerDialog(QDialog):
         self.scroll_area.setWidgetResizable(False)
         self.scroll_area.setAlignment(Qt.AlignCenter)
 
+        # Enable mouse wheel zoom
+        self.scroll_area.wheelEvent = self.wheel_event
+
         # Create image label
         self.image_label = QLabel()
         self.image_label.setAlignment(Qt.AlignCenter)
@@ -90,6 +93,19 @@ class PageViewerDialog(QDialog):
         # Add keyboard shortcuts
         escape_shortcut = QShortcut(QKeySequence("Escape"), self)
         escape_shortcut.activated.connect(self.close)
+
+        # Zoom shortcuts
+        zoom_in_shortcut = QShortcut(QKeySequence("Ctrl++"), self)
+        zoom_in_shortcut.activated.connect(self.zoom_in)
+
+        zoom_out_shortcut = QShortcut(QKeySequence("Ctrl+-"), self)
+        zoom_out_shortcut.activated.connect(self.zoom_out)
+
+        zoom_fit_shortcut = QShortcut(QKeySequence("Ctrl+0"), self)
+        zoom_fit_shortcut.activated.connect(self.zoom_fit)
+
+        zoom_100_shortcut = QShortcut(QKeySequence("Ctrl+1"), self)
+        zoom_100_shortcut.activated.connect(self.zoom_100)
 
     def show_page(self, page_pixmap, page_number, page_info=None):
         """Show a specific page in the viewer."""
@@ -155,6 +171,20 @@ class PageViewerDialog(QDialog):
         """Set zoom to 100%."""
         self.zoom_factor = 1.0
         self._update_display()
+
+    def wheel_event(self, event):
+        """Handle mouse wheel events for zooming."""
+        if event.modifiers() & Qt.ControlModifier:
+            # Zoom with Ctrl+wheel
+            delta = event.angleDelta().y()
+            if delta > 0:
+                self.zoom_in()
+            else:
+                self.zoom_out()
+            event.accept()
+        else:
+            # Normal scrolling
+            super(PanScrollArea, self.scroll_area).wheelEvent(event)
 
 
 class ClickablePageThumbnail(QLabel):
