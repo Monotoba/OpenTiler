@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
     QScrollArea, QFrame, QSizePolicy
 )
 from PySide6.QtCore import Qt, QPoint, QRect
-from PySide6.QtGui import QPixmap, QPainter, QCursor, QKeySequence, QShortcut
+from PySide6.QtGui import QPixmap, QPainter, QCursor, QKeySequence, QShortcut, QPen, QColor, QFont
 
 from ..viewer.viewer import PanScrollArea
 
@@ -33,7 +33,7 @@ class PageViewerDialog(QDialog):
         self.title_label = QLabel("Page Viewer")
         self.title_label.setStyleSheet(
             "font-weight: bold; font-size: 14px; padding: 5px; "
-            "background-color: #f0f0f0; border-bottom: 1px solid #ccc;"
+            "background-color: #e8e8e8; color: #333; border-bottom: 1px solid #ccc;"
         )
         layout.addWidget(self.title_label)
 
@@ -132,9 +132,11 @@ class PageViewerDialog(QDialog):
         zoom_100_shortcut = QShortcut(QKeySequence("Ctrl+1"), self)
         zoom_100_shortcut.activated.connect(self.zoom_100)
 
-    def show_page(self, page_pixmap, page_number, page_info=None):
+    def show_page(self, page_pixmap, page_number, page_info=None, scale_info=None):
         """Show a specific page in the viewer."""
         self.current_page_pixmap = page_pixmap.copy()
+        self.page_info = page_info
+        self.scale_info = scale_info
         self.zoom_factor = 1.0
 
         # Update title
@@ -151,17 +153,135 @@ class PageViewerDialog(QDialog):
         if not self.current_page_pixmap:
             return
 
+        # Add scale line/text overlay if available
+        display_pixmap = self._add_scale_overlay(self.current_page_pixmap)
+
         # Apply zoom
         if self.zoom_factor != 1.0:
-            size = self.current_page_pixmap.size() * self.zoom_factor
-            scaled = self.current_page_pixmap.scaled(
+            size = display_pixmap.size() * self.zoom_factor
+            scaled = display_pixmap.scaled(
                 size, Qt.KeepAspectRatio, Qt.SmoothTransformation
             )
         else:
-            scaled = self.current_page_pixmap
+            scaled = display_pixmap
 
         self.image_label.setPixmap(scaled)
         self.image_label.resize(scaled.size())
+
+    def _add_scale_overlay(self, pixmap):
+        """Add scale line and text overlay to the pixmap."""
+        if not (self.scale_info and self.page_info):
+            return pixmap
+
+        # Import config here to avoid circular imports
+        from ..settings.config import config
+
+        # Only draw if scale line display is enabled
+        if not config.get_scale_line_display():
+            return pixmap
+
+        # Extract scale information
+        point1 = self.scale_info.get('point1')
+        point2 = self.scale_info.get('point2')
+        measurement_text = self.scale_info.get('measurement_text', '')
+
+        if not (point1 and point2):
+            return pixmap
+
+        # Get page boundaries in document coordinates
+        page_x = self.page_info['x']
+        page_y = self.page_info['y']
+        page_doc_width = self.page_info['width']
+        page_doc_height = self.page_info['height']
+
+        # Check if either scaling point is within this page
+        p1_in_page = (page_x <= point1[0] <= page_x + page_doc_width and
+                      page_y <= point1[1] <= page_y + page_doc_height)
+        p2_in_page = (page_x <= point2[0] <= page_x + page_doc_width and
+                      page_y <= point2[1] <= page_y + page_doc_height)
+
+        # Check if the line crosses this page (simple bounding box check)
+        line_left = min(point1[0], point2[0])
+        line_right = max(point1[0], point2[0])
+        line_top = min(point1[1], point2[1])
+        line_bottom = max(point1[1], point2[1])
+
+        page_right = page_x + page_doc_width
+        page_bottom = page_y + page_doc_height
+
+        line_crosses_page = not (line_right < page_x or line_left > page_right or
+                               line_bottom < page_y or line_top > page_bottom)
+
+        if not (p1_in_page or p2_in_page or line_crosses_page):
+            return pixmap
+
+        # Create a copy to draw on
+        result = QPixmap(pixmap)
+        painter = QPainter(result)
+
+        # Convert document coordinates to page coordinates
+        p1_page_x = point1[0] - page_x
+        p1_page_y = point1[1] - page_y
+        p2_page_x = point2[0] - page_x
+        p2_page_y = point2[1] - page_y
+
+        # Scale to page pixmap coordinates
+        scale_x = pixmap.width() / page_doc_width
+        scale_y = pixmap.height() / page_doc_height
+
+        p1_x = p1_page_x * scale_x
+        p1_y = p1_page_y * scale_y
+        p2_x = p2_page_x * scale_x
+        p2_y = p2_page_y * scale_y
+
+        # Set up pen for scale line
+        pen = QPen(QColor(255, 0, 0), 3)  # Red color, 3px width for page viewer
+        pen.setStyle(Qt.DashLine)
+        painter.setPen(pen)
+
+        # Draw scale line
+        painter.drawLine(int(p1_x), int(p1_y), int(p2_x), int(p2_y))
+
+        # Draw scale points
+        pen.setStyle(Qt.SolidLine)
+        painter.setPen(pen)
+        if p1_in_page:
+            painter.drawEllipse(int(p1_x - 5), int(p1_y - 5), 10, 10)
+        if p2_in_page:
+            painter.drawEllipse(int(p2_x - 5), int(p2_y - 5), 10, 10)
+
+        # Draw measurement text if enabled and line midpoint is in page
+        if config.get_scale_text_display() and measurement_text:
+            mid_x = (p1_x + p2_x) / 2
+            mid_y = (p1_y + p2_y) / 2
+
+            # Check if midpoint is within page bounds
+            if 0 <= mid_x <= pixmap.width() and 0 <= mid_y <= pixmap.height():
+                # Set up font for measurement text (larger for page viewer)
+                font = painter.font()
+                font.setPointSize(14)
+                font.setBold(True)
+                painter.setFont(font)
+
+                # Set up pen for red text
+                text_pen = QPen(QColor(255, 0, 0), 1)
+                painter.setPen(text_pen)
+
+                # Calculate text position (above the line)
+                text_rect = painter.fontMetrics().boundingRect(measurement_text)
+                text_x = mid_x - text_rect.width() / 2
+                text_y = mid_y - 15  # 15 pixels above the line
+
+                # Draw background rectangle for better visibility
+                bg_rect = text_rect.adjusted(-5, -2, 5, 2)
+                bg_rect.moveTopLeft(QPoint(int(text_x - 5), int(text_y - text_rect.height() - 2)))
+                painter.fillRect(bg_rect, QColor(255, 255, 255, 200))  # Semi-transparent white
+
+                # Draw the measurement text
+                painter.drawText(int(text_x), int(text_y), measurement_text)
+
+        painter.end()
+        return result
 
     def zoom_in(self):
         """Zoom in on the page."""
@@ -211,11 +331,12 @@ class PageViewerDialog(QDialog):
 class ClickablePageThumbnail(QLabel):
     """A clickable page thumbnail that opens in the page viewer."""
 
-    def __init__(self, page_pixmap, page_number, page_info, parent=None):
+    def __init__(self, page_pixmap, page_number, page_info, parent=None, scale_info=None):
         super().__init__(parent)
         self.page_pixmap = page_pixmap
         self.page_number = page_number
         self.page_info = page_info
+        self.scale_info = scale_info
         self.page_viewer = None
 
         # Set up the thumbnail
@@ -256,6 +377,6 @@ class ClickablePageThumbnail(QLabel):
         if not self.page_viewer:
             self.page_viewer = PageViewerDialog(self.parent())
 
-        self.page_viewer.show_page(self.page_pixmap, self.page_number, self.page_info)
+        self.page_viewer.show_page(self.page_pixmap, self.page_number, self.page_info, self.scale_info)
         self.page_viewer.raise_()
         self.page_viewer.activateWindow()

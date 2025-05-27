@@ -273,8 +273,11 @@ class MainWindow(QMainWindow):
             gutter_pixels
         )
 
+        # Get scale info for preview
+        scale_info = self._get_scale_info()
+
         # Update preview panel and document viewer
-        self.preview_panel.update_preview(pixmap, page_grid, scale_factor)
+        self.preview_panel.update_preview(pixmap, page_grid, scale_factor, scale_info)
         self.document_viewer.set_page_grid(page_grid, gutter_pixels)
 
         # Update status
@@ -314,6 +317,20 @@ class MainWindow(QMainWindow):
             row += 1
 
         return pages
+
+    def _get_scale_info(self):
+        """Get scale information from the document viewer for preview display."""
+        if not hasattr(self.document_viewer, 'selected_points') or not self.document_viewer.selected_points:
+            return None
+
+        if len(self.document_viewer.selected_points) < 2:
+            return None
+
+        return {
+            'point1': self.document_viewer.selected_points[0],
+            'point2': self.document_viewer.selected_points[1],
+            'measurement_text': getattr(self.document_viewer, 'measurement_text', '')
+        }
 
     def show_unit_converter(self):
         """Show the unit converter dialog."""

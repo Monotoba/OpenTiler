@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QScrollArea,
     QFrame, QSizePolicy, QHBoxLayout
 )
-from PySide6.QtCore import Qt, QRect
+from PySide6.QtCore import Qt, QRect, QPoint
 from PySide6.QtGui import QPixmap, QPainter, QPen, QColor, QFont
 
 from ..dialogs.page_viewer_dialog import ClickablePageThumbnail
@@ -67,7 +67,7 @@ class PreviewPanel(QWidget):
         layout.addStretch()
         self.setLayout(layout)
 
-    def update_preview(self, pixmap, page_grid=None, scale_factor=1.0):
+    def update_preview(self, pixmap, page_grid=None, scale_factor=1.0, scale_info=None):
         """Update the preview with individual page thumbnails."""
         # Clear existing thumbnails
         self._clear_thumbnails()
@@ -82,7 +82,7 @@ class PreviewPanel(QWidget):
 
         # Generate thumbnail for each page
         for i, page in enumerate(page_grid):
-            page_thumbnail = self._create_page_thumbnail(pixmap, page, i + 1)
+            page_thumbnail = self._create_page_thumbnail(pixmap, page, i + 1, scale_info)
             self.thumbnail_layout.addWidget(page_thumbnail)
 
         # Add stretch at the end
@@ -105,7 +105,7 @@ class PreviewPanel(QWidget):
             if child.widget() and child.widget() != self.no_pages_label:
                 child.widget().deleteLater()
 
-    def _create_page_thumbnail(self, source_pixmap, page, page_number):
+    def _create_page_thumbnail(self, source_pixmap, page, page_number, scale_info=None):
         """Create a thumbnail widget for a single page."""
         # Extract the page area from the source document
         x, y = page['x'], page['y']
@@ -146,8 +146,8 @@ class PreviewPanel(QWidget):
 
         painter.end()
 
-        # Add crop marks and page info based on settings
-        page_pixmap = self._add_page_decorations(page_pixmap, page_number, gutter)
+        # Add crop marks, page info, and scale line/text based on settings
+        page_pixmap = self._add_page_decorations(page_pixmap, page_number, gutter, page, scale_info)
 
         # Create thumbnail widget
         thumbnail_widget = QFrame()
@@ -178,7 +178,8 @@ class PreviewPanel(QWidget):
             page_pixmap,  # Full-size page for viewer
             page_number,
             page,  # Page info dict
-            self
+            self,
+            scale_info  # Scale info for page viewer
         )
         thumbnail_label.setPixmap(scaled_thumbnail)
         thumbnail_label.setAlignment(Qt.AlignCenter)
@@ -187,8 +188,8 @@ class PreviewPanel(QWidget):
 
         return thumbnail_widget
 
-    def _add_page_decorations(self, page_pixmap, page_number, gutter_size):
-        """Add crop marks, gutter lines, and page number to page thumbnail."""
+    def _add_page_decorations(self, page_pixmap, page_number, gutter_size, page_info=None, scale_info=None):
+        """Add crop marks, gutter lines, page number, and scale line/text to page thumbnail."""
         # Import config here to avoid circular imports
         from ..settings.config import config
 
@@ -304,7 +305,125 @@ class PreviewPanel(QWidget):
             painter.setPen(QPen(color, 1))
             painter.drawText(int(text_x), int(text_y), text)
 
+        # Draw scale line and text if this page contains the scaling points
+        if scale_info and page_info:
+            self._draw_scale_line_on_page(painter, scale_info, page_info, width, height)
+
         painter.end()
         return result
+
+    def _draw_scale_line_on_page(self, painter, scale_info, page_info, page_width, page_height):
+        """Draw scale line and text on page if it contains the scaling points."""
+        # Import config here to avoid circular imports
+        from ..settings.config import config
+
+        # Only draw if scale line display is enabled
+        if not config.get_scale_line_display():
+            return
+
+        # Extract scale information
+        point1 = scale_info.get('point1')
+        point2 = scale_info.get('point2')
+        measurement_text = scale_info.get('measurement_text', '')
+
+        if not (point1 and point2):
+            return
+
+        # Get page boundaries in document coordinates
+        page_x = page_info['x']
+        page_y = page_info['y']
+        page_doc_width = page_info['width']
+        page_doc_height = page_info['height']
+
+        # Check if either scaling point is within this page
+        p1_in_page = (page_x <= point1[0] <= page_x + page_doc_width and
+                      page_y <= point1[1] <= page_y + page_doc_height)
+        p2_in_page = (page_x <= point2[0] <= page_x + page_doc_width and
+                      page_y <= point2[1] <= page_y + page_doc_height)
+
+        # Check if the line crosses this page
+        line_crosses_page = self._line_intersects_page(point1, point2, page_info)
+
+        if not (p1_in_page or p2_in_page or line_crosses_page):
+            return
+
+        # Convert document coordinates to page coordinates
+        p1_page_x = point1[0] - page_x
+        p1_page_y = point1[1] - page_y
+        p2_page_x = point2[0] - page_x
+        p2_page_y = point2[1] - page_y
+
+        # Scale to page pixmap coordinates
+        scale_x = page_width / page_doc_width
+        scale_y = page_height / page_doc_height
+
+        p1_x = p1_page_x * scale_x
+        p1_y = p1_page_y * scale_y
+        p2_x = p2_page_x * scale_x
+        p2_y = p2_page_y * scale_y
+
+        # Set up pen for scale line
+        pen = QPen(QColor(255, 0, 0), 2)  # Red color, 2px width
+        pen.setStyle(Qt.DashLine)
+        painter.setPen(pen)
+
+        # Draw scale line (clipped to page boundaries)
+        painter.drawLine(int(p1_x), int(p1_y), int(p2_x), int(p2_y))
+
+        # Draw scale points
+        pen.setStyle(Qt.SolidLine)
+        painter.setPen(pen)
+        if p1_in_page:
+            painter.drawEllipse(int(p1_x - 3), int(p1_y - 3), 6, 6)
+        if p2_in_page:
+            painter.drawEllipse(int(p2_x - 3), int(p2_y - 3), 6, 6)
+
+        # Draw measurement text if enabled and line midpoint is in page
+        if config.get_scale_text_display() and measurement_text:
+            mid_x = (p1_x + p2_x) / 2
+            mid_y = (p1_y + p2_y) / 2
+
+            # Check if midpoint is within page bounds
+            if 0 <= mid_x <= page_width and 0 <= mid_y <= page_height:
+                # Set up font for measurement text (smaller for thumbnails)
+                font = painter.font()
+                font.setPointSize(8)
+                font.setBold(True)
+                painter.setFont(font)
+
+                # Set up pen for red text
+                text_pen = QPen(QColor(255, 0, 0), 1)
+                painter.setPen(text_pen)
+
+                # Calculate text position (above the line)
+                text_rect = painter.fontMetrics().boundingRect(measurement_text)
+                text_x = mid_x - text_rect.width() / 2
+                text_y = mid_y - 8  # 8 pixels above the line
+
+                # Draw background rectangle for better visibility
+                bg_rect = text_rect.adjusted(-2, -1, 2, 1)
+                bg_rect.moveTopLeft(QPoint(int(text_x - 2), int(text_y - text_rect.height() - 1)))
+                painter.fillRect(bg_rect, QColor(255, 255, 255, 200))  # Semi-transparent white
+
+                # Draw the measurement text
+                painter.drawText(int(text_x), int(text_y), measurement_text)
+
+    def _line_intersects_page(self, point1, point2, page_info):
+        """Check if a line intersects with the page boundaries."""
+        # Simple bounding box intersection check
+        page_x = page_info['x']
+        page_y = page_info['y']
+        page_right = page_x + page_info['width']
+        page_bottom = page_y + page_info['height']
+
+        # Line bounding box
+        line_left = min(point1[0], point2[0])
+        line_right = max(point1[0], point2[0])
+        line_top = min(point1[1], point2[1])
+        line_bottom = max(point1[1], point2[1])
+
+        # Check if bounding boxes intersect
+        return not (line_right < page_x or line_left > page_right or
+                   line_bottom < page_y or line_top > page_bottom)
 
 

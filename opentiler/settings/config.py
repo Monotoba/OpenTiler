@@ -97,7 +97,7 @@ class Config:
 
         # Recent files settings
         if not self.settings.contains("recent_files"):
-            self.settings.setValue("recent_files", [])
+            self.settings.setValue("recent_files", "[]")  # Store as JSON string
 
         if not self.settings.contains("max_recent_files"):
             self.settings.setValue("max_recent_files", 10)
@@ -324,11 +324,13 @@ class Config:
     # Recent files settings
     def get_recent_files(self):
         """Get list of recent files."""
-        files = self.get("recent_files", [])
-        # Handle case where QSettings returns a string instead of list
-        if isinstance(files, str):
+        files_json = self.get("recent_files", "[]")
+        try:
+            # Parse JSON string to list
+            files = json.loads(files_json)
+            return files if isinstance(files, list) else []
+        except (json.JSONDecodeError, TypeError):
             return []
-        return files if files else []
 
     def add_recent_file(self, file_path):
         """Add a file to the recent files list."""
@@ -345,7 +347,8 @@ class Config:
         max_files = self.get_max_recent_files()
         recent_files = recent_files[:max_files]
 
-        self.set("recent_files", recent_files)
+        # Store as JSON string
+        self.set("recent_files", json.dumps(recent_files))
         self.sync()
 
     def remove_recent_file(self, file_path):
@@ -353,12 +356,12 @@ class Config:
         recent_files = self.get_recent_files()
         if file_path in recent_files:
             recent_files.remove(file_path)
-            self.set("recent_files", recent_files)
+            self.set("recent_files", json.dumps(recent_files))
             self.sync()
 
     def clear_recent_files(self):
         """Clear all recent files."""
-        self.set("recent_files", [])
+        self.set("recent_files", "[]")
         self.sync()
 
     def get_max_recent_files(self):

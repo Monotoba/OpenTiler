@@ -48,7 +48,7 @@ class UnitConverterDialog(QDialog):
         output_layout = QHBoxLayout()
         self.output_value = QLineEdit()
         self.output_value.setReadOnly(True)
-        self.output_value.setStyleSheet("background-color: #f0f0f0;")
+        self.output_value.setStyleSheet("background-color: #e8e8e8; color: #333; border: 1px solid #ccc;")
         output_layout.addWidget(self.output_value)
 
         self.output_units = QComboBox()
