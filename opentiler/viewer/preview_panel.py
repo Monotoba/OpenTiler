@@ -4,10 +4,10 @@ Preview panel for showing tiled layout preview.
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QScrollArea,
-    QFrame, QSizePolicy
+    QFrame, QSizePolicy, QHBoxLayout
 )
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QPixmap, QPainter, QPen, QColor
+from PySide6.QtGui import QPixmap, QPainter, QPen, QColor, QFont
 
 
 class PreviewPanel(QWidget):
@@ -23,7 +23,7 @@ class PreviewPanel(QWidget):
         layout = QVBoxLayout()
 
         # Title
-        title_label = QLabel("Tile Preview")
+        title_label = QLabel("Page Thumbnails")
         title_label.setStyleSheet("font-weight: bold; font-size: 14px;")
         layout.addWidget(title_label)
 
@@ -33,23 +33,30 @@ class PreviewPanel(QWidget):
         separator.setFrameShadow(QFrame.Sunken)
         layout.addWidget(separator)
 
-        # Preview area
+        # Scrollable area for page thumbnails
         self.preview_scroll = QScrollArea()
         self.preview_scroll.setWidgetResizable(True)
         self.preview_scroll.setMinimumHeight(200)
+        self.preview_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.preview_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
-        self.preview_label = QLabel()
-        self.preview_label.setAlignment(Qt.AlignCenter)
-        self.preview_label.setText("No document loaded")
-        self.preview_label.setStyleSheet("border: 1px solid lightgray; background-color: white;")
-        self.preview_label.setMinimumSize(200, 150)
-        self.preview_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        # Container widget for thumbnails
+        self.thumbnail_container = QWidget()
+        self.thumbnail_layout = QVBoxLayout(self.thumbnail_container)
+        self.thumbnail_layout.setSpacing(10)
+        self.thumbnail_layout.setContentsMargins(5, 5, 5, 5)
 
-        self.preview_scroll.setWidget(self.preview_label)
+        # Default message
+        self.no_pages_label = QLabel("No pages generated")
+        self.no_pages_label.setAlignment(Qt.AlignCenter)
+        self.no_pages_label.setStyleSheet("color: gray; font-style: italic;")
+        self.thumbnail_layout.addWidget(self.no_pages_label)
+
+        self.preview_scroll.setWidget(self.thumbnail_container)
         layout.addWidget(self.preview_scroll)
 
         # Info labels
-        self.info_label = QLabel("Tiles: 0")
+        self.info_label = QLabel("Pages: 0")
         layout.addWidget(self.info_label)
 
         self.scale_label = QLabel("Scale: Not set")
@@ -58,123 +65,159 @@ class PreviewPanel(QWidget):
         layout.addStretch()
         self.setLayout(layout)
 
-    def update_preview(self, pixmap, tile_grid=None, scale_factor=1.0):
-        """Update the preview with current document and tiling."""
-        if not pixmap:
-            self.preview_label.setText("No document loaded")
-            self.info_label.setText("Tiles: 0")
+    def update_preview(self, pixmap, page_grid=None, scale_factor=1.0):
+        """Update the preview with individual page thumbnails."""
+        # Clear existing thumbnails
+        self._clear_thumbnails()
+
+        if not pixmap or not page_grid:
+            self.no_pages_label.show()
+            self.info_label.setText("Pages: 0")
             self.scale_label.setText("Scale: Not set")
             return
 
-        # Create a scaled down version for preview
-        preview_size = self.preview_label.size()
-        scaled_pixmap = pixmap.scaled(
-            preview_size * 0.8,  # 80% of available space
+        self.no_pages_label.hide()
+
+        # Generate thumbnail for each page
+        for i, page in enumerate(page_grid):
+            page_thumbnail = self._create_page_thumbnail(pixmap, page, i + 1)
+            self.thumbnail_layout.addWidget(page_thumbnail)
+
+        # Add stretch at the end
+        self.thumbnail_layout.addStretch()
+
+        # Update info
+        page_count = len(page_grid)
+        self.info_label.setText(f"Pages: {page_count}")
+
+        if scale_factor != 1.0:
+            self.scale_label.setText(f"Scale: {scale_factor:.6f} mm/px")
+        else:
+            self.scale_label.setText("Scale: Not set")
+
+    def _clear_thumbnails(self):
+        """Clear all existing thumbnail widgets."""
+        # Remove all widgets except the no_pages_label
+        while self.thumbnail_layout.count() > 0:
+            child = self.thumbnail_layout.takeAt(0)
+            if child.widget() and child.widget() != self.no_pages_label:
+                child.widget().deleteLater()
+
+    def _create_page_thumbnail(self, source_pixmap, page, page_number):
+        """Create a thumbnail widget for a single page."""
+        # Extract the page area from the source document
+        x, y = page['x'], page['y']
+        width, height = page['width'], page['height']
+        gutter = page.get('gutter', 0)
+
+        # Create page pixmap by cropping from source
+        page_pixmap = source_pixmap.copy(int(x), int(y), int(width), int(height))
+
+        # Add crop marks and page info
+        page_pixmap = self._add_page_decorations(page_pixmap, page_number, gutter)
+
+        # Create thumbnail widget
+        thumbnail_widget = QFrame()
+        thumbnail_widget.setFrameStyle(QFrame.Box)
+        thumbnail_widget.setStyleSheet("border: 1px solid lightgray; margin: 2px;")
+
+        layout = QVBoxLayout(thumbnail_widget)
+        layout.setContentsMargins(5, 5, 5, 5)
+
+        # Page number label
+        page_label = QLabel(f"Page {page_number}")
+        page_label.setAlignment(Qt.AlignCenter)
+        page_label.setStyleSheet("font-weight: bold; color: #333;")
+        layout.addWidget(page_label)
+
+        # Thumbnail image
+        thumbnail_label = QLabel()
+        thumbnail_label.setAlignment(Qt.AlignCenter)
+
+        # Scale thumbnail to fit preview area (max 150px wide)
+        max_width = 150
+        scaled_thumbnail = page_pixmap.scaled(
+            max_width, max_width,
             Qt.KeepAspectRatio,
             Qt.SmoothTransformation
         )
 
-        # Draw tile grid if provided
-        if tile_grid:
-            scaled_pixmap = self._draw_tile_grid(scaled_pixmap, tile_grid)
+        thumbnail_label.setPixmap(scaled_thumbnail)
+        layout.addWidget(thumbnail_label)
 
-        self.preview_label.setPixmap(scaled_pixmap)
+        return thumbnail_widget
 
-        # Update info
-        tile_count = len(tile_grid) if tile_grid else 0
-        self.info_label.setText(f"Tiles: {tile_count}")
-
-        if scale_factor != 1.0:
-            self.scale_label.setText(f"Scale: {scale_factor:.3f}")
-        else:
-            self.scale_label.setText("Scale: Not set")
-
-    def _draw_tile_grid(self, pixmap, tile_grid):
-        """Draw tile grid overlay on pixmap."""
-        if not tile_grid:
-            return pixmap
-
+    def _add_page_decorations(self, page_pixmap, page_number, gutter_size):
+        """Add crop marks, gutter lines, and page number to page thumbnail."""
         # Create a copy to draw on
-        result = QPixmap(pixmap)
+        result = QPixmap(page_pixmap)
         painter = QPainter(result)
 
-        # Set up pen for grid lines
-        pen = QPen(QColor(255, 0, 0), 1)  # Red lines for page boundaries
-        painter.setPen(pen)
+        width = result.width()
+        height = result.height()
 
-        # Calculate scale factor for preview
-        preview_width = result.width()
-        preview_height = result.height()
+        # Draw gutter lines (blue) - printable area boundary
+        if gutter_size > 1:  # Only if gutter is visible
+            gutter_pen = QPen(QColor(0, 100, 255), 2)  # Blue for gutter
+            painter.setPen(gutter_pen)
 
-        # Handle both old format (tuples) and new format (dictionaries)
-        if tile_grid:
-            # Check if it's the new page grid format (dictionaries)
-            if isinstance(tile_grid[0], dict):
-                # New page grid format
-                max_x = max(page['x'] + page['width'] for page in tile_grid)
-                max_y = max(page['y'] + page['height'] for page in tile_grid)
+            # Draw gutter rectangle
+            painter.drawRect(
+                int(gutter_size), int(gutter_size),
+                int(width - 2 * gutter_size), int(height - 2 * gutter_size)
+            )
 
-                scale_x = preview_width / max_x if max_x > 0 else 1
-                scale_y = preview_height / max_y if max_y > 0 else 1
+        # Draw crop marks (black) - page boundary indicators
+        crop_pen = QPen(QColor(0, 0, 0), 1)  # Black for crop marks
+        painter.setPen(crop_pen)
 
-                # Draw each page rectangle
-                for i, page in enumerate(tile_grid):
-                    x, y = page['x'], page['y']
-                    width, height = page['width'], page['height']
-                    gutter = page.get('gutter', 0)
+        crop_length = 10
+        margin = 5
 
-                    # Scale to preview coordinates
-                    preview_x = x * scale_x
-                    preview_y = y * scale_y
-                    preview_w = width * scale_x
-                    preview_h = height * scale_y
-                    preview_gutter = gutter * scale_x
+        # Corner crop marks
+        # Top-left
+        painter.drawLine(0, margin, crop_length, margin)
+        painter.drawLine(margin, 0, margin, crop_length)
 
-                    # Draw red page boundary
-                    painter.setPen(QPen(QColor(255, 0, 0), 1))
-                    painter.drawRect(int(preview_x), int(preview_y), int(preview_w), int(preview_h))
+        # Top-right
+        painter.drawLine(width - crop_length, margin, width, margin)
+        painter.drawLine(width - margin, 0, width - margin, crop_length)
 
-                    # Draw blue gutter lines
-                    if preview_gutter > 1:  # Only if gutter is visible
-                        painter.setPen(QPen(QColor(0, 100, 255), 1))
-                        gutter_x = preview_x + preview_gutter
-                        gutter_y = preview_y + preview_gutter
-                        gutter_w = preview_w - (2 * preview_gutter)
-                        gutter_h = preview_h - (2 * preview_gutter)
-                        if gutter_w > 0 and gutter_h > 0:
-                            painter.drawRect(int(gutter_x), int(gutter_y), int(gutter_w), int(gutter_h))
+        # Bottom-left
+        painter.drawLine(0, height - margin, crop_length, height - margin)
+        painter.drawLine(margin, height - crop_length, margin, height)
 
-                    # Draw page number
-                    if preview_w > 15 and preview_h > 15:
-                        painter.setPen(QPen(QColor(0, 0, 0), 1))
-                        center_x = preview_x + preview_w / 2
-                        center_y = preview_y + preview_h / 2
-                        painter.drawText(int(center_x - 5), int(center_y), f"P{i + 1}")
+        # Bottom-right
+        painter.drawLine(width - crop_length, height - margin, width, height - margin)
+        painter.drawLine(width - margin, height - crop_length, width - margin, height)
 
-            else:
-                # Old tile grid format (tuples)
-                max_x = max(x + w for x, y, w, h in tile_grid)
-                max_y = max(y + h for x, y, w, h in tile_grid)
+        # Draw page number in corner
+        font = QFont()
+        font.setPointSize(8)
+        font.setBold(True)
+        painter.setFont(font)
 
-                scale_x = preview_width / max_x if max_x > 0 else 1
-                scale_y = preview_height / max_y if max_y > 0 else 1
+        text_pen = QPen(QColor(255, 255, 255), 1)  # White text
+        painter.setPen(text_pen)
 
-                # Draw each tile rectangle
-                for i, (x, y, width, height) in enumerate(tile_grid):
-                    # Scale to preview coordinates
-                    preview_x = x * scale_x
-                    preview_y = y * scale_y
-                    preview_w = width * scale_x
-                    preview_h = height * scale_y
+        # Draw text with black outline for visibility
+        text_rect = painter.fontMetrics().boundingRect(f"P{page_number}")
+        text_x = width - text_rect.width() - 10
+        text_y = height - 10
 
-                    # Draw tile boundary
-                    painter.drawRect(int(preview_x), int(preview_y), int(preview_w), int(preview_h))
+        # Black outline
+        outline_pen = QPen(QColor(0, 0, 0), 1)
+        painter.setPen(outline_pen)
+        for dx in [-1, 0, 1]:
+            for dy in [-1, 0, 1]:
+                if dx != 0 or dy != 0:
+                    painter.drawText(text_x + dx, text_y + dy, f"P{page_number}")
 
-                    # Draw tile number (smaller for preview)
-                    if preview_w > 20 and preview_h > 20:  # Only if tile is large enough
-                        center_x = preview_x + preview_w / 2
-                        center_y = preview_y + preview_h / 2
-                        painter.drawText(int(center_x - 5), int(center_y), f"{i + 1}")
+        # White text
+        painter.setPen(text_pen)
+        painter.drawText(text_x, text_y, f"P{page_number}")
 
         painter.end()
         return result
+
+
