@@ -1,0 +1,27 @@
+# Build Requirements for OpenTiler Installers
+# Install with: pip install -r requirements-build.txt
+
+# Core application requirements
+-r requirements.txt
+
+# Windows installer building
+pyinstaller>=5.13.0
+cx-Freeze>=6.15.0
+
+# macOS app building (macOS only)
+py2app>=0.28.0; sys_platform == "darwin"
+
+# Cross-platform packaging
+setuptools>=68.0.0
+wheel>=0.41.0
+build>=0.10.0
+
+# Development and testing
+pytest>=7.4.0
+black>=23.0.0
+flake8>=6.0.0
+mypy>=1.5.0
+
+# Documentation building
+sphinx>=7.1.0
+sphinx-rtd-theme>=1.3.0

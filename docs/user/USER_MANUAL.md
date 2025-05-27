@@ -45,10 +45,11 @@ pip install -r requirements.txt
 python main.py
 ```
 
-#### Method 3: Platform-Specific Installers
-- **Windows**: Download `.msi` installer from releases
-- **macOS**: Download `.dmg` package from releases
-- **Linux**: Download `.deb` or `.rpm` package from releases
+#### Method 3: Platform-Specific Installers (Coming Soon)
+- **Windows**: MSI installer (use build scripts in project)
+- **macOS**: DMG package (use build scripts in project)
+- **Linux**: DEB/RPM packages (use build scripts in project)
+- **Note**: See `BUILD_INSTRUCTIONS.md` for creating installers
 
 ### Optional Dependencies
 
@@ -95,7 +96,7 @@ pip install rawpy numpy
 ### Supported Formats
 
 #### Standard Formats
-- **PDF**: Multi-page and single-page documents
+- **PDF**: Multi-page and single-page documents (Multi-page not yet supported)
 - **Images**: PNG, JPEG, TIFF, BMP, GIF, SVG
 - **RAW**: Camera RAW formats (.cr2, .nef, .arw, .dng, .orf, .rw2, .pef, .srw, .raf)
 
