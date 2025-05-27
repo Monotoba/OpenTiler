@@ -37,10 +37,11 @@ class PreviewPanel(QWidget):
         separator.setFrameShadow(QFrame.Sunken)
         layout.addWidget(separator)
 
-        # Scrollable area for page thumbnails
+        # Scrollable area for page thumbnails - maximize vertical space
         self.preview_scroll = QScrollArea()
         self.preview_scroll.setWidgetResizable(True)
-        self.preview_scroll.setMinimumHeight(400)  # Increased from 200 to 400
+        self.preview_scroll.setMinimumHeight(200)  # Minimum height for usability
+        # Set size policy to expand and take maximum available space
         self.preview_scroll.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.preview_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.preview_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -58,16 +59,18 @@ class PreviewPanel(QWidget):
         self.thumbnail_layout.addWidget(self.no_pages_label)
 
         self.preview_scroll.setWidget(self.thumbnail_container)
-        layout.addWidget(self.preview_scroll)
 
-        # Info labels
+        # Add scroll area with stretch factor to take maximum space
+        layout.addWidget(self.preview_scroll, 1)  # Stretch factor 1 = take all available space
+
+        # Info labels at bottom (no stretch)
         self.info_label = QLabel("Pages: 0")
-        layout.addWidget(self.info_label)
+        layout.addWidget(self.info_label, 0)  # No stretch = fixed size
 
         self.scale_label = QLabel("Scale: Not set")
-        layout.addWidget(self.scale_label)
+        layout.addWidget(self.scale_label, 0)  # No stretch = fixed size
 
-        layout.addStretch()
+        # Remove the addStretch() call - we want the scroll area to take all space
         self.setLayout(layout)
 
     def update_preview(self, pixmap, page_grid=None, scale_factor=1.0, scale_info=None, document_info=None):
