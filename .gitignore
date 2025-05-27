@@ -128,17 +128,42 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# IDE
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+.env/
+
+# IDE and editors
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+*.sublime-project
+*.sublime-workspace
+.atom/
+.brackets.json
+.editorconfig
 
 # OS
 .DS_Store
 Thumbs.db
+Desktop.ini
 
 # Application specific
 *.ui~
 *.qrc~
+
+# Plans and user data
+plans/
+*.plan
+*.dwg
+*.dxf
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
