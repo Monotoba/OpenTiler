@@ -46,24 +46,24 @@ python main.py
 ```
 
 #### Method 3: Platform-Specific Installers
-- **Windows**: MSI installer (use `create_windows_exe.py`)
-- **macOS**: DMG package (use `create_macos_app.py`)
-- **Linux**: DEB/RPM packages (use build scripts in project)
+- **Windows**: MSI installer (use `installers/create_windows_exe.py`)
+- **macOS**: DMG package (use `installers/create_macos_app.py`)
+- **Linux**: DEB/RPM packages (use build scripts in installers/ folder)
 - **Note**: See `BUILD_INSTRUCTIONS.md` for creating installers
 
 #### Method 4: Platform Installation Scripts
 ```bash
 # macOS: Automated installation from source
-./install_macos.sh
+./installers/install_macos.sh
 
 # Linux: Automated installation from source
-./install_linux.sh
+./installers/install_linux.sh
 ```
 
 #### Method 5: Linux Packages
 ```bash
 # Create DEB and RPM packages
-python create_linux_packages.py --format both
+python installers/create_linux_packages.py --format both
 
 # Install DEB package
 sudo dpkg -i opentiler_*.deb && sudo apt-get install -f

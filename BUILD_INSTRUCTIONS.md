@@ -9,7 +9,7 @@ This document provides instructions for building platform-specific installers fo
 ### All Platforms
 ```bash
 # Install build dependencies
-pip install -r requirements-build.txt
+pip install -r installers/requirements-build.txt
 ```
 
 ### Windows Additional Requirements
@@ -27,40 +27,40 @@ pip install -r requirements-build.txt
 ### Windows Executable (Easiest)
 ```bash
 # Simple method - creates standalone .exe and installer
-python create_windows_exe.py
+python installers/create_windows_exe.py
 ```
 
 ### Windows Installer (Advanced)
 ```bash
 # Advanced method - creates batch installer and portable ZIP
-python build_windows_installer.py
+python installers/build_windows_installer.py
 
 # Professional MSI using cx_Freeze (requires Windows)
-python build_installer.py --platform windows --method cx_freeze
+python installers/build_installer.py --platform windows --method cx_freeze
 ```
 
 ### macOS Application (Recommended)
 ```bash
 # Simple method - creates .app bundle and DMG
-python create_macos_app.py
+python installers/create_macos_app.py
 ```
 
 ### macOS Installation from Source
 ```bash
 # Install from source with full setup
-./install_macos.sh
+./installers/install_macos.sh
 ```
 
 ### Linux Packages (Recommended)
 ```bash
 # Create DEB and RPM packages
-python create_linux_packages.py --format both
+python installers/create_linux_packages.py --format both
 ```
 
 ### Linux Installation from Source
 ```bash
 # Install from source with full setup
-./install_linux.sh
+./installers/install_linux.sh
 ```
 
 ## Manual Build Process
@@ -73,13 +73,13 @@ python create_linux_packages.py --format both
 pip install cx_Freeze
 
 # Run the advanced builder
-python build_installer.py --platform windows --method cx_freeze
+python installers/build_installer.py --platform windows --method cx_freeze
 ```
 
 #### Method B: Using PyInstaller + NSIS
 ```bash
 # Step 1: Build executable
-python build_windows_installer.py
+python installers/build_windows_installer.py
 
 # Step 2: Install NSIS from https://nsis.sourceforge.io/
 
@@ -91,7 +91,7 @@ makensis installer.nsi
 #### Method C: Simple Batch Installer
 ```bash
 # Creates install.bat and portable ZIP
-python build_windows_installer.py
+python installers/build_windows_installer.py
 ```
 
 ### 2. macOS Application and DMG Package
@@ -102,7 +102,7 @@ python build_windows_installer.py
 pip install py2app pyinstaller dmgbuild
 
 # Build app and DMG
-python create_macos_app.py
+python installers/create_macos_app.py
 ```
 
 #### Method B: Manual py2app Build
@@ -120,7 +120,7 @@ hdiutil create -volname "OpenTiler" -srcfolder dist/OpenTiler.app -ov -format UD
 #### Method C: Installation from Source
 ```bash
 # Install from source with full environment setup
-./install_macos.sh
+./installers/install_macos.sh
 ```
 
 ### 3. Linux Packages
