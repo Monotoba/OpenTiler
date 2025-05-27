@@ -247,37 +247,45 @@ class PreviewPanel(QWidget):
             color.setAlpha(alpha)
             text_pen = QPen(color, 1)
 
-            # Calculate text position
+            # Calculate text position within printable area (inside gutters)
             text = f"P{page_number}"
             text_rect = painter.fontMetrics().boundingRect(text)
-            margin = 5
+            margin = 3  # Smaller margin for thumbnails
+
+            # Define printable area (inside gutters)
+            printable_x = gutter_size
+            printable_y = gutter_size
+            printable_width = width - (2 * gutter_size)
+            printable_height = height - (2 * gutter_size)
 
             if position == "upper-left":
-                text_x = margin
-                text_y = margin + text_rect.height()
+                text_x = printable_x + margin
+                text_y = printable_y + margin + text_rect.height()
             elif position == "upper-right":
-                text_x = width - text_rect.width() - margin
-                text_y = margin + text_rect.height()
+                text_x = printable_x + printable_width - text_rect.width() - margin
+                text_y = printable_y + margin + text_rect.height()
             elif position == "bottom-left":
-                text_x = margin
-                text_y = height - margin
+                text_x = printable_x + margin
+                text_y = printable_y + printable_height - margin
             elif position == "bottom-right":
-                text_x = width - text_rect.width() - margin
-                text_y = height - margin
+                text_x = printable_x + printable_width - text_rect.width() - margin
+                text_y = printable_y + printable_height - margin
             else:  # center-page
-                text_x = (width - text_rect.width()) // 2
-                text_y = (height + text_rect.height()) // 2
+                text_x = printable_x + (printable_width - text_rect.width()) // 2
+                text_y = printable_y + (printable_height + text_rect.height()) // 2
 
-            # Draw text with outline for visibility
-            outline_pen = QPen(QColor(0, 0, 0), 1)
-            painter.setPen(outline_pen)
-            for dx in [-1, 0, 1]:
-                for dy in [-1, 0, 1]:
-                    if dx != 0 or dy != 0:
-                        painter.drawText(int(text_x + dx), int(text_y + dy), text)
+            # Draw text with outline for visibility (if alpha is high enough)
+            if alpha > 128:  # Only draw outline if text is reasonably opaque
+                outline_color = QColor(0, 0, 0)
+                outline_color.setAlpha(min(255, alpha + 50))  # Slightly more opaque outline
+                painter.setPen(QPen(outline_color, 1))
+                for dx in [-1, 0, 1]:
+                    for dy in [-1, 0, 1]:
+                        if dx != 0 or dy != 0:
+                            painter.drawText(int(text_x + dx), int(text_y + dy), text)
 
-            # Draw main text
-            painter.setPen(text_pen)
+            # Draw main text with alpha
+            painter.setPen(QPen(color, 1))
             painter.drawText(int(text_x), int(text_y), text)
 
         painter.end()

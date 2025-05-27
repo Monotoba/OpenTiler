@@ -16,34 +16,34 @@ from ..settings.config import config
 
 class SettingsDialog(QDialog):
     """Dialog for configuring application settings."""
-    
+
     # Signal emitted when settings change
     settings_changed = Signal()
-    
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Settings")
         self.setModal(True)
         self.resize(500, 600)
-        
+
         self.init_ui()
         self.load_settings()
-        
+
     def init_ui(self):
         """Initialize the user interface."""
         layout = QVBoxLayout()
-        
+
         # Create tab widget
         self.tab_widget = QTabWidget()
-        
+
         # Add tabs
         self.tab_widget.addTab(self.create_general_tab(), "General")
         self.tab_widget.addTab(self.create_tiling_tab(), "Tiling")
         self.tab_widget.addTab(self.create_display_tab(), "Display")
         self.tab_widget.addTab(self.create_page_indicators_tab(), "Page Indicators")
-        
+
         layout.addWidget(self.tab_widget)
-        
+
         # Button box
         button_box = QDialogButtonBox(
             QDialogButtonBox.Ok | QDialogButtonBox.Cancel | QDialogButtonBox.Apply
@@ -51,124 +51,129 @@ class SettingsDialog(QDialog):
         button_box.accepted.connect(self.accept_settings)
         button_box.rejected.connect(self.reject)
         button_box.button(QDialogButtonBox.Apply).clicked.connect(self.apply_settings)
-        
+
         layout.addWidget(button_box)
         self.setLayout(layout)
-        
+
     def create_general_tab(self):
         """Create the general settings tab."""
         widget = QWidget()
         layout = QFormLayout()
-        
+
         # Default units
         self.units_combo = QComboBox()
         self.units_combo.addItems(["mm", "inches"])
         layout.addRow("Default Units:", self.units_combo)
-        
+
         # Default DPI
         self.dpi_spin = QSpinBox()
         self.dpi_spin.setRange(72, 600)
         self.dpi_spin.setSuffix(" dpi")
         layout.addRow("Default DPI:", self.dpi_spin)
-        
+
         # Default page size
         self.page_size_combo = QComboBox()
         self.page_size_combo.addItems(["A4", "A3", "A2", "A1", "A0", "Letter", "Legal", "Tabloid"])
         layout.addRow("Default Page Size:", self.page_size_combo)
-        
+
         widget.setLayout(layout)
         return widget
-        
+
     def create_tiling_tab(self):
         """Create the tiling settings tab."""
         widget = QWidget()
         layout = QFormLayout()
-        
+
         # Gutter size
         self.gutter_size_spin = QDoubleSpinBox()
         self.gutter_size_spin.setRange(0.0, 50.0)
         self.gutter_size_spin.setSuffix(" mm")
         self.gutter_size_spin.setDecimals(1)
         layout.addRow("Gutter Size:", self.gutter_size_spin)
-        
+
+        # Page orientation
+        self.orientation_combo = QComboBox()
+        self.orientation_combo.addItems(["auto", "landscape", "portrait"])
+        layout.addRow("Page Orientation:", self.orientation_combo)
+
         widget.setLayout(layout)
         return widget
-        
+
     def create_display_tab(self):
         """Create the display settings tab."""
         widget = QWidget()
         layout = QVBoxLayout()
-        
+
         # Gutter lines group
         gutter_group = QGroupBox("Gutter Lines (Blue)")
         gutter_layout = QFormLayout()
-        
+
         self.gutter_display_check = QCheckBox("Show on screen")
         gutter_layout.addRow(self.gutter_display_check)
-        
+
         self.gutter_print_check = QCheckBox("Include when printing")
         gutter_layout.addRow(self.gutter_print_check)
-        
+
         gutter_group.setLayout(gutter_layout)
         layout.addWidget(gutter_group)
-        
+
         # Crop marks group
         crop_group = QGroupBox("Crop Marks")
         crop_layout = QFormLayout()
-        
+
         self.crop_display_check = QCheckBox("Show on screen")
         crop_layout.addRow(self.crop_display_check)
-        
+
         self.crop_print_check = QCheckBox("Include when printing")
         crop_layout.addRow(self.crop_print_check)
-        
+
         crop_group.setLayout(crop_layout)
         layout.addWidget(crop_group)
-        
+
         layout.addStretch()
         widget.setLayout(layout)
         return widget
-        
+
     def create_page_indicators_tab(self):
         """Create the page indicators settings tab."""
         widget = QWidget()
         layout = QVBoxLayout()
-        
+
         # Display options
         display_group = QGroupBox("Display Options")
         display_layout = QFormLayout()
-        
+
         self.indicator_display_check = QCheckBox("Show on screen")
         display_layout.addRow(self.indicator_display_check)
-        
+
         self.indicator_print_check = QCheckBox("Include when printing")
         display_layout.addRow(self.indicator_print_check)
-        
+
         display_group.setLayout(display_layout)
         layout.addWidget(display_group)
-        
+
         # Position and style
         style_group = QGroupBox("Position and Style")
         style_layout = QFormLayout()
-        
+
         # Position
         self.position_combo = QComboBox()
         self.position_combo.addItems([
             "upper-left", "upper-right", "bottom-left", "bottom-right", "center-page"
         ])
         style_layout.addRow("Position:", self.position_combo)
-        
+
         # Font size
         self.font_size_spin = QSpinBox()
         self.font_size_spin.setRange(6, 72)
         self.font_size_spin.setSuffix(" pt")
         style_layout.addRow("Font Size:", self.font_size_spin)
-        
+
         # Font style
         self.font_style_combo = QComboBox()
         self.font_style_combo.addItems(["normal", "bold", "italic"])
         style_layout.addRow("Font Style:", self.font_style_combo)
-        
+
         # Font color
         color_layout = QHBoxLayout()
         self.color_button = QPushButton()
@@ -177,7 +182,7 @@ class SettingsDialog(QDialog):
         color_layout.addWidget(self.color_button)
         color_layout.addStretch()
         style_layout.addRow("Font Color:", color_layout)
-        
+
         # Alpha (transparency)
         alpha_layout = QHBoxLayout()
         self.alpha_slider = QSlider(Qt.Horizontal)
@@ -187,85 +192,87 @@ class SettingsDialog(QDialog):
         alpha_layout.addWidget(self.alpha_slider)
         alpha_layout.addWidget(self.alpha_label)
         style_layout.addRow("Opacity:", alpha_layout)
-        
+
         style_group.setLayout(style_layout)
         layout.addWidget(style_group)
-        
+
         layout.addStretch()
         widget.setLayout(layout)
         return widget
-        
+
     def choose_color(self):
         """Open color chooser dialog."""
         color = QColorDialog.getColor(self.current_color, self, "Choose Font Color")
         if color.isValid():
             self.current_color = color
             self.update_color_button()
-            
+
     def update_color_button(self):
         """Update the color button appearance."""
         self.color_button.setStyleSheet(
             f"background-color: {self.current_color.name()}; border: 1px solid black;"
         )
-        
+
     def load_settings(self):
         """Load current settings into the dialog."""
         # General settings
         self.units_combo.setCurrentText(config.get_default_units())
         self.dpi_spin.setValue(config.get_default_dpi())
         self.page_size_combo.setCurrentText(config.get_default_page_size())
-        
+
         # Tiling settings
         self.gutter_size_spin.setValue(config.get_gutter_size_mm())
-        
+        self.orientation_combo.setCurrentText(config.get_page_orientation())
+
         # Display settings
         self.gutter_display_check.setChecked(config.get_gutter_lines_display())
         self.gutter_print_check.setChecked(config.get_gutter_lines_print())
         self.crop_display_check.setChecked(config.get_crop_marks_display())
         self.crop_print_check.setChecked(config.get_crop_marks_print())
-        
+
         # Page indicator settings
         self.indicator_display_check.setChecked(config.get_page_indicator_display())
         self.indicator_print_check.setChecked(config.get_page_indicator_print())
         self.position_combo.setCurrentText(config.get_page_indicator_position())
         self.font_size_spin.setValue(config.get_page_indicator_font_size())
         self.font_style_combo.setCurrentText(config.get_page_indicator_font_style())
-        
+
         # Color
         color_hex = config.get_page_indicator_font_color()
         self.current_color = QColor(color_hex)
         self.update_color_button()
-        
+
         # Alpha
         self.alpha_slider.setValue(config.get_page_indicator_alpha())
-        
+
     def apply_settings(self):
         """Apply settings without closing dialog."""
         self.save_settings()
         self.settings_changed.emit()
-        
+
     def accept_settings(self):
         """Accept and apply settings."""
         self.save_settings()
         self.settings_changed.emit()
         self.accept()
-        
+
     def save_settings(self):
         """Save settings to configuration."""
         # General settings
         config.set_default_units(self.units_combo.currentText())
         config.set_default_dpi(self.dpi_spin.value())
         config.set_default_page_size(self.page_size_combo.currentText())
-        
+
         # Tiling settings
         config.set_gutter_size_mm(self.gutter_size_spin.value())
-        
+        config.set_page_orientation(self.orientation_combo.currentText())
+
         # Display settings
         config.set_gutter_lines_display(self.gutter_display_check.isChecked())
         config.set_gutter_lines_print(self.gutter_print_check.isChecked())
         config.set_crop_marks_display(self.crop_display_check.isChecked())
         config.set_crop_marks_print(self.crop_print_check.isChecked())
-        
+
         # Page indicator settings
         config.set_page_indicator_display(self.indicator_display_check.isChecked())
         config.set_page_indicator_print(self.indicator_print_check.isChecked())
@@ -274,6 +281,6 @@ class SettingsDialog(QDialog):
         config.set_page_indicator_font_style(self.font_style_combo.currentText())
         config.set_page_indicator_font_color(self.current_color.name())
         config.set_page_indicator_alpha(self.alpha_slider.value())
-        
+
         # Sync to disk
         config.sync()

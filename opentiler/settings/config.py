@@ -43,6 +43,9 @@ class Config:
         if not self.settings.contains("gutter_size_mm"):
             self.settings.setValue("gutter_size_mm", 10.0)
 
+        if not self.settings.contains("page_orientation"):
+            self.settings.setValue("page_orientation", "auto")  # auto, landscape, portrait
+
         # Page indicator settings
         if not self.settings.contains("page_indicator_position"):
             self.settings.setValue("page_indicator_position", "bottom-right")
@@ -155,6 +158,14 @@ class Config:
     def set_gutter_size_mm(self, size):
         """Set gutter size in millimeters."""
         self.set("gutter_size_mm", float(size))
+
+    def get_page_orientation(self):
+        """Get page orientation preference."""
+        return self.get("page_orientation", "auto")
+
+    def set_page_orientation(self, orientation):
+        """Set page orientation preference."""
+        self.set("page_orientation", orientation)
 
     # Page indicator settings
     def get_page_indicator_position(self):

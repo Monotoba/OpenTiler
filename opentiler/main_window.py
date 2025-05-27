@@ -185,13 +185,12 @@ class MainWindow(QMainWindow):
             # Connect scaling dialog signals
             self.scaling_dialog.scale_applied.connect(self.document_viewer.set_scale)
             self.scaling_dialog.scale_applied.connect(self.on_scale_applied)
+            # Connect point selection from viewer to dialog
+            self.document_viewer.point_selected.connect(self.scaling_dialog.on_point_selected)
 
         # Enable point selection mode in the document viewer
         self.document_viewer.set_point_selection_mode(True)
         self.scaling_dialog.show()
-
-        # Connect point selection from viewer to dialog
-        self.document_viewer.point_selected.connect(self.scaling_dialog.on_point_selected)
 
     def on_scale_applied(self, scale_factor):
         """Handle when scale is applied - generate tiles and update preview."""
@@ -206,6 +205,18 @@ class MainWindow(QMainWindow):
         # Get page size from config (default A4)
         page_size = self.config.get_default_page_size()
         page_width_mm, page_height_mm = get_page_size_mm(page_size)
+
+        # Apply orientation preference
+        orientation = self.config.get_page_orientation()
+        if orientation == "landscape":
+            # Force landscape (width > height)
+            if page_width_mm < page_height_mm:
+                page_width_mm, page_height_mm = page_height_mm, page_width_mm
+        elif orientation == "portrait":
+            # Force portrait (height > width)
+            if page_height_mm < page_width_mm:
+                page_width_mm, page_height_mm = page_height_mm, page_width_mm
+        # "auto" uses the default page size as-is
 
         # Convert page size to pixels using document scale
         # scale_factor is mm/pixel, so to get pixels from mm: pixels = mm / scale_factor
