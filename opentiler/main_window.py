@@ -171,7 +171,15 @@ class MainWindow(QMainWindow):
         """Show the scaling dialog."""
         if not self.scaling_dialog:
             self.scaling_dialog = ScalingDialog(self)
+            # Connect scaling dialog signals
+            self.scaling_dialog.scale_applied.connect(self.document_viewer.set_scale)
+
+        # Enable point selection mode in the document viewer
+        self.document_viewer.set_point_selection_mode(True)
         self.scaling_dialog.show()
+
+        # Connect point selection from viewer to dialog
+        self.document_viewer.point_selected.connect(self.scaling_dialog.on_point_selected)
 
     def show_unit_converter(self):
         """Show the unit converter dialog."""
