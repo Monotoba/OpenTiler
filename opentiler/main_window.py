@@ -151,12 +151,22 @@ class MainWindow(QMainWindow):
         toolbar.setIconSize(QSize(24, 24))  # Set consistent icon size
         self.addToolBar(toolbar)
 
-        # Get standard icon theme
+        # Get standard icon theme for fallback
         style = QApplication.style()
 
-        # Open file action
+        # Helper function to load custom icon with fallback
+        def load_icon(icon_name, fallback_standard_icon):
+            icon_path = os.path.join(os.path.dirname(__file__), "assets", f"{icon_name}.png")
+            if os.path.exists(icon_path):
+                return QIcon(icon_path)
+            else:
+                return style.standardIcon(fallback_standard_icon)
+
+        # NEW ORDER: Open, Export, Print, Rotate Left, Rotate Right, Fit to Window, Zoom In, Zoom Out, Settings, Scale tool
+
+        # 1. Open file action
         open_action = QAction("Open", self)
-        open_action.setIcon(style.standardIcon(style.StandardPixmap.SP_DialogOpenButton))
+        open_action.setIcon(style.standardIcon(style.StandardPixmap.SP_DialogOpenButton))  # Use system icon for Open
         open_action.setToolTip("Open document (Ctrl+O)")
         open_action.setShortcut(QKeySequence.Open)
         open_action.triggered.connect(self.open_file)
@@ -164,77 +174,81 @@ class MainWindow(QMainWindow):
 
         toolbar.addSeparator()
 
-        # Zoom actions
-        zoom_in_action = QAction("Zoom In", self)
-        zoom_in_action.setIcon(style.standardIcon(style.StandardPixmap.SP_FileDialogDetailedView))  # Magnifying glass-like
-        zoom_in_action.setToolTip("Zoom in (+)")
-        zoom_in_action.setShortcut(QKeySequence.ZoomIn)
-        zoom_in_action.triggered.connect(self.document_viewer.zoom_in)
-        toolbar.addAction(zoom_in_action)
+        # 2. Export action
+        export_action = QAction("Export", self)
+        export_action.setIcon(load_icon("export", style.StandardPixmap.SP_DialogSaveButton))
+        export_action.setToolTip("Export document as tiles (Ctrl+E)")
+        export_action.setShortcut("Ctrl+E")
+        export_action.triggered.connect(self.export_document)
+        toolbar.addAction(export_action)
 
-        zoom_out_action = QAction("Zoom Out", self)
-        zoom_out_action.setIcon(style.standardIcon(style.StandardPixmap.SP_FileDialogListView))  # Smaller view icon
-        zoom_out_action.setToolTip("Zoom out (-)")
-        zoom_out_action.setShortcut(QKeySequence.ZoomOut)
-        zoom_out_action.triggered.connect(self.document_viewer.zoom_out)
-        toolbar.addAction(zoom_out_action)
-
-        zoom_fit_action = QAction("Fit to Window", self)
-        zoom_fit_action.setIcon(style.standardIcon(style.StandardPixmap.SP_ComputerIcon))
-        zoom_fit_action.setToolTip("Fit document to window (Ctrl+0)")
-        zoom_fit_action.setShortcut("Ctrl+0")
-        zoom_fit_action.triggered.connect(self.document_viewer.zoom_fit)
-        toolbar.addAction(zoom_fit_action)
+        # 3. Print action
+        print_action = QAction("Print", self)
+        print_action.setIcon(load_icon("printer", style.StandardPixmap.SP_FileDialogDetailedView))
+        print_action.setToolTip("Print tiles directly (Ctrl+P)")
+        print_action.setShortcut("Ctrl+P")
+        print_action.triggered.connect(self.print_tiles)
+        toolbar.addAction(print_action)
 
         toolbar.addSeparator()
 
-        # Scaling tool action
-        scale_action = QAction("Scale Tool", self)
-        scale_action.setIcon(style.standardIcon(style.StandardPixmap.SP_FileDialogInfoView))  # Ruler/measurement-like
-        scale_action.setToolTip("Open scaling tool to set real-world measurements")
-        scale_action.triggered.connect(self.show_scaling_dialog)
-        toolbar.addAction(scale_action)
-
-        toolbar.addSeparator()
-
-        # Rotation actions
+        # 4. Rotate Left action
         rotate_left_action = QAction("Rotate Left", self)
-        rotate_left_action.setIcon(style.standardIcon(style.StandardPixmap.SP_BrowserReload))  # Circular arrow-like
+        rotate_left_action.setIcon(load_icon("rotate-left", style.StandardPixmap.SP_BrowserReload))
         rotate_left_action.setToolTip("Rotate document 90° counterclockwise")
         rotate_left_action.triggered.connect(self.document_viewer.rotate_counterclockwise)
         toolbar.addAction(rotate_left_action)
 
+        # 5. Rotate Right action
         rotate_right_action = QAction("Rotate Right", self)
-        rotate_right_action.setIcon(style.standardIcon(style.StandardPixmap.SP_BrowserReload))  # Circular arrow-like
+        rotate_right_action.setIcon(load_icon("rotate-right", style.StandardPixmap.SP_BrowserReload))
         rotate_right_action.setToolTip("Rotate document 90° clockwise")
         rotate_right_action.triggered.connect(self.document_viewer.rotate_clockwise)
         toolbar.addAction(rotate_right_action)
 
         toolbar.addSeparator()
 
-        # Export action
-        export_action = QAction("Export", self)
-        export_action.setIcon(style.standardIcon(style.StandardPixmap.SP_DialogSaveButton))
-        export_action.setToolTip("Export document as tiles (Ctrl+E)")
-        export_action.setShortcut("Ctrl+E")
-        export_action.triggered.connect(self.export_document)
-        toolbar.addAction(export_action)
+        # 6. Fit to Window action
+        fit_action = QAction("Fit to Window", self)
+        fit_action.setIcon(load_icon("fit-to-window", style.StandardPixmap.SP_ComputerIcon))
+        fit_action.setToolTip("Fit document to window (Ctrl+0)")
+        fit_action.setShortcut("Ctrl+0")
+        fit_action.triggered.connect(self.document_viewer.zoom_fit)
+        toolbar.addAction(fit_action)
 
-        # Print action
-        print_action = QAction("Print", self)
-        print_action.setIcon(style.standardIcon(style.StandardPixmap.SP_FileDialogDetailedView))  # Use detailed view as print icon
-        print_action.setToolTip("Print tiles directly (Ctrl+P)")
-        print_action.setShortcut("Ctrl+P")
-        print_action.triggered.connect(self.print_tiles)
-        toolbar.addAction(print_action)
+        # 7. Zoom In action
+        zoom_in_action = QAction("Zoom In", self)
+        zoom_in_action.setIcon(load_icon("zoom-in", style.StandardPixmap.SP_FileDialogDetailedView))
+        zoom_in_action.setToolTip("Zoom in (+)")
+        zoom_in_action.setShortcut(QKeySequence.ZoomIn)
+        zoom_in_action.triggered.connect(self.document_viewer.zoom_in)
+        toolbar.addAction(zoom_in_action)
 
-        # Settings action
+        # 8. Zoom Out action
+        zoom_out_action = QAction("Zoom Out", self)
+        zoom_out_action.setIcon(load_icon("zoom-out", style.StandardPixmap.SP_FileDialogListView))
+        zoom_out_action.setToolTip("Zoom out (-)")
+        zoom_out_action.setShortcut(QKeySequence.ZoomOut)
+        zoom_out_action.triggered.connect(self.document_viewer.zoom_out)
+        toolbar.addAction(zoom_out_action)
+
+        toolbar.addSeparator()
+
+        # 9. Settings action (2nd from right end)
         settings_action = QAction("Settings", self)
-        settings_action.setIcon(style.standardIcon(style.StandardPixmap.SP_FileDialogDetailedView))  # Best available gear-like icon
+        settings_action.setIcon(load_icon("settings", style.StandardPixmap.SP_FileDialogDetailedView))
         settings_action.setToolTip("Open application settings (Ctrl+,)")
         settings_action.setShortcut("Ctrl+,")
         settings_action.triggered.connect(self.show_settings)
         toolbar.addAction(settings_action)
+
+        # 10. Scale tool action (rightmost - most used)
+        scale_action = QAction("Scale Tool", self)
+        scale_action.setIcon(load_icon("scale-tool", style.StandardPixmap.SP_FileDialogInfoView))
+        scale_action.setToolTip("Open scaling tool to set real-world measurements (Ctrl+S)")
+        scale_action.setShortcut("Ctrl+S")
+        scale_action.triggered.connect(self.show_scaling_dialog)
+        toolbar.addAction(scale_action)
 
     def create_status_bar(self):
         """Create status bar."""
