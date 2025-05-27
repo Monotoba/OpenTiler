@@ -51,10 +51,25 @@ python main.py
 - **Linux**: DEB/RPM packages (use build scripts in project)
 - **Note**: See `BUILD_INSTRUCTIONS.md` for creating installers
 
-#### Method 4: macOS Installation Script
+#### Method 4: Platform Installation Scripts
 ```bash
-# Automated macOS installation from source
+# macOS: Automated installation from source
 ./install_macos.sh
+
+# Linux: Automated installation from source
+./install_linux.sh
+```
+
+#### Method 5: Linux Packages
+```bash
+# Create DEB and RPM packages
+python create_linux_packages.py --format both
+
+# Install DEB package
+sudo dpkg -i opentiler_*.deb && sudo apt-get install -f
+
+# Install RPM package
+sudo rpm -i opentiler-*.rpm
 ```
 
 ### Optional Dependencies

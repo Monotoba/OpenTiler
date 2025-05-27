@@ -51,9 +51,16 @@ python create_macos_app.py
 ./install_macos.sh
 ```
 
-### Linux Packages
+### Linux Packages (Recommended)
 ```bash
-python build_installer.py --platform linux
+# Create DEB and RPM packages
+python create_linux_packages.py --format both
+```
+
+### Linux Installation from Source
+```bash
+# Install from source with full setup
+./install_linux.sh
 ```
 
 ## Manual Build Process
