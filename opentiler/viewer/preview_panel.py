@@ -9,6 +9,8 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QRect
 from PySide6.QtGui import QPixmap, QPainter, QPen, QColor, QFont
 
+from ..dialogs.page_viewer_dialog import ClickablePageThumbnail
+
 
 class PreviewPanel(QWidget):
     """Panel for showing real-time tile preview."""
@@ -154,10 +156,7 @@ class PreviewPanel(QWidget):
         page_label.setStyleSheet("font-weight: bold; color: #333;")
         layout.addWidget(page_label)
 
-        # Thumbnail image
-        thumbnail_label = QLabel()
-        thumbnail_label.setAlignment(Qt.AlignCenter)
-
+        # Clickable thumbnail image
         # Scale thumbnail to fit preview area while maintaining aspect ratio
         max_width = 150
         max_height = 200
@@ -167,7 +166,16 @@ class PreviewPanel(QWidget):
             Qt.SmoothTransformation
         )
 
+        # Create clickable thumbnail that opens in floating viewer
+        thumbnail_label = ClickablePageThumbnail(
+            page_pixmap,  # Full-size page for viewer
+            page_number,
+            page,  # Page info dict
+            self
+        )
         thumbnail_label.setPixmap(scaled_thumbnail)
+        thumbnail_label.setAlignment(Qt.AlignCenter)
+        thumbnail_label.setToolTip(f"Click to view Page {page_number} in detail")
         layout.addWidget(thumbnail_label)
 
         return thumbnail_widget

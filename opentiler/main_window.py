@@ -266,13 +266,11 @@ class MainWindow(QMainWindow):
             x = 0
             col = 0
             while x < doc_width:
-                # Calculate actual page dimensions
-                actual_width = min(page_width, doc_width - x)
-                actual_height = min(page_height, doc_height - y)
-
+                # Pages maintain full dimensions even if they extend beyond document
+                # This ensures consistent page sizes for printing
                 pages.append({
                     'x': x, 'y': y,
-                    'width': actual_width, 'height': actual_height,
+                    'width': page_width, 'height': page_height,
                     'row': row, 'col': col,
                     'gutter': gutter_size
                 })
