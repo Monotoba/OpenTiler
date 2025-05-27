@@ -214,7 +214,7 @@ class MainWindow(QMainWindow):
             return
 
         # Calculate tile grid with gutter support
-        gutter_mm = 10.0  # 10mm gutter
+        gutter_mm = self.config.get_gutter_size_mm()
         gutter_pixels = gutter_mm / scale_factor
 
         # Generate page grid (pages can overlap where gutters meet)

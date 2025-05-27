@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
     QMessageBox, QSizePolicy
 )
 from PySide6.QtCore import Qt, QSize, Signal, QPoint, QEvent
-from PySide6.QtGui import QPixmap, QPainter, QPen, QColor, QCursor
+from PySide6.QtGui import QPixmap, QPainter, QPen, QColor, QCursor, QFont
 
 try:
     import fitz  # PyMuPDF
@@ -387,6 +387,9 @@ class DocumentViewer(QWidget):
         if not self.page_grid:
             return pixmap
 
+        # Import config here to avoid circular imports
+        from ..settings.config import config
+
         # Create a copy to draw on
         result = QPixmap(pixmap)
         painter = QPainter(result)
@@ -399,32 +402,80 @@ class DocumentViewer(QWidget):
             height = page['height'] * self.zoom_factor
             gutter = page['gutter'] * self.zoom_factor
 
-            # Draw red page boundary (actual paper edge)
+            # Draw red page boundary (actual paper edge) - always shown
             page_pen = QPen(QColor(255, 0, 0), 2)  # Red lines for page edges
             painter.setPen(page_pen)
             painter.drawRect(int(x), int(y), int(width), int(height))
 
-            # Draw blue gutter lines (printable area boundary)
-            gutter_pen = QPen(QColor(0, 100, 255), 1)  # Blue lines for gutters
-            painter.setPen(gutter_pen)
+            # Draw blue gutter lines (printable area boundary) - if enabled
+            if config.get_crop_marks_display() and gutter > 1:
+                gutter_pen = QPen(QColor(0, 100, 255), 1)  # Blue lines for gutters
+                painter.setPen(gutter_pen)
 
-            # Inner rectangle for printable area
-            gutter_x = x + gutter
-            gutter_y = y + gutter
-            gutter_width = width - (2 * gutter)
-            gutter_height = height - (2 * gutter)
+                # Inner rectangle for printable area
+                gutter_x = x + gutter
+                gutter_y = y + gutter
+                gutter_width = width - (2 * gutter)
+                gutter_height = height - (2 * gutter)
 
-            if gutter_width > 0 and gutter_height > 0:
-                painter.drawRect(int(gutter_x), int(gutter_y), int(gutter_width), int(gutter_height))
+                if gutter_width > 0 and gutter_height > 0:
+                    painter.drawRect(int(gutter_x), int(gutter_y), int(gutter_width), int(gutter_height))
 
-            # Draw page number in center
-            center_x = x + width / 2
-            center_y = y + height / 2
+            # Draw page number based on settings
+            if config.get_page_indicator_display():
+                # Get settings
+                font_size = config.get_page_indicator_font_size()
+                font_color = config.get_page_indicator_font_color()
+                font_style = config.get_page_indicator_font_style()
+                alpha = config.get_page_indicator_alpha()
+                position = config.get_page_indicator_position()
 
-            # Use white text with black outline for visibility
-            text_pen = QPen(QColor(255, 255, 255), 1)
-            painter.setPen(text_pen)
-            painter.drawText(int(center_x - 15), int(center_y), f"P{i + 1}")
+                # Set up font
+                font = QFont()
+                font.setPointSize(font_size)
+                if font_style == "bold":
+                    font.setBold(True)
+                elif font_style == "italic":
+                    font.setItalic(True)
+                painter.setFont(font)
+
+                # Set up color with alpha
+                color = QColor(font_color)
+                color.setAlpha(alpha)
+                text_pen = QPen(color, 1)
+
+                # Calculate text position
+                text = f"P{i + 1}"
+                text_rect = painter.fontMetrics().boundingRect(text)
+                margin = 10
+
+                if position == "upper-left":
+                    text_x = x + margin
+                    text_y = y + margin + text_rect.height()
+                elif position == "upper-right":
+                    text_x = x + width - text_rect.width() - margin
+                    text_y = y + margin + text_rect.height()
+                elif position == "bottom-left":
+                    text_x = x + margin
+                    text_y = y + height - margin
+                elif position == "bottom-right":
+                    text_x = x + width - text_rect.width() - margin
+                    text_y = y + height - margin
+                else:  # center-page
+                    text_x = x + (width - text_rect.width()) / 2
+                    text_y = y + (height + text_rect.height()) / 2
+
+                # Draw text with outline for visibility
+                outline_pen = QPen(QColor(0, 0, 0), 1)
+                painter.setPen(outline_pen)
+                for dx in [-1, 0, 1]:
+                    for dy in [-1, 0, 1]:
+                        if dx != 0 or dy != 0:
+                            painter.drawText(int(text_x + dx), int(text_y + dy), text)
+
+                # Draw main text
+                painter.setPen(text_pen)
+                painter.drawText(int(text_x), int(text_y), text)
 
         painter.end()
         return result

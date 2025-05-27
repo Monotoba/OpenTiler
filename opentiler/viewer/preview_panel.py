@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QScrollArea,
     QFrame, QSizePolicy, QHBoxLayout
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QRect
 from PySide6.QtGui import QPixmap, QPainter, QPen, QColor, QFont
 
 
@@ -110,10 +110,34 @@ class PreviewPanel(QWidget):
         width, height = page['width'], page['height']
         gutter = page.get('gutter', 0)
 
-        # Create page pixmap by cropping from source
-        page_pixmap = source_pixmap.copy(int(x), int(y), int(width), int(height))
+        # Create a blank page pixmap with the correct page dimensions
+        # This maintains the page orientation and shows empty areas
+        page_pixmap = QPixmap(int(width), int(height))
+        page_pixmap.fill(Qt.white)  # Fill with white background
 
-        # Add crop marks and page info
+        # Draw the document content onto the page
+        painter = QPainter(page_pixmap)
+
+        # Calculate the area of the source that overlaps with this page
+        source_rect = source_pixmap.rect()
+        page_rect = QRect(int(x), int(y), int(width), int(height))
+
+        # Find intersection
+        intersection = source_rect.intersected(page_rect)
+
+        if not intersection.isEmpty():
+            # Copy the intersecting area from source to page
+            source_crop = source_pixmap.copy(intersection)
+
+            # Calculate where to place it on the page
+            dest_x = intersection.x() - x
+            dest_y = intersection.y() - y
+
+            painter.drawPixmap(int(dest_x), int(dest_y), source_crop)
+
+        painter.end()
+
+        # Add crop marks and page info based on settings
         page_pixmap = self._add_page_decorations(page_pixmap, page_number, gutter)
 
         # Create thumbnail widget
@@ -134,10 +158,11 @@ class PreviewPanel(QWidget):
         thumbnail_label = QLabel()
         thumbnail_label.setAlignment(Qt.AlignCenter)
 
-        # Scale thumbnail to fit preview area (max 150px wide)
+        # Scale thumbnail to fit preview area while maintaining aspect ratio
         max_width = 150
+        max_height = 200
         scaled_thumbnail = page_pixmap.scaled(
-            max_width, max_width,
+            max_width, max_height,
             Qt.KeepAspectRatio,
             Qt.SmoothTransformation
         )
@@ -149,6 +174,9 @@ class PreviewPanel(QWidget):
 
     def _add_page_decorations(self, page_pixmap, page_number, gutter_size):
         """Add crop marks, gutter lines, and page number to page thumbnail."""
+        # Import config here to avoid circular imports
+        from ..settings.config import config
+
         # Create a copy to draw on
         result = QPixmap(page_pixmap)
         painter = QPainter(result)
@@ -157,7 +185,7 @@ class PreviewPanel(QWidget):
         height = result.height()
 
         # Draw gutter lines (blue) - printable area boundary
-        if gutter_size > 1:  # Only if gutter is visible
+        if gutter_size > 1 and config.get_crop_marks_display():  # Only if gutter is visible and enabled
             gutter_pen = QPen(QColor(0, 100, 255), 2)  # Blue for gutter
             painter.setPen(gutter_pen)
 
@@ -167,55 +195,90 @@ class PreviewPanel(QWidget):
                 int(width - 2 * gutter_size), int(height - 2 * gutter_size)
             )
 
-        # Draw crop marks (black) - page boundary indicators
-        crop_pen = QPen(QColor(0, 0, 0), 1)  # Black for crop marks
-        painter.setPen(crop_pen)
+        # Draw crop marks at gutter intersections (not page corners)
+        if config.get_crop_marks_display():
+            crop_pen = QPen(QColor(0, 0, 0), 1)  # Black for crop marks
+            painter.setPen(crop_pen)
 
-        crop_length = 10
-        margin = 5
+            crop_length = 8
 
-        # Corner crop marks
-        # Top-left
-        painter.drawLine(0, margin, crop_length, margin)
-        painter.drawLine(margin, 0, margin, crop_length)
+            # Crop marks at gutter line intersections
+            gutter_left = int(gutter_size)
+            gutter_right = int(width - gutter_size)
+            gutter_top = int(gutter_size)
+            gutter_bottom = int(height - gutter_size)
 
-        # Top-right
-        painter.drawLine(width - crop_length, margin, width, margin)
-        painter.drawLine(width - margin, 0, width - margin, crop_length)
+            # Top-left gutter corner
+            painter.drawLine(gutter_left - crop_length, gutter_top, gutter_left + crop_length, gutter_top)
+            painter.drawLine(gutter_left, gutter_top - crop_length, gutter_left, gutter_top + crop_length)
 
-        # Bottom-left
-        painter.drawLine(0, height - margin, crop_length, height - margin)
-        painter.drawLine(margin, height - crop_length, margin, height)
+            # Top-right gutter corner
+            painter.drawLine(gutter_right - crop_length, gutter_top, gutter_right + crop_length, gutter_top)
+            painter.drawLine(gutter_right, gutter_top - crop_length, gutter_right, gutter_top + crop_length)
 
-        # Bottom-right
-        painter.drawLine(width - crop_length, height - margin, width, height - margin)
-        painter.drawLine(width - margin, height - crop_length, width - margin, height)
+            # Bottom-left gutter corner
+            painter.drawLine(gutter_left - crop_length, gutter_bottom, gutter_left + crop_length, gutter_bottom)
+            painter.drawLine(gutter_left, gutter_bottom - crop_length, gutter_left, gutter_bottom + crop_length)
 
-        # Draw page number in corner
-        font = QFont()
-        font.setPointSize(8)
-        font.setBold(True)
-        painter.setFont(font)
+            # Bottom-right gutter corner
+            painter.drawLine(gutter_right - crop_length, gutter_bottom, gutter_right + crop_length, gutter_bottom)
+            painter.drawLine(gutter_right, gutter_bottom - crop_length, gutter_right, gutter_bottom + crop_length)
 
-        text_pen = QPen(QColor(255, 255, 255), 1)  # White text
-        painter.setPen(text_pen)
+        # Draw page number based on settings
+        if config.get_page_indicator_display():
+            # Get settings
+            font_size = config.get_page_indicator_font_size()
+            font_color = config.get_page_indicator_font_color()
+            font_style = config.get_page_indicator_font_style()
+            alpha = config.get_page_indicator_alpha()
+            position = config.get_page_indicator_position()
 
-        # Draw text with black outline for visibility
-        text_rect = painter.fontMetrics().boundingRect(f"P{page_number}")
-        text_x = width - text_rect.width() - 10
-        text_y = height - 10
+            # Set up font
+            font = QFont()
+            font.setPointSize(max(6, font_size // 2))  # Scale down for thumbnail
+            if font_style == "bold":
+                font.setBold(True)
+            elif font_style == "italic":
+                font.setItalic(True)
+            painter.setFont(font)
 
-        # Black outline
-        outline_pen = QPen(QColor(0, 0, 0), 1)
-        painter.setPen(outline_pen)
-        for dx in [-1, 0, 1]:
-            for dy in [-1, 0, 1]:
-                if dx != 0 or dy != 0:
-                    painter.drawText(text_x + dx, text_y + dy, f"P{page_number}")
+            # Set up color with alpha
+            color = QColor(font_color)
+            color.setAlpha(alpha)
+            text_pen = QPen(color, 1)
 
-        # White text
-        painter.setPen(text_pen)
-        painter.drawText(text_x, text_y, f"P{page_number}")
+            # Calculate text position
+            text = f"P{page_number}"
+            text_rect = painter.fontMetrics().boundingRect(text)
+            margin = 5
+
+            if position == "upper-left":
+                text_x = margin
+                text_y = margin + text_rect.height()
+            elif position == "upper-right":
+                text_x = width - text_rect.width() - margin
+                text_y = margin + text_rect.height()
+            elif position == "bottom-left":
+                text_x = margin
+                text_y = height - margin
+            elif position == "bottom-right":
+                text_x = width - text_rect.width() - margin
+                text_y = height - margin
+            else:  # center-page
+                text_x = (width - text_rect.width()) // 2
+                text_y = (height + text_rect.height()) // 2
+
+            # Draw text with outline for visibility
+            outline_pen = QPen(QColor(0, 0, 0), 1)
+            painter.setPen(outline_pen)
+            for dx in [-1, 0, 1]:
+                for dy in [-1, 0, 1]:
+                    if dx != 0 or dy != 0:
+                        painter.drawText(int(text_x + dx), int(text_y + dy), text)
+
+            # Draw main text
+            painter.setPen(text_pen)
+            painter.drawText(int(text_x), int(text_y), text)
 
         painter.end()
         return result
