@@ -1,0 +1,3 @@
+"""
+Viewer module for OpenTiler.
+"""
