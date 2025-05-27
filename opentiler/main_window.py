@@ -55,8 +55,8 @@ class MainWindow(QMainWindow):
         self.preview_panel = PreviewPanel()
         main_splitter.addWidget(self.preview_panel)
 
-        # Set splitter proportions (viewer takes 70%, preview takes 30%)
-        main_splitter.setSizes([700, 300])
+        # Set splitter proportions (viewer takes 60%, preview takes 40%)
+        main_splitter.setSizes([600, 400])
 
         # Set central layout
         layout = QVBoxLayout()

@@ -40,7 +40,8 @@ class PreviewPanel(QWidget):
         # Scrollable area for page thumbnails
         self.preview_scroll = QScrollArea()
         self.preview_scroll.setWidgetResizable(True)
-        self.preview_scroll.setMinimumHeight(200)
+        self.preview_scroll.setMinimumHeight(400)  # Increased from 200 to 400
+        self.preview_scroll.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.preview_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.preview_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
