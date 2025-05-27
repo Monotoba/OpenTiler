@@ -12,65 +12,68 @@ from typing import Optional, Dict, Any
 from PySide6.QtGui import QPixmap, QPainter
 from PySide6.QtWidgets import QMessageBox
 
-# Try to import FreeCAD
-FREECAD_AVAILABLE = False
+# FreeCAD detection variables (will be set lazily)
+FREECAD_AVAILABLE = None  # None means not yet checked
 FREECAD_COMMAND = None
+_FREECAD_DETECTION_DONE = False
 
-try:
-    # First try to find FreeCAD command
-    import subprocess
 
-    # Check for different FreeCAD commands
-    freecad_commands = ['freecad', 'FreeCAD', '/snap/bin/freecad']
+def _detect_freecad():
+    """Lazy detection of FreeCAD availability."""
+    global FREECAD_AVAILABLE, FREECAD_COMMAND, _FREECAD_DETECTION_DONE
 
-    for cmd in freecad_commands:
-        try:
-            # Try console mode first to avoid GUI startup
-            result = subprocess.run([cmd, '--console', '--python-path'],
-                                  capture_output=True, text=True, timeout=10)
-            if result.returncode == 0 or 'FreeCAD' in result.stderr:
+    if _FREECAD_DETECTION_DONE:
+        return
+
+    _FREECAD_DETECTION_DONE = True
+    FREECAD_AVAILABLE = False
+    FREECAD_COMMAND = None
+
+    try:
+        # Check for different FreeCAD commands
+        import shutil
+        freecad_commands = ['freecad', 'FreeCAD', '/snap/bin/freecad']
+
+        for cmd in freecad_commands:
+            if shutil.which(cmd):
                 FREECAD_COMMAND = cmd
                 break
-        except (subprocess.TimeoutExpired, FileNotFoundError):
-            # Fallback: try just checking if command exists
-            try:
-                result = subprocess.run(['which', cmd],
-                                      capture_output=True, text=True, timeout=2)
-                if result.returncode == 0:
-                    FREECAD_COMMAND = cmd
+
+        # Try to import FreeCAD Python modules
+        try:
+            # Common FreeCAD installation paths for Python module
+            freecad_paths = [
+                '/usr/lib/freecad/lib',
+                '/usr/lib/freecad-python3/lib',
+                '/snap/freecad/current/usr/lib/freecad/lib',
+                '/snap/freecad/current/usr/lib/freecad-python3/lib',
+                '/Applications/FreeCAD.app/Contents/Resources/lib',
+                'C:\\Program Files\\FreeCAD 0.20\\lib',
+                'C:\\Program Files\\FreeCAD 0.21\\lib',
+                'C:\\Program Files (x86)\\FreeCAD 0.20\\lib',
+                'C:\\Program Files (x86)\\FreeCAD 0.21\\lib'
+            ]
+
+            # Try to find and add FreeCAD to path
+            for path in freecad_paths:
+                if os.path.exists(path):
+                    sys.path.append(path)
                     break
-            except:
-                continue
 
-    # Common FreeCAD installation paths for Python module
-    freecad_paths = [
-        '/usr/lib/freecad/lib',
-        '/usr/lib/freecad-python3/lib',
-        '/snap/freecad/current/usr/lib/freecad/lib',
-        '/snap/freecad/current/usr/lib/freecad-python3/lib',
-        '/Applications/FreeCAD.app/Contents/Resources/lib',
-        'C:\\Program Files\\FreeCAD 0.20\\lib',
-        'C:\\Program Files\\FreeCAD 0.21\\lib',
-        'C:\\Program Files (x86)\\FreeCAD 0.20\\lib',
-        'C:\\Program Files (x86)\\FreeCAD 0.21\\lib'
-    ]
+            import FreeCAD
+            import Part
+            import Draft
+            import TechDraw
+            FREECAD_AVAILABLE = True
+        except ImportError:
+            # If Python module not available but command exists, we can still use external command
+            if FREECAD_COMMAND:
+                FREECAD_AVAILABLE = "command_only"
+            else:
+                FREECAD_AVAILABLE = False
 
-    # Try to find and add FreeCAD to path
-    for path in freecad_paths:
-        if os.path.exists(path):
-            sys.path.append(path)
-            break
-
-    import FreeCAD
-    import Part
-    import Draft
-    import TechDraw
-    FREECAD_AVAILABLE = True
-except ImportError:
-    # If Python module not available but command exists, we can still use external command
-    if FREECAD_COMMAND:
-        FREECAD_AVAILABLE = "command_only"
-    else:
+    except Exception as e:
+        # Silently fail - don't print errors during normal operation
         FREECAD_AVAILABLE = False
 
 
@@ -84,11 +87,13 @@ class FreeCADHandler:
     @staticmethod
     def is_available() -> bool:
         """Check if FreeCAD support is available."""
+        _detect_freecad()
         return FREECAD_AVAILABLE is not False
 
     @staticmethod
     def get_availability_status() -> str:
         """Get detailed availability status."""
+        _detect_freecad()
         if FREECAD_AVAILABLE is True:
             return "Full Python API available"
         elif FREECAD_AVAILABLE == "command_only":
@@ -106,6 +111,7 @@ class FreeCADHandler:
         Returns:
             QPixmap if successful, None if failed
         """
+        _detect_freecad()
         if not FREECAD_AVAILABLE:
             QMessageBox.warning(None, "FreeCAD Support",
                               "FreeCAD support requires FreeCAD to be installed.\n"
@@ -337,6 +343,7 @@ FreeCAD.closeDocument(doc.Name)
         Returns:
             True if successful, False otherwise
         """
+        _detect_freecad()
         if not FREECAD_AVAILABLE:
             QMessageBox.warning(None, "FreeCAD Support",
                               "FreeCAD export requires FreeCAD to be installed.\n"
@@ -432,6 +439,7 @@ FreeCAD.closeDocument(doc.Name)
         Returns:
             Dictionary with FreeCAD file information
         """
+        _detect_freecad()
         if not FREECAD_AVAILABLE:
             return {}
 
