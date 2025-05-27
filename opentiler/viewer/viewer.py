@@ -123,6 +123,8 @@ class DocumentViewer(QWidget):
         self.point_selection_mode = False
         self.selected_points = []  # Store selected points for scaling
         self.tile_grid = []  # Store tile grid for display
+        self.page_grid = []  # Store page grid for display
+        self.gutter_size = 0  # Gutter size in pixels
         self.init_ui()
 
     def init_ui(self):
@@ -290,8 +292,11 @@ class DocumentViewer(QWidget):
         if self.point_selection_mode and self.selected_points:
             scaled = self._draw_selected_points(scaled)
 
-        # Draw tile grid overlay if tiles are defined
-        if self.tile_grid:
+        # Draw page grid overlay if pages are defined
+        if self.page_grid:
+            scaled = self._draw_page_grid_overlay(scaled)
+        # Draw tile grid overlay if tiles are defined (legacy support)
+        elif self.tile_grid:
             scaled = self._draw_tile_grid_overlay(scaled)
 
         self.image_label.setPixmap(scaled)
@@ -377,6 +382,53 @@ class DocumentViewer(QWidget):
         painter.end()
         return result
 
+    def _draw_page_grid_overlay(self, pixmap):
+        """Draw page grid overlay with red page boundaries and blue gutter lines."""
+        if not self.page_grid:
+            return pixmap
+
+        # Create a copy to draw on
+        result = QPixmap(pixmap)
+        painter = QPainter(result)
+
+        # Draw each page
+        for i, page in enumerate(self.page_grid):
+            x = page['x'] * self.zoom_factor
+            y = page['y'] * self.zoom_factor
+            width = page['width'] * self.zoom_factor
+            height = page['height'] * self.zoom_factor
+            gutter = page['gutter'] * self.zoom_factor
+
+            # Draw red page boundary (actual paper edge)
+            page_pen = QPen(QColor(255, 0, 0), 2)  # Red lines for page edges
+            painter.setPen(page_pen)
+            painter.drawRect(int(x), int(y), int(width), int(height))
+
+            # Draw blue gutter lines (printable area boundary)
+            gutter_pen = QPen(QColor(0, 100, 255), 1)  # Blue lines for gutters
+            painter.setPen(gutter_pen)
+
+            # Inner rectangle for printable area
+            gutter_x = x + gutter
+            gutter_y = y + gutter
+            gutter_width = width - (2 * gutter)
+            gutter_height = height - (2 * gutter)
+
+            if gutter_width > 0 and gutter_height > 0:
+                painter.drawRect(int(gutter_x), int(gutter_y), int(gutter_width), int(gutter_height))
+
+            # Draw page number in center
+            center_x = x + width / 2
+            center_y = y + height / 2
+
+            # Use white text with black outline for visibility
+            text_pen = QPen(QColor(255, 255, 255), 1)
+            painter.setPen(text_pen)
+            painter.drawText(int(center_x - 15), int(center_y), f"P{i + 1}")
+
+        painter.end()
+        return result
+
     def zoom_in(self):
         """Zoom in on the document."""
         self.zoom_factor *= 1.25
@@ -420,6 +472,12 @@ class DocumentViewer(QWidget):
     def set_tile_grid(self, tile_grid):
         """Set the tile grid for display overlay."""
         self.tile_grid = tile_grid
+        self._update_display()
+
+    def set_page_grid(self, page_grid, gutter_size):
+        """Set the page grid with gutter information for display overlay."""
+        self.page_grid = page_grid
+        self.gutter_size = gutter_size
         self._update_display()
 
     def set_point_selection_mode(self, enabled):

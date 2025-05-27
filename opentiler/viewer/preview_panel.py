@@ -99,40 +99,82 @@ class PreviewPanel(QWidget):
         painter = QPainter(result)
 
         # Set up pen for grid lines
-        pen = QPen(QColor(255, 0, 0), 1)  # Red lines for tile boundaries
+        pen = QPen(QColor(255, 0, 0), 1)  # Red lines for page boundaries
         painter.setPen(pen)
 
         # Calculate scale factor for preview
         preview_width = result.width()
         preview_height = result.height()
 
-        # Assume tile_grid contains (x, y, width, height) tuples in original image coordinates
-        # We need to scale these to the preview size
+        # Handle both old format (tuples) and new format (dictionaries)
         if tile_grid:
-            # Get original image dimensions from first tile calculation
-            # For now, estimate from the tile grid bounds
-            max_x = max(x + w for x, y, w, h in tile_grid)
-            max_y = max(y + h for x, y, w, h in tile_grid)
+            # Check if it's the new page grid format (dictionaries)
+            if isinstance(tile_grid[0], dict):
+                # New page grid format
+                max_x = max(page['x'] + page['width'] for page in tile_grid)
+                max_y = max(page['y'] + page['height'] for page in tile_grid)
 
-            scale_x = preview_width / max_x if max_x > 0 else 1
-            scale_y = preview_height / max_y if max_y > 0 else 1
+                scale_x = preview_width / max_x if max_x > 0 else 1
+                scale_y = preview_height / max_y if max_y > 0 else 1
 
-            # Draw each tile rectangle
-            for i, (x, y, width, height) in enumerate(tile_grid):
-                # Scale to preview coordinates
-                preview_x = x * scale_x
-                preview_y = y * scale_y
-                preview_w = width * scale_x
-                preview_h = height * scale_y
+                # Draw each page rectangle
+                for i, page in enumerate(tile_grid):
+                    x, y = page['x'], page['y']
+                    width, height = page['width'], page['height']
+                    gutter = page.get('gutter', 0)
 
-                # Draw tile boundary
-                painter.drawRect(int(preview_x), int(preview_y), int(preview_w), int(preview_h))
+                    # Scale to preview coordinates
+                    preview_x = x * scale_x
+                    preview_y = y * scale_y
+                    preview_w = width * scale_x
+                    preview_h = height * scale_y
+                    preview_gutter = gutter * scale_x
 
-                # Draw tile number (smaller for preview)
-                if preview_w > 20 and preview_h > 20:  # Only if tile is large enough
-                    center_x = preview_x + preview_w / 2
-                    center_y = preview_y + preview_h / 2
-                    painter.drawText(int(center_x - 5), int(center_y), f"{i + 1}")
+                    # Draw red page boundary
+                    painter.setPen(QPen(QColor(255, 0, 0), 1))
+                    painter.drawRect(int(preview_x), int(preview_y), int(preview_w), int(preview_h))
+
+                    # Draw blue gutter lines
+                    if preview_gutter > 1:  # Only if gutter is visible
+                        painter.setPen(QPen(QColor(0, 100, 255), 1))
+                        gutter_x = preview_x + preview_gutter
+                        gutter_y = preview_y + preview_gutter
+                        gutter_w = preview_w - (2 * preview_gutter)
+                        gutter_h = preview_h - (2 * preview_gutter)
+                        if gutter_w > 0 and gutter_h > 0:
+                            painter.drawRect(int(gutter_x), int(gutter_y), int(gutter_w), int(gutter_h))
+
+                    # Draw page number
+                    if preview_w > 15 and preview_h > 15:
+                        painter.setPen(QPen(QColor(0, 0, 0), 1))
+                        center_x = preview_x + preview_w / 2
+                        center_y = preview_y + preview_h / 2
+                        painter.drawText(int(center_x - 5), int(center_y), f"P{i + 1}")
+
+            else:
+                # Old tile grid format (tuples)
+                max_x = max(x + w for x, y, w, h in tile_grid)
+                max_y = max(y + h for x, y, w, h in tile_grid)
+
+                scale_x = preview_width / max_x if max_x > 0 else 1
+                scale_y = preview_height / max_y if max_y > 0 else 1
+
+                # Draw each tile rectangle
+                for i, (x, y, width, height) in enumerate(tile_grid):
+                    # Scale to preview coordinates
+                    preview_x = x * scale_x
+                    preview_y = y * scale_y
+                    preview_w = width * scale_x
+                    preview_h = height * scale_y
+
+                    # Draw tile boundary
+                    painter.drawRect(int(preview_x), int(preview_y), int(preview_w), int(preview_h))
+
+                    # Draw tile number (smaller for preview)
+                    if preview_w > 20 and preview_h > 20:  # Only if tile is large enough
+                        center_x = preview_x + preview_w / 2
+                        center_y = preview_y + preview_h / 2
+                        painter.drawText(int(center_x - 5), int(center_y), f"{i + 1}")
 
         painter.end()
         return result

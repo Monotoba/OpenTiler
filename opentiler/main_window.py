@@ -197,34 +197,76 @@ class MainWindow(QMainWindow):
         page_size = self.config.get_default_page_size()
         page_width_mm, page_height_mm = get_page_size_mm(page_size)
 
-        # Convert page size to pixels using current scale
-        dpi = self.config.get_default_dpi()
-        page_width_pixels = mm_to_pixels(page_width_mm, dpi)
-        page_height_pixels = mm_to_pixels(page_height_mm, dpi)
+        # Convert page size to pixels using document scale
+        # scale_factor is mm/pixel, so to get pixels from mm: pixels = mm / scale_factor
+        page_width_pixels = page_width_mm / scale_factor if scale_factor > 0 else page_width_mm
+        page_height_pixels = page_height_mm / scale_factor if scale_factor > 0 else page_height_mm
 
-        # Scale the page size based on the document scale
-        # If scale_factor is mm/pixel, we need to convert page size accordingly
-        scaled_page_width = page_width_pixels / scale_factor if scale_factor > 0 else page_width_pixels
-        scaled_page_height = page_height_pixels / scale_factor if scale_factor > 0 else page_height_pixels
+        # Safety check: prevent too many tiles
+        if page_width_pixels < 50 or page_height_pixels < 50:
+            self.status_bar.showMessage(f"Warning: Scale too large - pages would be {page_width_pixels:.0f}x{page_height_pixels:.0f} pixels")
+            return
 
-        # Calculate tile grid
-        tile_grid = calculate_tile_grid(
-            doc_width,
-            doc_height,
-            int(scaled_page_width),
-            int(scaled_page_height),
-            overlap=0  # No overlap for now
+        max_tiles = 100  # Reasonable limit
+        estimated_tiles = (doc_width / page_width_pixels) * (doc_height / page_height_pixels)
+        if estimated_tiles > max_tiles:
+            self.status_bar.showMessage(f"Warning: Scale would generate {estimated_tiles:.0f} tiles (limit: {max_tiles})")
+            return
+
+        # Calculate tile grid with gutter support
+        gutter_mm = 10.0  # 10mm gutter
+        gutter_pixels = gutter_mm / scale_factor
+
+        # Generate page grid (pages can overlap where gutters meet)
+        page_grid = self._calculate_page_grid_with_gutters(
+            doc_width, doc_height,
+            page_width_pixels, page_height_pixels,
+            gutter_pixels
         )
 
-        # Update preview panel
-        self.preview_panel.update_preview(pixmap, tile_grid, scale_factor)
-
-        # Update document viewer to show tile grid
-        self.document_viewer.set_tile_grid(tile_grid)
+        # Update preview panel and document viewer
+        self.preview_panel.update_preview(pixmap, page_grid, scale_factor)
+        self.document_viewer.set_page_grid(page_grid, gutter_pixels)
 
         # Update status
-        tile_count = len(tile_grid)
-        self.status_bar.showMessage(f"Scale applied: {scale_factor:.6f} - {tile_count} tiles generated")
+        self.status_bar.showMessage(f"Scale applied: {scale_factor:.6f} - {len(page_grid)} pages generated")
+
+    def _calculate_page_grid_with_gutters(self, doc_width, doc_height, page_width, page_height, gutter_size):
+        """Calculate page grid where gutters meet on single lines."""
+        pages = []
+
+        # Calculate step size (printable area)
+        step_x = page_width - (2 * gutter_size)  # Pages overlap by 2*gutter
+        step_y = page_height - (2 * gutter_size)
+
+        y = 0
+        row = 0
+        while y < doc_height:
+            x = 0
+            col = 0
+            while x < doc_width:
+                # Calculate actual page dimensions
+                actual_width = min(page_width, doc_width - x)
+                actual_height = min(page_height, doc_height - y)
+
+                pages.append({
+                    'x': x, 'y': y,
+                    'width': actual_width, 'height': actual_height,
+                    'row': row, 'col': col,
+                    'gutter': gutter_size
+                })
+
+                x += step_x
+                if x >= doc_width:
+                    break
+                col += 1
+
+            y += step_y
+            if y >= doc_height:
+                break
+            row += 1
+
+        return pages
 
     def show_unit_converter(self):
         """Show the unit converter dialog."""
