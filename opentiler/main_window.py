@@ -362,7 +362,7 @@ class MainWindow(QMainWindow):
     def on_settings_changed(self):
         """Handle when settings are changed - refresh display and regenerate tiles if needed."""
         # Refresh the document viewer display to apply new settings
-        self.document_viewer._update_display()
+        self.document_viewer.refresh_display()
 
         # If we have a scale applied, regenerate the page grid with new settings
         if (hasattr(self.document_viewer, 'scale_factor') and

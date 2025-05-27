@@ -289,8 +289,8 @@ class DocumentViewer(QWidget):
         else:
             scaled = transform
 
-        # Draw selected points if in point selection mode
-        if self.point_selection_mode and self.selected_points:
+        # Draw selected points if in point selection mode OR if we have scale points to show
+        if (self.point_selection_mode and self.selected_points) or (len(self.selected_points) >= 2):
             scaled = self._draw_selected_points(scaled)
 
         # Draw page grid overlay if pages are defined
@@ -611,6 +611,10 @@ class DocumentViewer(QWidget):
     def set_measurement_text(self, text):
         """Set the measurement text to display above the scaling line."""
         self.measurement_text = text
+        self._update_display()
+
+    def refresh_display(self):
+        """Refresh the display to apply any setting changes."""
         self._update_display()
 
     def on_image_clicked(self, pos):
