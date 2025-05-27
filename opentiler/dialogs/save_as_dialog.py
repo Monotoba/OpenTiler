@@ -32,20 +32,30 @@ class SaveAsWorker(QThread):
     def run(self):
         """Run save-as operation in background thread."""
         try:
+            success = False
+            error_details = ""
+
             if isinstance(self.handler, DXFHandler):
                 success = self.handler.save_as_dxf(
                     self.source_pixmap, self.output_path,
                     self.scale_factor, self.units
                 )
+                format_name = "DXF"
             elif isinstance(self.handler, FreeCADHandler):
                 success = self.handler.save_as_freecad(
                     self.source_pixmap, self.output_path,
                     self.scale_factor, self.units
                 )
+                format_name = "FreeCAD"
             else:
                 success = False
+                format_name = "Unknown"
 
-            message = "Save completed successfully" if success else "Save failed"
+            if success:
+                message = f"Save completed successfully: {self.output_path}"
+            else:
+                message = f"{format_name} save failed - check file path and permissions"
+
             self.finished.emit(success, message)
 
         except Exception as e:
@@ -241,6 +251,16 @@ class SaveAsDialog(QDialog):
 
         format_text = self.format_combo.currentText()
         units = self.units_combo.currentText()
+
+        # Add proper file extension if missing
+        if "DXF" in format_text:
+            if not output_path.lower().endswith('.dxf'):
+                output_path += '.dxf'
+                self.output_path_edit.setText(output_path)
+        elif "FreeCAD" in format_text:
+            if not output_path.lower().endswith('.fcstd'):
+                output_path += '.FCStd'
+                self.output_path_edit.setText(output_path)
 
         # Check format availability
         if "DXF" in format_text:

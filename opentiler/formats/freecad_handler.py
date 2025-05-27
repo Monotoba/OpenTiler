@@ -351,6 +351,128 @@ FreeCAD.closeDocument(doc.Name)
             return False
 
         try:
+            if FREECAD_AVAILABLE is True:
+                # Use Python API
+                return self._save_via_python_api(source_pixmap, output_path, scale_factor, units)
+            elif FREECAD_AVAILABLE == "command_only":
+                # Use command-line approach
+                return self._save_via_command_line(source_pixmap, output_path, scale_factor, units)
+            else:
+                return False
+
+        except Exception as e:
+            QMessageBox.critical(None, "FreeCAD Export Error", f"Failed to export FreeCAD file:\n{str(e)}")
+            return False
+
+
+
+    def _save_via_command_line(self, source_pixmap: QPixmap, output_path: str,
+                             scale_factor: float, units: str) -> bool:
+        """Save using FreeCAD command-line interface."""
+        try:
+            import subprocess
+            import tempfile
+
+            # Calculate real-world dimensions
+            pixel_width = source_pixmap.width()
+            pixel_height = source_pixmap.height()
+            real_width = pixel_width * scale_factor
+            real_height = pixel_height * scale_factor
+
+            # Create a temporary Python script for FreeCAD
+            script_content = f'''
+import FreeCAD
+import Draft
+import os
+
+# Create new document
+doc = FreeCAD.newDocument("OpenTilerExport")
+
+# Calculate dimensions
+real_width = {real_width}
+real_height = {real_height}
+scale_factor = {scale_factor}
+units = "{units}"
+
+# Create a rectangle representing the document bounds
+rect_points = [
+    FreeCAD.Vector(0, 0, 0),
+    FreeCAD.Vector(real_width, 0, 0),
+    FreeCAD.Vector(real_width, real_height, 0),
+    FreeCAD.Vector(0, real_height, 0),
+    FreeCAD.Vector(0, 0, 0)
+]
+
+# Create wire from points
+wire = Draft.makeWire(rect_points)
+wire.Label = "Document_Boundary"
+
+# Add scale information as text
+scale_text = Draft.makeText([f"Scale: {{scale_factor:.6f}} {{units}}/pixel"],
+                          FreeCAD.Vector(real_width * 0.02, real_height * 0.98, 0))
+scale_text.Label = "Scale_Info"
+
+# Add dimension information
+width_text = Draft.makeText([f"Width: {{real_width:.2f}} {{units}}"],
+                          FreeCAD.Vector(real_width * 0.02, real_height * 0.94, 0))
+width_text.Label = "Width_Info"
+
+height_text = Draft.makeText([f"Height: {{real_height:.2f}} {{units}}"],
+                           FreeCAD.Vector(real_width * 0.02, real_height * 0.90, 0))
+height_text.Label = "Height_Info"
+
+# Recompute document
+doc.recompute()
+
+# Save the document
+output_path = "{output_path}"
+doc.saveAs(output_path)
+
+print(f"SAVE_SUCCESS:{{output_path}}")
+
+# Close the document
+FreeCAD.closeDocument(doc.Name)
+'''
+
+            # Write script to temporary file
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as script_file:
+                script_file.write(script_content)
+                script_path = script_file.name
+
+            try:
+                # Run FreeCAD with the script
+                result = subprocess.run([
+                    FREECAD_COMMAND, '-c', script_path
+                ], capture_output=True, text=True, timeout=60)
+
+                # Check if save was successful
+                success = False
+                for line in result.stdout.split('\n'):
+                    if line.startswith('SAVE_SUCCESS:'):
+                        saved_path = line.split(':', 1)[1]
+                        if os.path.exists(saved_path):
+                            success = True
+                            break
+
+                if not success:
+                    print(f"FreeCAD command output: {result.stdout}")
+                    print(f"FreeCAD command errors: {result.stderr}")
+
+                return success
+
+            finally:
+                # Clean up script file
+                if os.path.exists(script_path):
+                    os.unlink(script_path)
+
+        except Exception as e:
+            print(f"Command-line FreeCAD save error: {str(e)}")
+            return False
+
+    def _save_via_python_api(self, source_pixmap: QPixmap, output_path: str,
+                           scale_factor: float, units: str) -> bool:
+        """Save using FreeCAD Python API."""
+        try:
             # Create new FreeCAD document
             doc = FreeCAD.newDocument("OpenTilerExport")
 
@@ -426,7 +548,7 @@ FreeCAD.closeDocument(doc.Name)
             return True
 
         except Exception as e:
-            QMessageBox.critical(None, "FreeCAD Export Error", f"Failed to export FreeCAD file:\n{str(e)}")
+            print(f"FreeCAD Python API save error: {str(e)}")
             return False
 
     def get_freecad_info(self, file_path: str) -> Dict[str, Any]:
