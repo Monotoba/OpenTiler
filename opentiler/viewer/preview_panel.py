@@ -117,8 +117,15 @@ class PreviewPanel(QWidget):
         page_pixmap = QPixmap(int(width), int(height))
         page_pixmap.fill(Qt.white)  # Fill with white background
 
-        # Draw the document content onto the page
+        # Draw the document content onto the page, clipped to printable area
         painter = QPainter(page_pixmap)
+
+        # Set clipping region to printable area (inside gutters)
+        printable_rect = QRect(
+            int(gutter), int(gutter),
+            int(width - 2 * gutter), int(height - 2 * gutter)
+        )
+        painter.setClipRect(printable_rect)
 
         # Calculate the area of the source that overlaps with this page
         source_rect = source_pixmap.rect()

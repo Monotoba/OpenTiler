@@ -210,7 +210,8 @@ class Config:
 
     def get_page_indicator_display(self):
         """Get whether to display page indicators."""
-        return self.get("page_indicator_display", True) == True
+        value = self.get("page_indicator_display", True)
+        return str(value).lower() == 'true' if isinstance(value, str) else bool(value)
 
     def set_page_indicator_display(self, display):
         """Set whether to display page indicators."""
@@ -218,7 +219,8 @@ class Config:
 
     def get_page_indicator_print(self):
         """Get whether to print page indicators."""
-        return self.get("page_indicator_print", True) == True
+        value = self.get("page_indicator_print", True)
+        return str(value).lower() == 'true' if isinstance(value, str) else bool(value)
 
     def set_page_indicator_print(self, print_enabled):
         """Set whether to print page indicators."""
@@ -227,7 +229,8 @@ class Config:
     # Gutter line settings
     def get_gutter_lines_display(self):
         """Get whether to display gutter lines."""
-        return self.get("gutter_lines_display", True) == True
+        value = self.get("gutter_lines_display", True)
+        return str(value).lower() == 'true' if isinstance(value, str) else bool(value)
 
     def set_gutter_lines_display(self, display):
         """Set whether to display gutter lines."""
@@ -235,7 +238,8 @@ class Config:
 
     def get_gutter_lines_print(self):
         """Get whether to print gutter lines."""
-        return self.get("gutter_lines_print", True) == True
+        value = self.get("gutter_lines_print", True)
+        return str(value).lower() == 'true' if isinstance(value, str) else bool(value)
 
     def set_gutter_lines_print(self, print_enabled):
         """Set whether to print gutter lines."""
@@ -244,7 +248,8 @@ class Config:
     # Crop mark settings
     def get_crop_marks_display(self):
         """Get whether to display crop marks."""
-        return self.get("crop_marks_display", True) == True
+        value = self.get("crop_marks_display", True)
+        return str(value).lower() == 'true' if isinstance(value, str) else bool(value)
 
     def set_crop_marks_display(self, display):
         """Set whether to display crop marks."""
@@ -252,7 +257,8 @@ class Config:
 
     def get_crop_marks_print(self):
         """Get whether to print crop marks."""
-        return self.get("crop_marks_print", True) == True
+        value = self.get("crop_marks_print", True)
+        return str(value).lower() == 'true' if isinstance(value, str) else bool(value)
 
     def set_crop_marks_print(self, print_enabled):
         """Set whether to print crop marks."""

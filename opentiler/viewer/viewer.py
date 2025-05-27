@@ -125,6 +125,7 @@ class DocumentViewer(QWidget):
         self.tile_grid = []  # Store tile grid for display
         self.page_grid = []  # Store page grid for display
         self.gutter_size = 0  # Gutter size in pixels
+        self.measurement_text = ""  # Store measurement text for display
         self.init_ui()
 
     def init_ui(self):
@@ -340,6 +341,35 @@ class DocumentViewer(QWidget):
             painter.setPen(pen)
             painter.drawLine(int(p1_x), int(p1_y), int(p2_x), int(p2_y))
 
+            # Draw measurement text above the line if available
+            if self.measurement_text:
+                # Calculate midpoint of the line
+                mid_x = (p1_x + p2_x) / 2
+                mid_y = (p1_y + p2_y) / 2
+
+                # Set up font for measurement text
+                font = painter.font()
+                font.setPointSize(12)
+                font.setBold(True)
+                painter.setFont(font)
+
+                # Set up pen for red text
+                text_pen = QPen(QColor(255, 0, 0), 1)
+                painter.setPen(text_pen)
+
+                # Calculate text position (above the line)
+                text_rect = painter.fontMetrics().boundingRect(self.measurement_text)
+                text_x = mid_x - text_rect.width() / 2
+                text_y = mid_y - 15  # 15 pixels above the line
+
+                # Draw background rectangle for better visibility
+                bg_rect = text_rect.adjusted(-5, -2, 5, 2)
+                bg_rect.moveTopLeft(QPoint(int(text_x - 5), int(text_y - text_rect.height() - 2)))
+                painter.fillRect(bg_rect, QColor(255, 255, 255, 200))  # Semi-transparent white
+
+                # Draw the measurement text
+                painter.drawText(int(text_x), int(text_y), self.measurement_text)
+
         painter.end()
         return result
 
@@ -546,9 +576,15 @@ class DocumentViewer(QWidget):
             self.scroll_area.viewport().setCursor(QCursor(Qt.CrossCursor))
             self.image_label.setCursor(QCursor(Qt.CrossCursor))
             self.selected_points.clear()
+            self.measurement_text = ""
         else:
             self.scroll_area.viewport().setCursor(QCursor(Qt.OpenHandCursor))
             self.image_label.setCursor(QCursor(Qt.OpenHandCursor))
+
+    def set_measurement_text(self, text):
+        """Set the measurement text to display above the scaling line."""
+        self.measurement_text = text
+        self._update_display()
 
     def on_image_clicked(self, pos):
         """Handle image click for point selection."""

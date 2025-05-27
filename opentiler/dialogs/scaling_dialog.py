@@ -166,13 +166,24 @@ class ScalingDialog(QDialog):
 
                 self.scale_preview_label.setText(f"Scale: {scale_text}")
                 self.apply_button.setEnabled(True)
+
+                # Update measurement text in viewer
+                measurement_text = f"{real_distance} {units}"
+                if hasattr(self.parent(), 'document_viewer'):
+                    self.parent().document_viewer.set_measurement_text(measurement_text)
             else:
                 self.scale_preview_label.setText("Scale: Invalid values")
                 self.apply_button.setEnabled(False)
+                # Clear measurement text from viewer
+                if hasattr(self.parent(), 'document_viewer'):
+                    self.parent().document_viewer.set_measurement_text("")
 
         except ValueError:
             self.scale_preview_label.setText("Scale: Invalid distance")
             self.apply_button.setEnabled(False)
+            # Clear measurement text from viewer
+            if hasattr(self.parent(), 'document_viewer'):
+                self.parent().document_viewer.set_measurement_text("")
 
     def apply_scale(self):
         """Apply the calculated scale."""
