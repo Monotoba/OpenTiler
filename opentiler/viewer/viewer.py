@@ -178,6 +178,10 @@ class DocumentViewer(QWidget):
                 return self._load_image(file_path)
             elif file_ext == '.svg':
                 return self._load_svg(file_path)
+            elif file_ext == '.dxf':
+                return self._load_dxf(file_path)
+            elif file_ext.lower() == '.fcstd':
+                return self._load_freecad(file_path)
             else:
                 QMessageBox.critical(self, "Error", f"Unsupported file format: {file_ext}")
                 return False
@@ -267,6 +271,50 @@ class DocumentViewer(QWidget):
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to load SVG: {str(e)}")
+            return False
+
+    def _load_dxf(self, file_path):
+        """Load a DXF document."""
+        try:
+            from ..formats.dxf_handler import DXFHandler
+
+            dxf_handler = DXFHandler()
+            pixmap = dxf_handler.load_dxf(file_path)
+
+            if pixmap and not pixmap.isNull():
+                self.current_pixmap = pixmap
+                self.current_document = file_path
+                self._update_display()
+                self.document_loaded.emit(file_path)
+                return True
+            else:
+                QMessageBox.critical(self, "Error", "Failed to load DXF file.")
+                return False
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to load DXF: {str(e)}")
+            return False
+
+    def _load_freecad(self, file_path):
+        """Load a FreeCAD document."""
+        try:
+            from ..formats.freecad_handler import FreeCADHandler
+
+            freecad_handler = FreeCADHandler()
+            pixmap = freecad_handler.load_freecad(file_path)
+
+            if pixmap and not pixmap.isNull():
+                self.current_pixmap = pixmap
+                self.current_document = file_path
+                self._update_display()
+                self.document_loaded.emit(file_path)
+                return True
+            else:
+                QMessageBox.critical(self, "Error", "Failed to load FreeCAD file.")
+                return False
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to load FreeCAD: {str(e)}")
             return False
 
     def _update_display(self):

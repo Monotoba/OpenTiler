@@ -18,6 +18,7 @@ from .dialogs.unit_converter import UnitConverterDialog
 from .dialogs.scale_calculator import ScaleCalculatorDialog
 from .dialogs.settings_dialog import SettingsDialog
 from .dialogs.export_dialog import ExportDialog
+from .dialogs.save_as_dialog import SaveAsDialog
 from .settings.config import Config
 from .utils.helpers import calculate_tile_grid, get_page_size_mm, mm_to_pixels
 
@@ -31,6 +32,7 @@ class MainWindow(QMainWindow):
         self.scaling_dialog = None
         self.settings_dialog = None
         self.export_dialog = None
+        self.save_as_dialog = None
         self.init_ui()
 
     def init_ui(self):
@@ -84,7 +86,14 @@ class MainWindow(QMainWindow):
 
         file_menu.addSeparator()
 
-        export_action = QAction("&Export...", self)
+        save_as_action = QAction("Save &As...", self)
+        save_as_action.setShortcut(QKeySequence("Ctrl+Shift+S"))
+        save_as_action.triggered.connect(self.save_as_document)
+        file_menu.addAction(save_as_action)
+
+        file_menu.addSeparator()
+
+        export_action = QAction("&Export Tiles...", self)
         export_action.setShortcut(QKeySequence("Ctrl+E"))
         export_action.triggered.connect(self.export_document)
         file_menu.addAction(export_action)
@@ -173,7 +182,7 @@ class MainWindow(QMainWindow):
             self,
             "Open Document",
             self.config.get_last_input_dir(),
-            "All Supported (*.pdf *.png *.jpg *.jpeg *.tiff *.svg);;PDF Files (*.pdf);;Image Files (*.png *.jpg *.jpeg *.tiff);;SVG Files (*.svg)"
+            "All Supported (*.pdf *.png *.jpg *.jpeg *.tiff *.svg *.dxf *.FCStd);;PDF Files (*.pdf);;Image Files (*.png *.jpg *.jpeg *.tiff);;SVG Files (*.svg);;DXF Files (*.dxf);;FreeCAD Files (*.FCStd)"
         )
 
         if file_path:
@@ -226,6 +235,29 @@ class MainWindow(QMainWindow):
 
         # Show dialog
         self.export_dialog.show()
+
+    def save_as_document(self):
+        """Save the current document in a different CAD format."""
+        # Check if we have a document
+        if not self.document_viewer.current_pixmap:
+            QMessageBox.warning(self, "Save As", "No document loaded. Please load a document first.")
+            return
+
+        # Create and show save-as dialog
+        if not self.save_as_dialog:
+            self.save_as_dialog = SaveAsDialog(self)
+
+        # Get current scale factor
+        scale_factor = getattr(self.document_viewer, 'scale_factor', 1.0)
+
+        # Set document data
+        self.save_as_dialog.set_document_data(
+            self.document_viewer.current_pixmap,
+            scale_factor
+        )
+
+        # Show dialog
+        self.save_as_dialog.show()
 
     def show_scaling_dialog(self):
         """Show the scaling dialog."""
