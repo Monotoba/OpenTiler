@@ -257,10 +257,12 @@ class SaveAsDialog(QDialog):
             if not output_path.lower().endswith('.dxf'):
                 output_path += '.dxf'
                 self.output_path_edit.setText(output_path)
+                self.status_text.append(f"Added .dxf extension: {output_path}")
         elif "FreeCAD" in format_text:
             if not output_path.lower().endswith('.fcstd'):
                 output_path += '.FCStd'
                 self.output_path_edit.setText(output_path)
+                self.status_text.append(f"Added .FCStd extension: {output_path}")
 
         # Check format availability
         if "DXF" in format_text:
