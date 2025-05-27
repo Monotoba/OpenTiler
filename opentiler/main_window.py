@@ -284,17 +284,23 @@ class MainWindow(QMainWindow):
         self.status_bar.showMessage(f"Scale applied: {scale_factor:.6f} - {len(page_grid)} pages generated")
 
     def _calculate_page_grid_with_gutters(self, doc_width, doc_height, page_width, page_height, gutter_size):
-        """Calculate page grid where gutters meet on single lines."""
+        """Calculate page grid where drawable areas tile seamlessly with no gaps."""
         pages = []
 
-        # Calculate step size (printable area)
-        step_x = page_width - (2 * gutter_size)  # Pages overlap by 2*gutter
-        step_y = page_height - (2 * gutter_size)
+        # Calculate step size based on drawable area (printable area inside gutters)
+        # This ensures all document content falls within a drawable area
+        drawable_width = page_width - (2 * gutter_size)
+        drawable_height = page_height - (2 * gutter_size)
 
-        y = 0
+        # Step size equals drawable area size for seamless tiling
+        step_x = drawable_width
+        step_y = drawable_height
+
+        # Start pages offset by negative gutter so drawable areas start at (0,0)
+        y = -gutter_size
         row = 0
         while y < doc_height:
-            x = 0
+            x = -gutter_size
             col = 0
             while x < doc_width:
                 # Pages maintain full dimensions even if they extend beyond document
@@ -307,12 +313,14 @@ class MainWindow(QMainWindow):
                 })
 
                 x += step_x
-                if x >= doc_width:
+                # Continue until drawable area covers document width
+                if x + gutter_size >= doc_width:
                     break
                 col += 1
 
             y += step_y
-            if y >= doc_height:
+            # Continue until drawable area covers document height
+            if y + gutter_size >= doc_height:
                 break
             row += 1
 
