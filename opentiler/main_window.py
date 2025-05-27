@@ -16,6 +16,7 @@ from .dialogs.scaling_dialog import ScalingDialog
 from .dialogs.unit_converter import UnitConverterDialog
 from .dialogs.scale_calculator import ScaleCalculatorDialog
 from .settings.config import Config
+from .utils.helpers import calculate_tile_grid, get_page_size_mm, mm_to_pixels
 
 
 class MainWindow(QMainWindow):
@@ -173,6 +174,7 @@ class MainWindow(QMainWindow):
             self.scaling_dialog = ScalingDialog(self)
             # Connect scaling dialog signals
             self.scaling_dialog.scale_applied.connect(self.document_viewer.set_scale)
+            self.scaling_dialog.scale_applied.connect(self.on_scale_applied)
 
         # Enable point selection mode in the document viewer
         self.document_viewer.set_point_selection_mode(True)
@@ -180,6 +182,49 @@ class MainWindow(QMainWindow):
 
         # Connect point selection from viewer to dialog
         self.document_viewer.point_selected.connect(self.scaling_dialog.on_point_selected)
+
+    def on_scale_applied(self, scale_factor):
+        """Handle when scale is applied - generate tiles and update preview."""
+        if not self.document_viewer.current_pixmap:
+            return
+
+        # Get document dimensions in pixels
+        pixmap = self.document_viewer.current_pixmap
+        doc_width = pixmap.width()
+        doc_height = pixmap.height()
+
+        # Get page size from config (default A4)
+        page_size = self.config.get_default_page_size()
+        page_width_mm, page_height_mm = get_page_size_mm(page_size)
+
+        # Convert page size to pixels using current scale
+        dpi = self.config.get_default_dpi()
+        page_width_pixels = mm_to_pixels(page_width_mm, dpi)
+        page_height_pixels = mm_to_pixels(page_height_mm, dpi)
+
+        # Scale the page size based on the document scale
+        # If scale_factor is mm/pixel, we need to convert page size accordingly
+        scaled_page_width = page_width_pixels / scale_factor if scale_factor > 0 else page_width_pixels
+        scaled_page_height = page_height_pixels / scale_factor if scale_factor > 0 else page_height_pixels
+
+        # Calculate tile grid
+        tile_grid = calculate_tile_grid(
+            doc_width,
+            doc_height,
+            int(scaled_page_width),
+            int(scaled_page_height),
+            overlap=0  # No overlap for now
+        )
+
+        # Update preview panel
+        self.preview_panel.update_preview(pixmap, tile_grid, scale_factor)
+
+        # Update document viewer to show tile grid
+        self.document_viewer.set_tile_grid(tile_grid)
+
+        # Update status
+        tile_count = len(tile_grid)
+        self.status_bar.showMessage(f"Scale applied: {scale_factor:.6f} - {tile_count} tiles generated")
 
     def show_unit_converter(self):
         """Show the unit converter dialog."""

@@ -122,6 +122,7 @@ class DocumentViewer(QWidget):
         self.rotation = 0
         self.point_selection_mode = False
         self.selected_points = []  # Store selected points for scaling
+        self.tile_grid = []  # Store tile grid for display
         self.init_ui()
 
     def init_ui(self):
@@ -289,6 +290,10 @@ class DocumentViewer(QWidget):
         if self.point_selection_mode and self.selected_points:
             scaled = self._draw_selected_points(scaled)
 
+        # Draw tile grid overlay if tiles are defined
+        if self.tile_grid:
+            scaled = self._draw_tile_grid_overlay(scaled)
+
         self.image_label.setPixmap(scaled)
 
         # Resize the label to match the pixmap size for proper scrolling
@@ -333,6 +338,45 @@ class DocumentViewer(QWidget):
         painter.end()
         return result
 
+    def _draw_tile_grid_overlay(self, pixmap):
+        """Draw tile grid overlay on the document."""
+        if not self.tile_grid:
+            return pixmap
+
+        # Create a copy to draw on
+        result = QPixmap(pixmap)
+        painter = QPainter(result)
+
+        # Set up pen for tile boundaries
+        pen = QPen(QColor(0, 150, 255), 2)  # Blue lines for tile boundaries
+        painter.setPen(pen)
+
+        # Draw each tile rectangle
+        for i, (x, y, width, height) in enumerate(self.tile_grid):
+            # Scale coordinates according to current zoom
+            scaled_x = x * self.zoom_factor
+            scaled_y = y * self.zoom_factor
+            scaled_width = width * self.zoom_factor
+            scaled_height = height * self.zoom_factor
+
+            # Draw tile boundary
+            painter.drawRect(int(scaled_x), int(scaled_y), int(scaled_width), int(scaled_height))
+
+            # Draw tile number in the center
+            center_x = scaled_x + scaled_width / 2
+            center_y = scaled_y + scaled_height / 2
+
+            # Set up text pen
+            text_pen = QPen(QColor(255, 255, 255), 1)
+            painter.setPen(text_pen)
+            painter.drawText(int(center_x - 10), int(center_y), f"{i + 1}")
+
+            # Reset pen for next rectangle
+            painter.setPen(pen)
+
+        painter.end()
+        return result
+
     def zoom_in(self):
         """Zoom in on the document."""
         self.zoom_factor *= 1.25
@@ -372,6 +416,11 @@ class DocumentViewer(QWidget):
         """Set the real-world scale factor."""
         self.scale_factor = scale_factor
         self.scale_changed.emit(scale_factor)
+
+    def set_tile_grid(self, tile_grid):
+        """Set the tile grid for display overlay."""
+        self.tile_grid = tile_grid
+        self._update_display()
 
     def set_point_selection_mode(self, enabled):
         """Enable or disable point selection mode."""
