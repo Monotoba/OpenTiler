@@ -160,14 +160,14 @@ class MainWindow(QMainWindow):
 
         # Zoom actions
         zoom_in_action = QAction("Zoom In", self)
-        zoom_in_action.setIcon(style.standardIcon(style.StandardPixmap.SP_ArrowUp))
+        zoom_in_action.setIcon(style.standardIcon(style.StandardPixmap.SP_FileDialogDetailedView))  # Magnifying glass-like
         zoom_in_action.setToolTip("Zoom in (+)")
         zoom_in_action.setShortcut(QKeySequence.ZoomIn)
         zoom_in_action.triggered.connect(self.document_viewer.zoom_in)
         toolbar.addAction(zoom_in_action)
 
         zoom_out_action = QAction("Zoom Out", self)
-        zoom_out_action.setIcon(style.standardIcon(style.StandardPixmap.SP_ArrowDown))
+        zoom_out_action.setIcon(style.standardIcon(style.StandardPixmap.SP_FileDialogListView))  # Smaller view icon
         zoom_out_action.setToolTip("Zoom out (-)")
         zoom_out_action.setShortcut(QKeySequence.ZoomOut)
         zoom_out_action.triggered.connect(self.document_viewer.zoom_out)
@@ -184,7 +184,7 @@ class MainWindow(QMainWindow):
 
         # Scaling tool action
         scale_action = QAction("Scale Tool", self)
-        scale_action.setIcon(style.standardIcon(style.StandardPixmap.SP_FileDialogDetailedView))
+        scale_action.setIcon(style.standardIcon(style.StandardPixmap.SP_FileDialogInfoView))  # Ruler/measurement-like
         scale_action.setToolTip("Open scaling tool to set real-world measurements")
         scale_action.triggered.connect(self.show_scaling_dialog)
         toolbar.addAction(scale_action)
@@ -193,13 +193,13 @@ class MainWindow(QMainWindow):
 
         # Rotation actions
         rotate_left_action = QAction("Rotate Left", self)
-        rotate_left_action.setIcon(style.standardIcon(style.StandardPixmap.SP_ArrowLeft))
+        rotate_left_action.setIcon(style.standardIcon(style.StandardPixmap.SP_BrowserReload))  # Circular arrow-like
         rotate_left_action.setToolTip("Rotate document 90° counterclockwise")
         rotate_left_action.triggered.connect(self.document_viewer.rotate_counterclockwise)
         toolbar.addAction(rotate_left_action)
 
         rotate_right_action = QAction("Rotate Right", self)
-        rotate_right_action.setIcon(style.standardIcon(style.StandardPixmap.SP_ArrowRight))
+        rotate_right_action.setIcon(style.standardIcon(style.StandardPixmap.SP_BrowserReload))  # Circular arrow-like
         rotate_right_action.setToolTip("Rotate document 90° clockwise")
         rotate_right_action.triggered.connect(self.document_viewer.rotate_clockwise)
         toolbar.addAction(rotate_right_action)
@@ -216,7 +216,7 @@ class MainWindow(QMainWindow):
 
         # Settings action
         settings_action = QAction("Settings", self)
-        settings_action.setIcon(style.standardIcon(style.StandardPixmap.SP_ComputerIcon))
+        settings_action.setIcon(style.standardIcon(style.StandardPixmap.SP_FileDialogDetailedView))  # Best available gear-like icon
         settings_action.setToolTip("Open application settings (Ctrl+,)")
         settings_action.setShortcut("Ctrl+,")
         settings_action.triggered.connect(self.show_settings)
