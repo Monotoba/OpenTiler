@@ -1,6 +1,35 @@
 # OpenTiler Documentation
 
-Welcome to the OpenTiler documentation! This directory contains comprehensive guides to help you install, use, and troubleshoot OpenTiler.
+![OpenTiler Main Interface](images/opentiler-hero-image.png)
+
+Welcome to the OpenTiler documentation! OpenTiler is a professional document scaling and tiling application designed for architects, engineers, and professionals who need to print large-format documents on standard printers.
+
+## 🎯 What is OpenTiler?
+
+OpenTiler allows you to:
+- **Scale and tile large documents** for printing on standard paper sizes
+- **Maintain precise measurements** with built-in scale tools
+- **Generate assembly guides** with crop marks and page indicators
+- **Export professional-quality tiles** ready for printing and assembly
+
+![OpenTiler with Document Loaded](images/opentiler-with-document.png)
+
+## 🖥️ Interface Overview
+
+### Main Interface
+OpenTiler features a clean, professional interface designed for efficient workflow:
+
+![OpenTiler Main Interface](images/opentiler-main-interface.png)
+
+### Toolbar and Tools
+The toolbar provides quick access to all essential functions:
+
+![OpenTiler Toolbar Detail](images/opentiler-toolbar-detail.png)
+
+### Preview Panel
+The preview panel shows how your document will be tiled:
+
+![OpenTiler Preview Panel](images/opentiler-preview-panel.png)
 
 ## 📚 Documentation Overview
 

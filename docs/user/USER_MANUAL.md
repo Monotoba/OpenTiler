@@ -1,5 +1,9 @@
 # OpenTiler User Manual
 
+![OpenTiler Hero](../images/opentiler-hero-image.png)
+
+*Professional document scaling and tiling for architects, engineers, and professionals*
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Installation](#installation)
@@ -95,6 +99,23 @@ pip install rawpy numpy
 
 ### Main Interface Overview
 
+OpenTiler features a clean, professional interface designed for efficient workflow:
+
+![OpenTiler Main Interface](../images/opentiler-main-interface.png)
+
+The main interface consists of:
+1. **Menu Bar** - Access to all application functions
+2. **Toolbar** - Quick access to common tools
+3. **Document Viewer** - Main area for viewing and working with documents
+4. **Preview Panel** - Shows how the document will be tiled
+5. **Status Bar** - Displays current document information and status
+
+#### Toolbar Overview
+
+The toolbar provides quick access to essential functions:
+
+![OpenTiler Toolbar Detail](../images/opentiler-toolbar-detail.png)
+
 #### Toolbar Icons
 - 📁 **Open**: Load a document
 - 🔍+ **Zoom In**: Increase document zoom
@@ -130,6 +151,18 @@ pip install rawpy numpy
 2. Browse to your document file
 3. Select the file and click **Open**
 4. The document appears in the viewer
+
+### Document with Sky Skanner Example
+
+Here's OpenTiler with the Sky Skanner architectural plan loaded:
+
+![OpenTiler with Document Loaded](../images/opentiler-with-document.png)
+
+The document viewer shows:
+- **Document content** in the main viewing area
+- **Current zoom level** in the status bar
+- **Document dimensions** and scale information
+- **Navigation controls** for panning and zooming
 
 ### Recent Files
 - Access recently opened files via **File → Recent Files**
@@ -172,6 +205,18 @@ Access **Tools → Unit Converter** for:
 
 ### Understanding Tiling
 Tiling breaks large documents into smaller pages that fit on standard printers. Each tile overlaps slightly (gutter) for easy assembly.
+
+### Preview Panel
+
+The preview panel shows how your document will be tiled:
+
+![OpenTiler Preview Panel](../images/opentiler-preview-panel.png)
+
+The preview shows:
+- **Individual tiles** as separate pages
+- **Overlap areas** between adjacent tiles
+- **Crop marks** at tile boundaries
+- **Page numbers** for assembly reference
 
 ### Setting Up Tiling
 1. Load and scale your document
