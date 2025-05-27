@@ -4,7 +4,7 @@ PDF exporter for OpenTiler.
 
 import os
 from typing import List, Tuple, Optional
-from PySide6.QtCore import QRect
+from PySide6.QtCore import QRect, Qt
 from PySide6.QtGui import QPixmap, QPainter, QPdfWriter, QPageSize, QPageLayout
 from PySide6.QtWidgets import QMessageBox
 
@@ -30,18 +30,31 @@ class PDFExporter(BaseExporter):
                page_size: str = "A4",
                **kwargs) -> bool:
         """
-        Export tiled document as multi-page PDF.
+        Export tiled document as multi-page PDF or composite single-page PDF.
 
         Args:
             source_pixmap: Source document pixmap
             page_grid: List of page dictionaries with position and size info
             output_path: Output PDF file path
             page_size: Page size (A4, Letter, etc.)
-            **kwargs: Additional export options
+            **kwargs: Additional export options (composite=True for single-page)
 
         Returns:
             True if export successful, False otherwise
         """
+        # Check if composite export is requested
+        if kwargs.get('composite', False):
+            return self._export_composite_pdf(source_pixmap, page_grid, output_path, page_size, **kwargs)
+        else:
+            return self._export_multipage_pdf(source_pixmap, page_grid, output_path, page_size, **kwargs)
+
+    def _export_multipage_pdf(self,
+                              source_pixmap: QPixmap,
+                              page_grid: List[dict],
+                              output_path: str,
+                              page_size: str = "A4",
+                              **kwargs) -> bool:
+        """Export as multi-page PDF (original functionality)."""
         try:
             # Ensure output directory exists
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -239,3 +252,89 @@ class PDFExporter(BaseExporter):
         except Exception as e:
             print(f"Error adding metadata page: {str(e)}")
             # Continue without metadata page if there's an error
+
+    def _export_composite_pdf(self,
+                             source_pixmap: QPixmap,
+                             page_grid: List[dict],
+                             output_path: str,
+                             page_size: str = "A4",
+                             **kwargs) -> bool:
+        """Export as single-page composite PDF showing all tiles."""
+        try:
+            # Ensure output directory exists
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+            # Calculate composite image size
+            max_x = max_y = 0
+            for page in page_grid:
+                page_right = page['x'] + page['width']
+                page_bottom = page['y'] + page['height']
+                max_x = max(max_x, page_right)
+                max_y = max(max_y, page_bottom)
+
+            # Create composite image
+            composite = QPixmap(int(max_x), int(max_y))
+            composite.fill(Qt.white)  # Fill with white
+
+            painter = QPainter(composite)
+
+            # Draw each page
+            for page in page_grid:
+                page_pixmap = self._create_page_pixmap(source_pixmap, page)
+                if page_pixmap and not page_pixmap.isNull():
+                    painter.drawPixmap(int(page['x']), int(page['y']), page_pixmap)
+
+            painter.end()
+
+            # Create PDF writer
+            pdf_writer = QPdfWriter(output_path)
+
+            # Set page size to fit composite image
+            # Calculate appropriate page size based on composite dimensions
+            aspect_ratio = composite.width() / composite.height()
+
+            if page_size == "A4":
+                if aspect_ratio > 1.414:  # Landscape
+                    pdf_writer.setPageSize(QPageSize(QPageSize.A4))
+                    pdf_writer.setPageOrientation(QPageLayout.Landscape)
+                else:  # Portrait
+                    pdf_writer.setPageSize(QPageSize(QPageSize.A4))
+                    pdf_writer.setPageOrientation(QPageLayout.Portrait)
+            elif page_size == "A3":
+                pdf_writer.setPageSize(QPageSize(QPageSize.A3))
+                pdf_writer.setPageOrientation(QPageLayout.Landscape if aspect_ratio > 1.414 else QPageLayout.Portrait)
+            else:
+                pdf_writer.setPageSize(QPageSize(QPageSize.A4))  # Default
+
+            # Set resolution (300 DPI for high quality)
+            pdf_writer.setResolution(300)
+
+            # Add metadata
+            self.add_default_metadata()
+            pdf_writer.setTitle(self.metadata.get('title', 'OpenTiler Composite Export'))
+            pdf_writer.setCreator(self.metadata.get('application', 'OpenTiler'))
+
+            # Create painter for PDF
+            pdf_painter = QPainter(pdf_writer)
+
+            # Scale composite to fit PDF page while maintaining aspect ratio
+            pdf_rect = pdf_painter.viewport()
+            scaled_composite = composite.scaled(
+                pdf_rect.size(),
+                Qt.KeepAspectRatio,
+                Qt.SmoothTransformation
+            )
+
+            # Center the composite on the page
+            x = (pdf_rect.width() - scaled_composite.width()) // 2
+            y = (pdf_rect.height() - scaled_composite.height()) // 2
+
+            pdf_painter.drawPixmap(x, y, scaled_composite)
+            pdf_painter.end()
+
+            print(f"Composite PDF exported successfully: {output_path}")
+            return True
+
+        except Exception as e:
+            print(f"Composite PDF export error: {str(e)}")
+            return False

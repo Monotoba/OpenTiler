@@ -133,6 +133,16 @@ class Config:
         """Set default DPI."""
         self.set("default_dpi", dpi)
 
+    def get_available_dpi_options(self):
+        """Get list of available DPI options."""
+        dpi_string = self.get("available_dpi_options", "75,100,150,300,600")
+        return [int(dpi.strip()) for dpi in dpi_string.split(",")]
+
+    def set_available_dpi_options(self, dpi_list):
+        """Set available DPI options."""
+        dpi_string = ",".join(str(dpi) for dpi in dpi_list)
+        self.set("available_dpi_options", dpi_string)
+
     def get_default_page_size(self):
         """Get default page size."""
         return self.get("default_page_size", "A4")

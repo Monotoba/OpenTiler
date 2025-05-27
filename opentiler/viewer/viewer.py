@@ -16,6 +16,13 @@ try:
 except ImportError:
     HAS_PYMUPDF = False
 
+try:
+    import rawpy
+    import numpy as np
+    HAS_RAWPY = True
+except ImportError:
+    HAS_RAWPY = False
+
 from PIL import Image
 import io
 
@@ -182,6 +189,8 @@ class DocumentViewer(QWidget):
                 return self._load_dxf(file_path)
             elif file_ext.lower() == '.fcstd':
                 return self._load_freecad(file_path)
+            elif file_ext.lower() in ['.raw', '.cr2', '.nef', '.arw', '.dng', '.orf', '.rw2', '.pef', '.srw', '.raf']:
+                return self._load_raw(file_path)
             else:
                 QMessageBox.critical(self, "Error", f"Unsupported file format: {file_ext}")
                 return False
@@ -315,6 +324,49 @@ class DocumentViewer(QWidget):
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to load FreeCAD: {str(e)}")
+            return False
+
+    def _load_raw(self, file_path):
+        """Load a RAW image file."""
+        if not HAS_RAWPY:
+            QMessageBox.critical(self, "RAW Support Required",
+                               "RAW image support requires 'rawpy' package.\n"
+                               "Install with: pip install rawpy")
+            return False
+
+        try:
+            # Load RAW file
+            with rawpy.imread(file_path) as raw:
+                # Process RAW to RGB
+                rgb = raw.postprocess(
+                    use_camera_wb=True,      # Use camera white balance
+                    half_size=False,         # Full resolution
+                    no_auto_bright=True,     # Disable auto brightness
+                    output_bps=8             # 8-bit output
+                )
+
+            # Convert numpy array to PIL Image
+            pil_image = Image.fromarray(rgb)
+
+            # Convert PIL Image to QPixmap
+            # First convert to bytes
+            img_buffer = io.BytesIO()
+            pil_image.save(img_buffer, format='PNG')
+            img_buffer.seek(0)
+
+            # Load into QPixmap
+            qimg = QPixmap()
+            qimg.loadFromData(img_buffer.getvalue())
+
+            self.current_pixmap = qimg
+            self.current_document = file_path
+            self._update_display()
+            self.document_loaded.emit(file_path)
+
+            return True
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to load RAW image: {str(e)}")
             return False
 
     def _update_display(self):

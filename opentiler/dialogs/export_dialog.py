@@ -69,7 +69,13 @@ class ExportDialog(QDialog):
         format_layout = QFormLayout()
 
         self.format_combo = QComboBox()
-        self.format_combo.addItems(["PDF (Multi-page)", "PNG Images", "JPEG Images", "TIFF Images"])
+        self.format_combo.addItems([
+            "PDF (Multi-page)",
+            "PDF (Single-page Composite)",
+            "PNG Images",
+            "JPEG Images",
+            "TIFF Images"
+        ])
         self.format_combo.currentTextChanged.connect(self.on_format_changed)
         format_layout.addRow("Format:", self.format_combo)
 
@@ -241,6 +247,10 @@ class ExportDialog(QDialog):
             }
             # Add document information for metadata page
             kwargs.update(self.document_info)
+
+            # Check if composite PDF is requested
+            if "Composite" in format_text:
+                kwargs['composite'] = True
         else:
             exporter = ImageExporter()
             if "PNG" in format_text:

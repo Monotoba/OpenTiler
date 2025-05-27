@@ -68,10 +68,11 @@ class SettingsDialog(QDialog):
         layout.addRow("Default Units:", self.units_combo)
 
         # Default DPI
-        self.dpi_spin = QSpinBox()
-        self.dpi_spin.setRange(72, 600)
-        self.dpi_spin.setSuffix(" dpi")
-        layout.addRow("Default DPI:", self.dpi_spin)
+        self.dpi_combo = QComboBox()
+        available_dpi = config.get_available_dpi_options()
+        for dpi in available_dpi:
+            self.dpi_combo.addItem(f"{dpi} DPI", dpi)
+        layout.addRow("Default DPI:", self.dpi_combo)
 
         # Default page size
         self.page_size_combo = QComboBox()
@@ -296,7 +297,14 @@ class SettingsDialog(QDialog):
         """Load current settings into the dialog."""
         # General settings
         self.units_combo.setCurrentText(config.get_default_units())
-        self.dpi_spin.setValue(config.get_default_dpi())
+
+        # Set DPI combo to current value
+        current_dpi = config.get_default_dpi()
+        for i in range(self.dpi_combo.count()):
+            if self.dpi_combo.itemData(i) == current_dpi:
+                self.dpi_combo.setCurrentIndex(i)
+                break
+
         self.page_size_combo.setCurrentText(config.get_default_page_size())
         self.max_recent_spin.setValue(config.get_max_recent_files())
 
@@ -354,7 +362,7 @@ class SettingsDialog(QDialog):
         """Save settings to configuration."""
         # General settings
         config.set_default_units(self.units_combo.currentText())
-        config.set_default_dpi(self.dpi_spin.value())
+        config.set_default_dpi(self.dpi_combo.currentData())
         config.set_default_page_size(self.page_size_combo.currentText())
         config.set_max_recent_files(self.max_recent_spin.value())
 
