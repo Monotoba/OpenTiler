@@ -76,6 +76,12 @@ class SettingsDialog(QDialog):
         self.page_size_combo.addItems(["A4", "A3", "A2", "A1", "A0", "Letter", "Legal", "Tabloid"])
         layout.addRow("Default Page Size:", self.page_size_combo)
 
+        # Max recent files
+        self.max_recent_spin = QSpinBox()
+        self.max_recent_spin.setRange(1, 20)
+        self.max_recent_spin.setSuffix(" files")
+        layout.addRow("Max Recent Files:", self.max_recent_spin)
+
         widget.setLayout(layout)
         return widget
 
@@ -219,6 +225,7 @@ class SettingsDialog(QDialog):
         self.units_combo.setCurrentText(config.get_default_units())
         self.dpi_spin.setValue(config.get_default_dpi())
         self.page_size_combo.setCurrentText(config.get_default_page_size())
+        self.max_recent_spin.setValue(config.get_max_recent_files())
 
         # Tiling settings
         self.gutter_size_spin.setValue(config.get_gutter_size_mm())
@@ -262,6 +269,7 @@ class SettingsDialog(QDialog):
         config.set_default_units(self.units_combo.currentText())
         config.set_default_dpi(self.dpi_spin.value())
         config.set_default_page_size(self.page_size_combo.currentText())
+        config.set_max_recent_files(self.max_recent_spin.value())
 
         # Tiling settings
         config.set_gutter_size_mm(self.gutter_size_spin.value())

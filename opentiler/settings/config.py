@@ -82,6 +82,13 @@ class Config:
         if not self.settings.contains("crop_marks_print"):
             self.settings.setValue("crop_marks_print", True)
 
+        # Recent files settings
+        if not self.settings.contains("recent_files"):
+            self.settings.setValue("recent_files", [])
+
+        if not self.settings.contains("max_recent_files"):
+            self.settings.setValue("max_recent_files", 10)
+
     def get(self, key, default=None):
         """Get a configuration value."""
         return self.settings.value(key, default)
@@ -263,6 +270,54 @@ class Config:
     def set_crop_marks_print(self, print_enabled):
         """Set whether to print crop marks."""
         self.set("crop_marks_print", bool(print_enabled))
+
+    # Recent files settings
+    def get_recent_files(self):
+        """Get list of recent files."""
+        files = self.get("recent_files", [])
+        # Handle case where QSettings returns a string instead of list
+        if isinstance(files, str):
+            return []
+        return files if files else []
+
+    def add_recent_file(self, file_path):
+        """Add a file to the recent files list."""
+        recent_files = self.get_recent_files()
+
+        # Remove if already in list
+        if file_path in recent_files:
+            recent_files.remove(file_path)
+
+        # Add to beginning
+        recent_files.insert(0, file_path)
+
+        # Limit to max recent files
+        max_files = self.get_max_recent_files()
+        recent_files = recent_files[:max_files]
+
+        self.set("recent_files", recent_files)
+        self.sync()
+
+    def remove_recent_file(self, file_path):
+        """Remove a file from the recent files list."""
+        recent_files = self.get_recent_files()
+        if file_path in recent_files:
+            recent_files.remove(file_path)
+            self.set("recent_files", recent_files)
+            self.sync()
+
+    def clear_recent_files(self):
+        """Clear all recent files."""
+        self.set("recent_files", [])
+        self.sync()
+
+    def get_max_recent_files(self):
+        """Get maximum number of recent files to keep."""
+        return int(self.get("max_recent_files", 10))
+
+    def set_max_recent_files(self, max_files):
+        """Set maximum number of recent files to keep."""
+        self.set("max_recent_files", int(max_files))
 
 
 # Global configuration instance

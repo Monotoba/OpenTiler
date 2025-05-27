@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QIcon, QKeySequence, QAction
+import os
 
 from .viewer.viewer import DocumentViewer
 from .viewer.preview_panel import PreviewPanel
@@ -74,6 +75,10 @@ class MainWindow(QMainWindow):
         open_action.setShortcut(QKeySequence.Open)
         open_action.triggered.connect(self.open_file)
         file_menu.addAction(open_action)
+
+        # Open Recent submenu
+        self.recent_menu = file_menu.addMenu("Open &Recent")
+        self.update_recent_files_menu()
 
         file_menu.addSeparator()
 
@@ -165,13 +170,36 @@ class MainWindow(QMainWindow):
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "Open Document",
-            "",
+            self.config.get_last_input_dir(),
             "All Supported (*.pdf *.png *.jpg *.jpeg *.tiff *.svg);;PDF Files (*.pdf);;Image Files (*.png *.jpg *.jpeg *.tiff);;SVG Files (*.svg)"
         )
 
         if file_path:
-            self.document_viewer.load_document(file_path)
-            self.status_bar.showMessage(f"Loaded: {file_path}")
+            self.load_document(file_path)
+
+    def load_document(self, file_path):
+        """Load a document from the given file path."""
+        if not os.path.exists(file_path):
+            QMessageBox.warning(self, "Error", f"File not found: {file_path}")
+            # Remove from recent files if it doesn't exist
+            self.config.remove_recent_file(file_path)
+            self.update_recent_files_menu()
+            return False
+
+        # Update last input directory
+        self.config.set_last_input_dir(os.path.dirname(file_path))
+
+        # Load the document
+        if self.document_viewer.load_document(file_path):
+            self.status_bar.showMessage(f"Loaded: {os.path.basename(file_path)}")
+
+            # Add to recent files
+            self.config.add_recent_file(file_path)
+            self.update_recent_files_menu()
+            return True
+        else:
+            QMessageBox.warning(self, "Error", f"Failed to load document: {file_path}")
+            return False
 
     def export_document(self):
         """Export the current document."""
@@ -320,6 +348,47 @@ class MainWindow(QMainWindow):
             self.on_scale_applied(self.document_viewer.scale_factor)
 
         self.status_bar.showMessage("Settings updated")
+
+    def update_recent_files_menu(self):
+        """Update the recent files menu."""
+        self.recent_menu.clear()
+
+        recent_files = self.config.get_recent_files()
+
+        if not recent_files:
+            # Add disabled "No recent files" action
+            no_files_action = QAction("No recent files", self)
+            no_files_action.setEnabled(False)
+            self.recent_menu.addAction(no_files_action)
+        else:
+            # Add recent files
+            for i, file_path in enumerate(recent_files):
+                # Create action with filename and path
+                filename = os.path.basename(file_path)
+                action_text = f"&{i+1} {filename}"
+
+                action = QAction(action_text, self)
+                action.setToolTip(file_path)  # Show full path in tooltip
+                action.setData(file_path)  # Store full path in action data
+                action.triggered.connect(lambda checked, path=file_path: self.load_document(path))
+                self.recent_menu.addAction(action)
+
+                # Add keyboard shortcut for first 9 files
+                if i < 9:
+                    action.setShortcut(QKeySequence(f"Ctrl+{i+1}"))
+
+            # Add separator and clear action
+            self.recent_menu.addSeparator()
+
+            clear_action = QAction("&Clear Recent Files", self)
+            clear_action.triggered.connect(self.clear_recent_files)
+            self.recent_menu.addAction(clear_action)
+
+    def clear_recent_files(self):
+        """Clear all recent files."""
+        self.config.clear_recent_files()
+        self.update_recent_files_menu()
+        self.status_bar.showMessage("Recent files cleared")
 
     def show_about(self):
         """Show about dialog."""
