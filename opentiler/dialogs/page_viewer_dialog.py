@@ -66,7 +66,32 @@ class PageViewerDialog(QDialog):
 
         toolbar_widget = QFrame()
         toolbar_widget.setLayout(toolbar_layout)
-        toolbar_widget.setStyleSheet("background-color: #f8f8f8; padding: 5px;")
+        toolbar_widget.setStyleSheet("""
+            QFrame {
+                background-color: #2b2b2b;
+                padding: 5px;
+                border-bottom: 1px solid #555;
+            }
+            QPushButton {
+                background-color: #404040;
+                color: white;
+                border: 1px solid #555;
+                padding: 5px 10px;
+                border-radius: 3px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #505050;
+                border-color: #777;
+            }
+            QPushButton:pressed {
+                background-color: #353535;
+            }
+            QLabel {
+                color: white;
+                font-weight: bold;
+            }
+        """)
         layout.addWidget(toolbar_widget)
 
         # Create custom scroll area with panning support
@@ -174,17 +199,13 @@ class PageViewerDialog(QDialog):
 
     def wheel_event(self, event):
         """Handle mouse wheel events for zooming."""
-        if event.modifiers() & Qt.ControlModifier:
-            # Zoom with Ctrl+wheel
-            delta = event.angleDelta().y()
-            if delta > 0:
-                self.zoom_in()
-            else:
-                self.zoom_out()
-            event.accept()
+        # Always zoom with wheel (no Ctrl needed since panning handles navigation)
+        delta = event.angleDelta().y()
+        if delta > 0:
+            self.zoom_in()
         else:
-            # Normal scrolling
-            super(PanScrollArea, self.scroll_area).wheelEvent(event)
+            self.zoom_out()
+        event.accept()
 
 
 class ClickablePageThumbnail(QLabel):
