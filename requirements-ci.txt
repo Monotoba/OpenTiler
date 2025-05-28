@@ -1,0 +1,13 @@
+# OpenTiler CI/CD Requirements
+# Dependencies for GitHub Actions and continuous integration
+
+# Include development requirements
+-r requirements-dev.txt
+
+# CI-specific tools
+codecov>=2.1.0
+coverage>=7.0.0
+
+# Additional testing tools for CI
+pytest-timeout>=2.1.0
+pytest-mock>=3.10.0

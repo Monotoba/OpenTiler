@@ -1,0 +1,13 @@
+# OpenTiler Optional Features
+# Additional dependencies for enhanced functionality
+
+# CAD file support
+ezdxf>=1.0.0
+
+# RAW image support
+rawpy>=0.18.0
+numpy>=1.21.0
+
+# Automation and screen capture
+mss>=9.0.0
+pywinctl>=0.0.50

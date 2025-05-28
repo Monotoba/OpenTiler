@@ -1,0 +1,36 @@
+# OpenTiler Development Requirements
+# Dependencies for developers contributing to OpenTiler
+
+# Include core requirements
+-r requirements.txt
+-r requirements-optional.txt
+
+# Testing framework
+pytest>=7.0.0
+pytest-cov>=4.0.0
+pytest-xvfb>=3.0.0
+
+# Code quality and formatting
+black>=22.0.0
+flake8>=5.0.0
+isort>=5.0.0
+mypy>=1.0.0
+
+# Security scanning
+bandit>=1.7.0
+safety>=2.0.0
+
+# Type stubs
+types-Pillow>=9.0.0
+
+# Build tools
+pyinstaller>=5.0.0
+setuptools>=65.0.0
+wheel>=0.38.0
+
+# Documentation
+sphinx>=5.0.0
+sphinx-rtd-theme>=1.0.0
+
+# Development tools
+pre-commit>=3.0.0

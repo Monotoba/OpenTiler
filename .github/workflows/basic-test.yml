@@ -32,15 +32,15 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y xvfb
 
-    - name: Install Python dependencies
+    - name: Install core dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install PySide6 Pillow PyMuPDF
+        pip install -r requirements.txt
         pip install pytest
 
     - name: Install optional dependencies
       run: |
-        pip install ezdxf
+        pip install -r requirements-optional.txt
       continue-on-error: true
 
     - name: Test Python imports

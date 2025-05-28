@@ -31,11 +31,17 @@ OPTIONAL_REQUIREMENTS = {
     'cad': ['ezdxf>=1.0.0'],
     'raw': ['rawpy>=0.18.0', 'numpy>=1.21.0'],
     'automation': ['mss>=9.0.0', 'pywinctl>=0.0.50'],
+    'all': ['ezdxf>=1.0.0', 'rawpy>=0.18.0', 'numpy>=1.21.0', 'mss>=9.0.0', 'pywinctl>=0.0.50'],
     'dev': [
         'pytest>=7.0.0',
+        'pytest-cov>=4.0.0',
         'black>=22.0.0',
         'flake8>=5.0.0',
+        'isort>=5.0.0',
         'mypy>=1.0.0',
+        'bandit>=1.7.0',
+        'safety>=2.0.0',
+        'pyinstaller>=5.0.0',
     ],
     'docs': [
         'sphinx>=5.0.0',

@@ -19,6 +19,10 @@ sys.path.insert(0, str(project_root))
 
 # Import Qt application for GUI tests
 try:
+    import os
+    # Set Qt platform to offscreen for headless testing
+    os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+
     from PySide6.QtWidgets import QApplication
     from PySide6.QtCore import QCoreApplication
     QT_AVAILABLE = True
@@ -31,14 +35,15 @@ def qapp():
     """Create QApplication instance for GUI tests."""
     if not QT_AVAILABLE:
         pytest.skip("PySide6 not available")
-    
+
     # Check if QApplication already exists
     app = QCoreApplication.instance()
     if app is None:
-        app = QApplication([])
-    
+        # Create app with minimal arguments for testing
+        app = QApplication(['--platform', 'offscreen'])
+
     yield app
-    
+
     # Don't quit the app as it might be used by other tests
 
 
@@ -54,7 +59,7 @@ def temp_dir():
 def mock_main_window():
     """Create mock main window for plugin tests."""
     main_window = Mock()
-    
+
     # Mock document
     main_window.current_document = Mock()
     main_window.current_document.file_path = "/test/document.pdf"
@@ -63,7 +68,7 @@ def mock_main_window():
     main_window.current_document.dimensions = (210.0, 297.0)
     main_window.current_document.resolution = (300, 300)
     main_window.current_document.metadata = {}
-    
+
     # Mock plan view
     main_window.plan_view = Mock()
     main_window.plan_view.zoom_level = 1.0
@@ -73,7 +78,7 @@ def mock_main_window():
     main_window.plan_view.content_bounds = Mock()
     main_window.plan_view.visible_area = Mock()
     main_window.plan_view.fit_mode = "fit_window"
-    
+
     # Mock tile preview
     main_window.tile_preview = Mock()
     main_window.tile_preview.tile_count = 4
@@ -85,18 +90,18 @@ def mock_main_window():
         'page_size': (210.0, 297.0),
         'export_settings': {}
     }
-    
+
     # Mock measurement system
     main_window.measurement_system = Mock()
     main_window.measurement_system.get_all_measurements.return_value = []
     main_window.measurement_system.get_snap_points.return_value = []
-    
+
     # Mock menu bar
     main_window.menuBar.return_value = Mock()
-    
+
     # Mock status bar
     main_window.statusBar.return_value = Mock()
-    
+
     return main_window
 
 
@@ -106,13 +111,13 @@ def plugin_test_environment(temp_dir, mock_main_window):
     # Create plugin directories
     plugin_dirs = {
         'builtin': temp_dir / "plugins" / "builtin",
-        'external': temp_dir / "plugins" / "external", 
+        'external': temp_dir / "plugins" / "external",
         'user': temp_dir / "config" / "plugins" / "user"
     }
-    
+
     for plugin_dir in plugin_dirs.values():
         plugin_dir.mkdir(parents=True, exist_ok=True)
-    
+
     return {
         'temp_dir': temp_dir,
         'main_window': mock_main_window,

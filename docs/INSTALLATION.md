@@ -60,8 +60,21 @@ python main.py
    ```
 
 5. **Install dependencies:**
+
+   **Basic Installation (Recommended for most users):**
    ```cmd
-   pip install PySide6 PyPDF2 ezdxf matplotlib
+   pip install -r requirements.txt
+   ```
+
+   **Full Installation (All features):**
+   ```cmd
+   pip install -r requirements.txt
+   pip install -r requirements-optional.txt
+   ```
+
+   **Developer Installation:**
+   ```cmd
+   pip install -r requirements-dev.txt
    ```
 
 6. **Download OpenTiler source code** and run:
@@ -81,8 +94,9 @@ python main.py
 
 3. **Install dependencies:**
    ```cmd
-   conda install -c conda-forge pyside6 matplotlib
-   pip install PyPDF2 ezdxf
+   conda install -c conda-forge pyside6
+   pip install -r requirements.txt
+   pip install -r requirements-optional.txt
    ```
 
 #### Windows Troubleshooting
@@ -120,10 +134,10 @@ pip install --user PySide6 PyPDF2 ezdxf matplotlib
    ```bash
    # For Qt/GUI support
    sudo apt install python3-pyqt5 python3-pyqt5.qtsvg
-   
+
    # For matplotlib
    sudo apt install python3-matplotlib
-   
+
    # Optional: For FreeCAD
    sudo apt install freecad
    ```
@@ -135,8 +149,16 @@ pip install --user PySide6 PyPDF2 ezdxf matplotlib
    ```
 
 5. **Install Python dependencies:**
+
+   **Basic Installation:**
    ```bash
-   pip install PySide6 PyPDF2 ezdxf matplotlib
+   pip install -r requirements.txt
+   ```
+
+   **Full Installation (All features):**
+   ```bash
+   pip install -r requirements.txt
+   pip install -r requirements-optional.txt
    ```
 
 #### CentOS/RHEL/Fedora
@@ -145,7 +167,7 @@ pip install --user PySide6 PyPDF2 ezdxf matplotlib
    ```bash
    # CentOS/RHEL
    sudo yum install python3 python3-pip
-   
+
    # Fedora
    sudo dnf install python3 python3-pip
    ```
@@ -155,7 +177,7 @@ pip install --user PySide6 PyPDF2 ezdxf matplotlib
    # CentOS/RHEL
    sudo yum groupinstall "Development Tools"
    sudo yum install python3-devel
-   
+
    # Fedora
    sudo dnf groupinstall "Development Tools"
    sudo dnf install python3-devel
@@ -199,8 +221,16 @@ pip install PySide6 PyPDF2 ezdxf matplotlib
    ```
 
 4. **Install dependencies:**
+
+   **Basic Installation:**
    ```bash
-   pip install PySide6 PyPDF2 ezdxf matplotlib
+   pip install -r requirements.txt
+   ```
+
+   **Full Installation (All features):**
+   ```bash
+   pip install -r requirements.txt
+   pip install -r requirements-optional.txt
    ```
 
 5. **Optional: Install FreeCAD:**
