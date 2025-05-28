@@ -9,7 +9,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Dict, Any, Optional, List
 from PySide6.QtCore import QObject, Signal
-from PySide6.QtWidgets import QWidget, QAction, QMenu
+from PySide6.QtWidgets import QWidget, QMenu
+from PySide6.QtGui import QAction
 
 from .hook_system import HookHandler, HookType, HookContext, get_hook_manager
 
@@ -28,7 +29,7 @@ class PluginInfo:
     max_opentiler_version: Optional[str] = None
 
 
-class BasePlugin(QObject, ABC):
+class BasePlugin(QObject):
     """
     Base class for all OpenTiler plugins.
 

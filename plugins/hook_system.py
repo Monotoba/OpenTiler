@@ -18,25 +18,25 @@ from PySide6.QtWidgets import QWidget
 
 class HookType(Enum):
     """Types of hooks available in the system."""
-    
+
     # Document lifecycle hooks
     DOCUMENT_BEFORE_LOAD = "document_before_load"
     DOCUMENT_AFTER_LOAD = "document_after_load"
     DOCUMENT_BEFORE_CLOSE = "document_before_close"
     DOCUMENT_AFTER_CLOSE = "document_after_close"
-    
+
     # Rendering hooks
     RENDER_BEFORE_DRAW = "render_before_draw"
     RENDER_AFTER_DRAW = "render_after_draw"
     RENDER_BEFORE_TRANSFORM = "render_before_transform"
     RENDER_AFTER_TRANSFORM = "render_after_transform"
-    
+
     # Tile processing hooks
     TILE_BEFORE_GENERATE = "tile_before_generate"
     TILE_AFTER_GENERATE = "tile_after_generate"
     TILE_BEFORE_EXPORT = "tile_before_export"
     TILE_AFTER_EXPORT = "tile_after_export"
-    
+
     # Measurement hooks
     MEASUREMENT_BEFORE_START = "measurement_before_start"
     MEASUREMENT_AFTER_START = "measurement_after_start"
@@ -44,13 +44,13 @@ class HookType(Enum):
     MEASUREMENT_AFTER_UPDATE = "measurement_after_update"
     MEASUREMENT_BEFORE_FINISH = "measurement_before_finish"
     MEASUREMENT_AFTER_FINISH = "measurement_after_finish"
-    
+
     # Scale hooks
     SCALE_BEFORE_SET = "scale_before_set"
     SCALE_AFTER_SET = "scale_after_set"
     SCALE_BEFORE_CALCULATE = "scale_before_calculate"
     SCALE_AFTER_CALCULATE = "scale_after_calculate"
-    
+
     # View hooks
     VIEW_BEFORE_ZOOM = "view_before_zoom"
     VIEW_AFTER_ZOOM = "view_after_zoom"
@@ -58,7 +58,7 @@ class HookType(Enum):
     VIEW_AFTER_PAN = "view_after_pan"
     VIEW_BEFORE_ROTATE = "view_before_rotate"
     VIEW_AFTER_ROTATE = "view_after_rotate"
-    
+
     # Export hooks
     EXPORT_BEFORE_START = "export_before_start"
     EXPORT_AFTER_START = "export_after_start"
@@ -66,13 +66,13 @@ class HookType(Enum):
     EXPORT_AFTER_PROCESS = "export_after_process"
     EXPORT_BEFORE_SAVE = "export_before_save"
     EXPORT_AFTER_SAVE = "export_after_save"
-    
+
     # UI hooks
     UI_BEFORE_UPDATE = "ui_before_update"
     UI_AFTER_UPDATE = "ui_after_update"
     UI_CONTEXT_MENU = "ui_context_menu"
     UI_TOOLBAR_UPDATE = "ui_toolbar_update"
-    
+
     # Settings hooks
     SETTINGS_BEFORE_LOAD = "settings_before_load"
     SETTINGS_AFTER_LOAD = "settings_after_load"
@@ -89,7 +89,7 @@ class HookContext:
     timestamp: Optional[float] = None
     can_cancel: bool = False
     cancelled: bool = False
-    
+
     def cancel(self):
         """Cancel the operation if cancellation is allowed."""
         if self.can_cancel:
@@ -158,28 +158,28 @@ class ViewContext:
     fit_mode: Optional[str] = None
 
 
-class HookHandler(ABC):
+class HookHandler:
     """Abstract base class for hook handlers."""
-    
+
     @abstractmethod
     def handle_hook(self, context: HookContext) -> bool:
         """
         Handle a hook event.
-        
+
         Args:
             context: Hook context with event data
-            
+
         Returns:
             True if hook was handled successfully, False otherwise
         """
         pass
-    
+
     @property
     @abstractmethod
     def supported_hooks(self) -> List[HookType]:
         """Return list of hook types this handler supports."""
         pass
-    
+
     @property
     def priority(self) -> int:
         """Return handler priority (higher = executed first)."""
@@ -189,41 +189,41 @@ class HookHandler(ABC):
 class HookManager(QObject):
     """
     Manages the hook system for OpenTiler plugins.
-    
+
     Provides registration, execution, and management of hooks throughout
     the OpenTiler application lifecycle.
     """
-    
+
     # Signals
     hook_executed = Signal(HookType, str)  # hook_type, plugin_name
     hook_failed = Signal(HookType, str, str)  # hook_type, plugin_name, error
-    
+
     def __init__(self):
         """Initialize the hook manager."""
         super().__init__()
-        
+
         # Hook handlers organized by type
         self.handlers: Dict[HookType, List[tuple]] = {}  # (handler, plugin_name, priority)
-        
+
         # Hook execution statistics
         self.execution_stats: Dict[HookType, Dict[str, int]] = {}
-        
+
         # Hook configuration
         self.hook_config: Dict[HookType, Dict[str, Any]] = {}
-        
+
         # Initialize all hook types
         for hook_type in HookType:
             self.handlers[hook_type] = []
             self.execution_stats[hook_type] = {}
-    
+
     def register_handler(self, handler: HookHandler, plugin_name: str) -> bool:
         """
         Register a hook handler.
-        
+
         Args:
             handler: Hook handler instance
             plugin_name: Name of the plugin registering the handler
-            
+
         Returns:
             True if registered successfully
         """
@@ -232,28 +232,28 @@ class HookManager(QObject):
                 # Add handler with priority
                 handler_tuple = (handler, plugin_name, handler.priority)
                 self.handlers[hook_type].append(handler_tuple)
-                
+
                 # Sort by priority (highest first)
                 self.handlers[hook_type].sort(key=lambda x: x[2], reverse=True)
-                
+
                 # Initialize stats
                 if plugin_name not in self.execution_stats[hook_type]:
                     self.execution_stats[hook_type][plugin_name] = 0
-            
+
             return True
-            
+
         except Exception as e:
             print(f"Failed to register hook handler for {plugin_name}: {e}")
             return False
-    
+
     def unregister_handler(self, handler: HookHandler, plugin_name: str) -> bool:
         """
         Unregister a hook handler.
-        
+
         Args:
             handler: Hook handler instance
             plugin_name: Name of the plugin
-            
+
         Returns:
             True if unregistered successfully
         """
@@ -264,29 +264,29 @@ class HookManager(QObject):
                     (h, name, priority) for h, name, priority in self.handlers[hook_type]
                     if h != handler or name != plugin_name
                 ]
-            
+
             return True
-            
+
         except Exception as e:
             print(f"Failed to unregister hook handler for {plugin_name}: {e}")
             return False
-    
-    def execute_hook(self, hook_type: HookType, context_data: Dict[str, Any], 
+
+    def execute_hook(self, hook_type: HookType, context_data: Dict[str, Any],
                     source: Optional[str] = None, can_cancel: bool = False) -> HookContext:
         """
         Execute all handlers for a specific hook type.
-        
+
         Args:
             hook_type: Type of hook to execute
             context_data: Data to pass to hook handlers
             source: Source of the hook execution
             can_cancel: Whether handlers can cancel the operation
-            
+
         Returns:
             Hook context with results
         """
         import time
-        
+
         # Create hook context
         context = HookContext(
             hook_type=hook_type,
@@ -296,55 +296,55 @@ class HookManager(QObject):
             can_cancel=can_cancel,
             cancelled=False
         )
-        
+
         # Execute handlers in priority order
         for handler, plugin_name, priority in self.handlers[hook_type]:
             try:
                 # Execute handler
                 success = handler.handle_hook(context)
-                
+
                 # Update statistics
                 if success:
                     self.execution_stats[hook_type][plugin_name] += 1
                     self.hook_executed.emit(hook_type, plugin_name)
-                
+
                 # Check if operation was cancelled
                 if context.cancelled:
                     break
-                    
+
             except Exception as e:
                 error_msg = f"Hook handler error: {e}"
                 self.hook_failed.emit(hook_type, plugin_name, error_msg)
                 print(f"Hook execution failed for {plugin_name} on {hook_type}: {e}")
-        
+
         return context
-    
+
     def get_handlers(self, hook_type: HookType) -> List[str]:
         """
         Get list of plugin names that handle a specific hook type.
-        
+
         Args:
             hook_type: Hook type to query
-            
+
         Returns:
             List of plugin names
         """
         return [plugin_name for _, plugin_name, _ in self.handlers[hook_type]]
-    
+
     def get_execution_stats(self) -> Dict[HookType, Dict[str, int]]:
         """Get hook execution statistics."""
         return self.execution_stats.copy()
-    
+
     def configure_hook(self, hook_type: HookType, config: Dict[str, Any]):
         """
         Configure hook behavior.
-        
+
         Args:
             hook_type: Hook type to configure
             config: Configuration settings
         """
         self.hook_config[hook_type] = config
-    
+
     def get_hook_config(self, hook_type: HookType) -> Dict[str, Any]:
         """Get configuration for a hook type."""
         return self.hook_config.get(hook_type, {})

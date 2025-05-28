@@ -18,8 +18,8 @@ import logging
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Callable
 from PySide6.QtCore import QTimer, QThread, Signal, QObject
-from PySide6.QtWidgets import QAction, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox, QCheckBox, QPushButton, QTextEdit, QGroupBox
-from PySide6.QtGui import QKeySequence, QShortcut
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox, QCheckBox, QPushButton, QTextEdit, QGroupBox
+from PySide6.QtGui import QKeySequence, QShortcut, QAction
 
 # Add screen capture tool to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "tools" / "screen_capture"))
