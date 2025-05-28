@@ -275,6 +275,352 @@ class MyHookHandler(HookHandler):
         return True  # Success
 ```
 
+## ⚡ Plugin Priority System
+
+### Priority-Based Hook Execution
+
+The plugin system uses **priority-based execution** to ensure hooks run in the correct order. Higher priority plugins execute first and can modify data for lower priority plugins.
+
+#### **Priority Ranges (Recommended):**
+
+```python
+# CRITICAL (1000+): Security, validation, system integrity
+class SecurityPlugin(HookHandler):
+    @property
+    def priority(self) -> int:
+        return 1000  # Must run first to validate operations
+
+# HIGH (500-999): Core functionality, essential features
+class CoreFeaturePlugin(HookHandler):
+    @property
+    def priority(self) -> int:
+        return 500  # Core functionality
+
+# NORMAL (100-499): Standard plugins, user features
+class SnapPlugin(HookHandler):
+    @property
+    def priority(self) -> int:
+        return 200  # Feature plugins
+
+class AutomationPlugin(HookHandler):
+    @property
+    def priority(self) -> int:
+        return 100  # Automation and utilities
+
+# LOW (1-99): Logging, analytics, non-essential
+class LoggingPlugin(HookHandler):
+    @property
+    def priority(self) -> int:
+        return 50  # Background logging
+```
+
+### Real-World Priority Example
+
+Here's how multiple plugins work together on measurement hooks:
+
+```python
+# MEASUREMENT_BEFORE_START execution order:
+
+# 1. PRIORITY 500: Validation Plugin (runs FIRST)
+class ValidationHookHandler(HookHandler):
+    @property
+    def priority(self) -> int:
+        return 500
+
+    def handle_hook(self, context: HookContext) -> bool:
+        start_point = context.data.get('start_point')
+        if not self.is_valid_measurement_point(start_point):
+            context.cancel()  # Stop the entire chain
+            return False
+        return True
+
+# 2. PRIORITY 200: Snap Plugin (runs SECOND)
+class SnapHookHandler(HookHandler):
+    @property
+    def priority(self) -> int:
+        return 200
+
+    def handle_hook(self, context: HookContext) -> bool:
+        start_point = context.data.get('start_point')
+        snap_point = self.find_snap_point(start_point)
+        if snap_point:
+            # Modify data for next plugin
+            context.data['start_point'] = snap_point
+            context.data['snapped'] = True
+        return True
+
+# 3. PRIORITY 100: Automation Plugin (runs THIRD)
+class AutomationHookHandler(HookHandler):
+    @property
+    def priority(self) -> int:
+        return 100
+
+    def handle_hook(self, context: HookContext) -> bool:
+        # Gets the validated and snapped point
+        start_point = context.data.get('start_point')
+        snapped = context.data.get('snapped', False)
+
+        if snapped:
+            self.log_info(f"Measurement started at snapped point: {start_point}")
+        else:
+            self.log_info(f"Measurement started at: {start_point}")
+
+        # Auto-capture screenshot if enabled
+        if self.config.get('auto_capture_on_measurement'):
+            self.capture_screenshot('measurement-started.png')
+
+        return True
+
+# 4. PRIORITY 50: Analytics Plugin (runs LAST)
+class AnalyticsHookHandler(HookHandler):
+    @property
+    def priority(self) -> int:
+        return 50
+
+    def handle_hook(self, context: HookContext) -> bool:
+        # Track measurement statistics
+        self.track_measurement_event(context.data)
+        return True
+```
+
+### Hook Chain Execution Flow
+
+```python
+# When OpenTiler executes MEASUREMENT_BEFORE_START:
+
+hook_manager.execute_hook(HookType.MEASUREMENT_BEFORE_START, {
+    'start_point': QPointF(100, 200),
+    'measurement_id': 'meas_001'
+})
+
+# Execution order (automatic, based on priority):
+# 1. ValidationHookHandler (priority 500) - Validates point
+# 2. SnapHookHandler (priority 200) - Snaps to nearest point
+# 3. AutomationHookHandler (priority 100) - Logs and captures
+# 4. AnalyticsHookHandler (priority 50) - Tracks statistics
+
+# If ValidationHookHandler calls context.cancel(),
+# the chain stops and no other plugins execute
+```
+
+### Priority Best Practices
+
+#### **1. Choose Appropriate Priority Ranges:**
+```python
+# ✅ GOOD: Use standard ranges
+class MyPlugin(HookHandler):
+    @property
+    def priority(self) -> int:
+        return 200  # Standard feature plugin
+
+# ❌ AVOID: Extreme priorities without reason
+class MyPlugin(HookHandler):
+    @property
+    def priority(self) -> int:
+        return 99999  # Unnecessarily high
+```
+
+#### **2. Document Priority Decisions:**
+```python
+class SnapPlugin(HookHandler):
+    @property
+    def priority(self) -> int:
+        # Higher than automation (100) because snap must modify
+        # measurement points before automation logs them
+        return 200
+```
+
+#### **3. Consider Plugin Interactions:**
+```python
+# Plugins that MODIFY data should have higher priority
+# than plugins that READ/LOG data
+
+class DataModifierPlugin(HookHandler):
+    @property
+    def priority(self) -> int:
+        return 300  # Modifies context data
+
+class DataReaderPlugin(HookHandler):
+    @property
+    def priority(self) -> int:
+        return 100  # Reads modified data
+```
+
+### Priority Conflict Resolution
+
+When multiple plugins have the same priority, execution order is determined by:
+
+1. **Registration order** (first registered runs first)
+2. **Plugin name** (alphabetical as tiebreaker)
+
+```python
+# Both plugins have priority 200:
+# - SnapPlugin (registered first) → runs first
+# - MeasurementPlugin (registered second) → runs second
+```
+
+### Cancellation and Chain Control
+
+Higher priority plugins can stop the execution chain:
+
+```python
+class SecurityPlugin(HookHandler):
+    @property
+    def priority(self) -> int:
+        return 1000  # Highest priority
+
+    def handle_hook(self, context: HookContext) -> bool:
+        if not self.user_has_permission(context.data):
+            context.cancel()  # Stops all lower priority plugins
+            return False
+        return True
+```
+
+### Practical Priority Examples
+
+#### **Example 1: Measurement Workflow**
+```python
+# Real execution order for MEASUREMENT_BEFORE_START:
+
+# Priority 1000: Security validation
+if not user_has_measurement_permission():
+    context.cancel()  # Stops everything
+
+# Priority 500: Input validation
+if measurement_point_out_of_bounds():
+    context.cancel()  # Stops remaining plugins
+
+# Priority 200: Snap functionality
+snap_point = find_nearest_snap_point()
+context.data['start_point'] = snap_point  # Modifies for next plugins
+
+# Priority 150: Grid alignment
+align_to_grid(context.data['start_point'])  # Further refinement
+
+# Priority 100: Automation logging
+log_measurement_started(context.data)  # Records the final point
+
+# Priority 50: Analytics tracking
+track_user_measurement_behavior()  # Background analytics
+```
+
+#### **Example 2: Rendering Pipeline**
+```python
+# Real execution order for RENDER_BEFORE_DRAW:
+
+# Priority 800: Performance optimization
+if low_memory_mode():
+    reduce_render_quality()
+
+# Priority 600: Content filtering
+if content_needs_filtering():
+    apply_content_filters()
+
+# Priority 400: Transform modifications
+apply_custom_transforms()  # Modify rendering transforms
+
+# Priority 300: Overlay additions
+add_measurement_overlays()  # Add visual overlays
+
+# Priority 200: Snap point rendering
+render_snap_points()  # Visual snap indicators
+
+# Priority 100: Automation markers
+add_automation_markers()  # Debug/automation indicators
+
+# Priority 50: Performance monitoring
+start_render_timer()  # Track rendering performance
+```
+
+#### **Example 3: Export Process**
+```python
+# Real execution order for EXPORT_BEFORE_START:
+
+# Priority 900: License validation
+if not valid_export_license():
+    context.cancel()
+
+# Priority 700: Format validation
+if unsupported_export_format():
+    context.cancel()
+
+# Priority 500: Quality optimization
+optimize_export_settings()
+
+# Priority 300: Watermark addition
+add_export_watermark()
+
+# Priority 200: Metadata injection
+inject_export_metadata()
+
+# Priority 100: Automation tracking
+log_export_started()
+
+# Priority 50: Usage analytics
+track_export_statistics()
+```
+
+### Priority Planning Guide
+
+When creating a new plugin, ask these questions:
+
+#### **1. Does your plugin VALIDATE or SECURE?**
+```python
+# Use priority 800-1000
+class SecurityPlugin(HookHandler):
+    @property
+    def priority(self) -> int:
+        return 1000  # Must run first
+```
+
+#### **2. Does your plugin MODIFY data for others?**
+```python
+# Use priority 200-500
+class SnapPlugin(HookHandler):
+    @property
+    def priority(self) -> int:
+        return 200  # Modifies measurement points
+```
+
+#### **3. Does your plugin READ/LOG data?**
+```python
+# Use priority 50-150
+class LoggingPlugin(HookHandler):
+    @property
+    def priority(self) -> int:
+        return 100  # Reads final data
+```
+
+#### **4. Does your plugin do BACKGROUND tasks?**
+```python
+# Use priority 1-50
+class AnalyticsPlugin(HookHandler):
+    @property
+    def priority(self) -> int:
+        return 25  # Background analytics
+```
+
+### Priority Reference Table
+
+| Priority Range | Purpose | Examples | When to Use |
+|---------------|---------|----------|-------------|
+| **1000+** | Critical System | Security, License validation | Must run first, can stop everything |
+| **800-999** | Core Validation | Input validation, Bounds checking | Essential validation before processing |
+| **500-799** | Core Features | Format conversion, Core algorithms | Essential functionality |
+| **200-499** | User Features | Snap, Grid alignment, Overlays | Modify data for other plugins |
+| **100-199** | Automation/Utils | Logging, Automation, Screenshots | Read/process final data |
+| **50-99** | Background | Analytics, Performance monitoring | Non-essential background tasks |
+| **1-49** | Debug/Dev | Debug logging, Development tools | Development and debugging only |
+
+### Current Plugin Priorities
+
+| Plugin | Priority | Rationale |
+|--------|----------|-----------|
+| **Snap Plugin** | 200 | Must modify measurement points before automation logs them |
+| **Automation Plugin** | 100 | Logs and captures after all modifications are complete |
+| **Future Security Plugin** | 1000 | Must validate permissions before any operations |
+| **Future Analytics Plugin** | 50 | Background tracking, doesn't affect functionality |
+
 ## 🔐 Content Access System
 
 ### Access Levels
