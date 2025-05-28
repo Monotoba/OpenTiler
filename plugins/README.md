@@ -19,9 +19,12 @@ The plugin system allows developers to:
 
 - ✅ **Dynamic Loading** - Plugins loaded at runtime
 - ✅ **Dependency Management** - Automatic dependency resolution
-- ✅ **Event System** - React to OpenTiler events
+- ✅ **Comprehensive Hook System** - Deep integration with OpenTiler's core functions
+- ✅ **Content Access Control** - Secure access to plan views, tiles, and measurements
+- ✅ **Before/After Hooks** - Intercept and modify drawing and transformation operations
 - ✅ **Menu Integration** - Add custom menu items and toolbars
-- ✅ **Settings Integration** - Plugin-specific configuration
+- ✅ **Settings Integration** - Plugin-specific configuration with UI
+- ✅ **Plugin Manager UI** - Complete management interface in settings dialog
 - ✅ **Error Handling** - Robust error management and recovery
 - ✅ **Hot Reload** - Reload plugins without restarting OpenTiler
 
@@ -45,6 +48,24 @@ The plugin system allows developers to:
 - Maintains registry of available plugins
 - Tracks dependencies and relationships
 - Provides plugin discovery and metadata
+
+#### **Hook System** (`hook_system.py`)
+- Comprehensive before/after hooks for all OpenTiler operations
+- Document lifecycle, rendering, measurements, exports, and UI events
+- Priority-based hook execution with cancellation support
+- Context-rich event data for plugin decision making
+
+#### **Content Access** (`content_access.py`)
+- Controlled access to plan views, tile previews, and measurements
+- Read-only, read-write, and full-control access levels
+- Secure plugin sandboxing with permission-based access
+- Real-time document content and transformation access
+
+#### **Plugin Manager UI** (`plugin_manager_ui.py`)
+- Complete plugin management interface for settings dialog
+- Plugin discovery, enable/disable, and configuration
+- Hook registration status and execution statistics
+- Real-time plugin status monitoring and error reporting
 
 ### Plugin Types
 
@@ -77,13 +98,13 @@ def main():
     parser = argparse.ArgumentParser()
     add_plugin_arguments(parser)
     args = parser.parse_args()
-    
+
     # Create main window
     main_window = OpenTilerMainWindow()
-    
+
     # Integrate plugin system
     plugin_integration = integrate_plugins_with_main_window(main_window, args)
-    
+
     # Run application
     main_window.show()
     return app.exec()
@@ -167,6 +188,139 @@ response = json.loads(sock.recv(1024).decode('utf-8'))
 - `rotate_right` - Rotate document clockwise
 - `capture_screenshot` - Capture screenshot of OpenTiler
 
+### Snap Plugin
+
+The **Snap Plugin** demonstrates the hook system with intelligent snap functionality:
+
+#### **Features:**
+- **Measurement Hooks** - Intercept measurement events for snap functionality
+- **Content Analysis** - Analyze document content for snap points
+- **Visual Indicators** - Render snap points as visual overlays
+- **Grid Snap** - Snap to regular grid points
+- **Content Snap** - Snap to document corners, edges, and intersections
+
+#### **Hook Integration:**
+```python
+@property
+def supported_hooks(self) -> List[HookType]:
+    return [
+        HookType.MEASUREMENT_BEFORE_START,
+        HookType.MEASUREMENT_BEFORE_UPDATE,
+        HookType.RENDER_AFTER_DRAW,
+        HookType.DOCUMENT_AFTER_LOAD
+    ]
+```
+
+## 🔗 Hook System
+
+### Comprehensive Hook Types
+
+The hook system provides **before** and **after** hooks for all major OpenTiler operations:
+
+#### **Document Lifecycle Hooks:**
+- `DOCUMENT_BEFORE_LOAD` / `DOCUMENT_AFTER_LOAD`
+- `DOCUMENT_BEFORE_CLOSE` / `DOCUMENT_AFTER_CLOSE`
+
+#### **Rendering Hooks:**
+- `RENDER_BEFORE_DRAW` / `RENDER_AFTER_DRAW`
+- `RENDER_BEFORE_TRANSFORM` / `RENDER_AFTER_TRANSFORM`
+
+#### **Tile Processing Hooks:**
+- `TILE_BEFORE_GENERATE` / `TILE_AFTER_GENERATE`
+- `TILE_BEFORE_EXPORT` / `TILE_AFTER_EXPORT`
+
+#### **Measurement Hooks:**
+- `MEASUREMENT_BEFORE_START` / `MEASUREMENT_AFTER_START`
+- `MEASUREMENT_BEFORE_UPDATE` / `MEASUREMENT_AFTER_UPDATE`
+- `MEASUREMENT_BEFORE_FINISH` / `MEASUREMENT_AFTER_FINISH`
+
+#### **Scale Hooks:**
+- `SCALE_BEFORE_SET` / `SCALE_AFTER_SET`
+- `SCALE_BEFORE_CALCULATE` / `SCALE_AFTER_CALCULATE`
+
+#### **View Transformation Hooks:**
+- `VIEW_BEFORE_ZOOM` / `VIEW_AFTER_ZOOM`
+- `VIEW_BEFORE_PAN` / `VIEW_AFTER_PAN`
+- `VIEW_BEFORE_ROTATE` / `VIEW_AFTER_ROTATE`
+
+#### **Export Hooks:**
+- `EXPORT_BEFORE_START` / `EXPORT_AFTER_START`
+- `EXPORT_BEFORE_PROCESS` / `EXPORT_AFTER_PROCESS`
+- `EXPORT_BEFORE_SAVE` / `EXPORT_AFTER_SAVE`
+
+### Hook Handler Implementation
+
+```python
+class MyHookHandler(HookHandler):
+    @property
+    def supported_hooks(self) -> List[HookType]:
+        return [HookType.RENDER_BEFORE_DRAW, HookType.MEASUREMENT_AFTER_FINISH]
+
+    @property
+    def priority(self) -> int:
+        return 100  # Higher = executed first
+
+    def handle_hook(self, context: HookContext) -> bool:
+        if context.hook_type == HookType.RENDER_BEFORE_DRAW:
+            # Modify rendering before it happens
+            painter = context.data.get('painter')
+            # Add custom overlays, modify transforms, etc.
+
+        elif context.hook_type == HookType.MEASUREMENT_AFTER_FINISH:
+            # React to completed measurements
+            distance = context.data.get('distance', 0)
+            units = context.data.get('units', 'mm')
+            # Log, validate, or trigger other actions
+
+        return True  # Success
+```
+
+## 🔐 Content Access System
+
+### Access Levels
+
+- **READ_ONLY** - View content and state information
+- **READ_WRITE** - Modify view settings and add overlays
+- **FULL_CONTROL** - Complete access to all content and transformations
+
+### Plan View Access
+
+```python
+def get_document_access_requirements(self) -> Dict[str, bool]:
+    return {
+        'plan_view': True,        # Access to plan view content
+        'tile_preview': True,     # Access to tile preview
+        'document_data': True,    # Access to raw document data
+        'metadata': True,         # Access to document metadata
+        'measurements': True,     # Access to measurement data
+        'transformations': True   # Access to transformation data
+    }
+
+# In plugin initialization:
+plan_view = self.content_access_objects['plan_view']
+document_info = plan_view.get_document_info()
+content_image = plan_view.get_content_image()
+plan_view.add_overlay('my_overlay', my_draw_function)
+```
+
+### Tile Preview Access
+
+```python
+tile_preview = self.content_access_objects['tile_preview']
+tile_count = tile_preview.get_tile_count()
+tile_info = tile_preview.get_tile_info(0)
+tile_image = tile_preview.get_tile_image(0, (800, 600))
+```
+
+### Measurement Access
+
+```python
+measurement_access = self.content_access_objects['measurements']
+measurements = measurement_access.get_measurements()
+snap_points = measurement_access.get_snap_points(point, radius=10)
+measurement_id = measurement_access.add_measurement(start, end)
+```
+
 ## 🛠️ Creating Plugins
 
 ### Basic Plugin Structure
@@ -184,19 +338,19 @@ class MyPlugin(BasePlugin):
             author="Your Name",
             dependencies=[]
         )
-    
+
     def initialize(self) -> bool:
         self.log_info("Initializing My Plugin")
         return True
-    
+
     def enable(self) -> bool:
         self.log_info("Enabling My Plugin")
         return True
-    
+
     def disable(self) -> bool:
         self.log_info("Disabling My Plugin")
         return True
-    
+
     def cleanup(self) -> bool:
         self.log_info("Cleaning up My Plugin")
         return True
@@ -212,7 +366,7 @@ class MenuPlugin(BasePlugin):
         action = QAction("My Action", self.main_window)
         action.triggered.connect(self.my_action)
         return [action]
-    
+
     def my_action(self):
         self.log_info("My action executed!")
 ```
@@ -226,15 +380,15 @@ class SettingsPlugin(BasePlugin):
     def get_settings_widget(self):
         widget = QWidget()
         layout = QVBoxLayout(widget)
-        
+
         self.enable_feature = QCheckBox("Enable Feature")
         layout.addWidget(self.enable_feature)
-        
+
         return widget
-    
+
     def get_config(self):
         return {'enable_feature': self.enable_feature.isChecked()}
-    
+
     def set_config(self, config):
         self.enable_feature.setChecked(config.get('enable_feature', False))
         return True
@@ -282,13 +436,13 @@ client = OpenTilerAutomationClient()
 if client.connect():
     # Load demo document
     client.send_command('load_demo_document')
-    
+
     # Capture screenshot
     client.send_command('capture_screenshot', {
         'filename': 'my_screenshot.png',
         'size': (1600, 1000)
     })
-    
+
     client.disconnect()
 ```
 
