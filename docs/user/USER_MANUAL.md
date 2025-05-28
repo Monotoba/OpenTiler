@@ -101,7 +101,7 @@ pip install rawpy numpy
 
 OpenTiler features a clean, professional interface designed for efficient workflow:
 
-![OpenTiler Main Interface](../images/opentiler-main-interface.png)
+![OpenTiler Main Interface](../images/01-sky-skanner-loaded.png)
 
 The main interface consists of:
 1. **Menu Bar** - Access to all application functions
@@ -110,11 +110,61 @@ The main interface consists of:
 4. **Preview Panel** - Shows how the document will be tiled
 5. **Status Bar** - Displays current document information and status
 
-#### Toolbar Overview
+#### Menu System
 
-The toolbar provides quick access to essential functions:
+OpenTiler provides comprehensive menu access to all features:
 
-![OpenTiler Toolbar Detail](../images/opentiler-toolbar-detail.png)
+**File Menu**
+![File Menu](../images/13-file-menu.png)
+
+**Edit Menu**
+![Edit Menu](../images/14-edit-menu.png)
+
+**View Menu**
+![View Menu](../images/15-view-menu.png)
+
+**Tools Menu**
+![Tools Menu](../images/16-tools-menu.png)
+
+**Help Menu**
+![Help Menu](../images/17-help-menu.png)
+
+#### Individual Menu Functions
+
+**File Operations**
+- **File → Open**: Load documents from your computer
+  ![File Open Dialog](../images/09-file-open-dialog.png)
+
+- **File → Recent Files**: Quick access to recently opened documents
+  ![Recent Files](../images/10-file-recent-files.png)
+
+**View Controls**
+- **View → Zoom In**: Increase document magnification
+  ![Zoom In Result](../images/12-view-zoom-in.png)
+
+- **View → Fit to Window**: Automatically fit document to viewer
+  ![Fit to Window](../images/13-view-fit-window.png)
+
+- **View → Rotate Left/Right**: Rotate document orientation
+  ![Rotate Left](../images/14-view-rotate-left.png)
+  ![Rotate Right](../images/15-view-rotate-right.png)
+
+**Tools Access**
+- **Tools → Scale Tool**: Open the scaling measurement dialog
+  ![Scale Tool](../images/16-tools-scale-tool.png)
+
+- **Tools → Tile Preview**: Access tile preview functionality
+  ![Tile Preview](../images/17-tools-tile-preview.png)
+
+**Settings and Help**
+- **Edit → Preferences**: Access application settings
+  ![Preferences](../images/11-edit-preferences.png)
+
+- **Help → About**: View application information
+  ![About Dialog](../images/18-help-about.png)
+
+- **Help → User Manual**: Access this documentation
+  ![User Manual](../images/19-help-user-manual.png)
 
 #### Toolbar Icons
 - 📁 **Open**: Load a document
@@ -174,21 +224,55 @@ The document viewer shows:
 Scaling ensures that measurements in your printed tiles match real-world dimensions. This is crucial for architectural drawings, engineering plans, and technical documents.
 
 ### Using the Scale Tool
-1. Click the **📏 Scale Tool** button or **Tools → Scaling Dialog**
-2. The scaling dialog opens with measurement tools
 
-#### Two-Point Measurement Method
+#### Step 1: Open the Scale Tool
+Click the **📏 Scale Tool** button or **Tools → Scaling Dialog**:
+
+![Scale Tool Dialog](../images/03-scale-tool-opened.png)
+
+The scaling dialog opens with measurement tools and input fields.
+
+#### Step 2: Select Two Points on Known Distance
+Click two points on a known measurement in your document. For example, selecting wing tips on an aircraft plan:
+
+![Wing Tips Selected](../images/04-wing-tips-selected.png)
+
+The selected points are marked and the pixel distance is calculated automatically.
+
+#### Step 3: Enter Real-World Distance
+Input the actual real-world distance between the selected points:
+
+![Distance Entered](../images/05-distance-460mm.png)
+
+In this example, we're setting the wing span to 460mm.
+
+#### Step 4: Apply the Scale
+Click "Apply" to set the scale factor:
+
+![Success Dialog](../images/06-success-dialog.png)
+
+A success dialog confirms the scale has been applied.
+
+#### Step 5: Scale Applied Successfully
+The document is now properly scaled for accurate measurements:
+
+![Scale Applied](../images/07-scale-applied-complete.png)
+
+![Final Scaled Document](../images/08-all-dialogs-closed.png)
+
+#### Two-Point Measurement Method Summary
 1. **Select Known Distance**: Click two points on a known measurement
 2. **Enter Real Distance**: Input the actual real-world distance
 3. **Choose Units**: Select mm or inches
 4. **Apply Scale**: Click "Apply" to set the scale factor
+5. **Confirm**: Click "OK" on the success dialog
 
-#### Example: Scaling an Architectural Plan
-1. Find a dimension line showing "5000mm" on the plan
-2. Click the start and end of this dimension line
-3. Enter "5000" in the real distance field
+#### Example: Scaling the Sky Skanner Aircraft Plan
+1. Open the Sky Skanner plan in OpenTiler
+2. Use the Scale Tool to select the wing tips (460mm span)
+3. Enter "460" in the real distance field
 4. Select "mm" as the unit
-5. Click "Apply" - your document is now properly scaled
+5. Click "Apply" - your document is now properly scaled for 460mm wing span
 
 ### Scale Calculator
 Access **Tools → Scale Calculator** for:
@@ -254,26 +338,92 @@ Automatically included with PDF exports:
 ## Settings and Configuration
 
 ### Accessing Settings
-- Click **⚙️ Settings** button or **Settings → Preferences**
-- Settings are automatically saved between sessions
+Click **⚙️ Settings** button or **Settings → Preferences** to open the comprehensive settings dialog:
 
-### General Settings
+![Settings Dialog Main](../images/test-settings-main.png)
+
+Settings are automatically saved between sessions and organized into multiple tabs for easy navigation.
+
+### General Settings Tab
+Configure basic application preferences:
+
+![General Settings](../images/test-settings-tab-general.png)
+
 - **Default Units**: mm or inches
 - **Default DPI**: 75, 100, 150, 300, or 600 DPI
 - **Default Page Size**: A4, Letter, A3, etc.
 - **Recent Files**: Number of recent files to remember
+- **Language**: Application language settings
+- **Theme**: Light or dark interface theme
 
-### Display Settings
+### Display Settings Tab
+Control how documents and tiles are displayed:
+
+![Display Settings](../images/test-settings-tab-display.png)
+
 - **Page Indicators**: Show page numbers on tiles
-- **Crop Marks**: Show cutting guides
-- **Scale Lines**: Display measurement lines
+- **Crop Marks**: Show cutting guides at tile boundaries
+- **Scale Lines**: Display measurement lines on documents
 - **Grid Display**: Show tile grid overlay
+- **Zoom Behavior**: Mouse wheel and zoom controls
+- **Pan Controls**: Middle mouse button for panning
 
-### Export Settings
+### Tiling Settings Tab
+Configure tile layout and overlap settings:
+
+![Tiling Settings](../images/test-settings-tab-tiling.png)
+
+- **Tile Overlap**: Gutter size between tiles (recommended: 10mm)
+- **Page Orientation**: Portrait or landscape per plan
+- **Tile Size**: Custom tile dimensions
+- **Assembly Guides**: Include assembly instructions
+- **Crop Mark Style**: Line style and thickness
+
+### Page Settings Tab
+Control page layout and printing options:
+
+![Page Settings](../images/test-settings-tab-page.png)
+
+- **Page Size**: A4, Letter, A3, Legal, Custom
+- **Margins**: Page margins for printing
+- **Orientation**: Portrait or landscape
+- **Print Quality**: DPI settings for output
+- **Paper Type**: Plain, photo, technical drawing
+
+### Scale Settings Tab
+Configure scaling tool behavior:
+
+![Scale Settings](../images/test-settings-tab-scale.png)
+
+- **Default Units**: Preferred measurement units
+- **Precision**: Decimal places for measurements
+- **Scale Tool Behavior**: Point selection and measurement
+- **Unit Conversion**: Automatic unit conversions
+- **Scale Factor Display**: Show current scale factor
+
+### Export Settings Tab
+Control export formats and quality:
+
+![Export Settings](../images/test-settings-tab-export.png)
+
 - **Include Metadata Page**: Add assembly guide page
 - **Metadata Position**: First or last page
 - **Default Export Format**: PDF, PNG, JPEG, or TIFF
 - **Output Directory**: Default save location
+- **Quality Settings**: Compression and DPI options
+- **File Naming**: Automatic file naming patterns
+
+### Advanced Settings Tab
+Configure advanced options and performance:
+
+![Advanced Settings](../images/test-settings-tab-advanced.png)
+
+- **Memory Usage**: RAM allocation for large documents
+- **Performance**: Rendering and processing options
+- **Debug Mode**: Enable detailed logging
+- **Plugin Settings**: Configure installed plugins
+- **Automation**: Enable automation server
+- **Cache Settings**: Temporary file management
 
 ## Troubleshooting
 

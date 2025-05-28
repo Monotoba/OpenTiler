@@ -164,10 +164,17 @@ plans/
 *.FCStd
 *.pdf
 
-# Test files
+# Test files and automation scripts
 test_*.py
 simple_test.py
 verify_*.py
+demo_*.py
+automation_*.py
+comprehensive_*.py
+generate_*.py
+run_*.py
+*_test.py
+*_demo.py
 
 # Output directories
 output/
@@ -180,6 +187,10 @@ screenshots/
 *.temp
 *.bak
 *.backup
+*.log
+*_output.log
+*_summary.md
+*SUMMARY.md
 
 # Build and distribution
 *.spec

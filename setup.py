@@ -30,6 +30,7 @@ CORE_REQUIREMENTS = [
 OPTIONAL_REQUIREMENTS = {
     'cad': ['ezdxf>=1.0.0'],
     'raw': ['rawpy>=0.18.0', 'numpy>=1.21.0'],
+    'automation': ['mss>=9.0.0', 'pywinctl>=0.0.50'],
     'dev': [
         'pytest>=7.0.0',
         'black>=22.0.0',
