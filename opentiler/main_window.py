@@ -431,12 +431,27 @@ class MainWindow(QMainWindow):
 
             print(f"DEBUG: Print page rect: {page_rect.width()}x{page_rect.height()}")
 
+            # Check if metadata page should be included
+            from .settings.config import config
+            include_metadata = config.get_include_metadata_page()
+            metadata_position = config.get_metadata_page_position()
+
+            print(f"DEBUG: Include metadata page: {include_metadata}, Position: {metadata_position}")
+
+            page_count = 0
+
+            # Add metadata page at the beginning if configured
+            if include_metadata and metadata_position == "first":
+                print("DEBUG: Printing metadata page first")
+                self._print_metadata_page(painter, printer, source_pixmap, page_grid, page_rect)
+                page_count += 1
+
             # Print each tile - use the SAME logic as the working preview
             for i, page in enumerate(page_grid):
                 print(f"DEBUG: Printing tile {i+1}/{len(page_grid)}")
 
-                if i > 0:
-                    printer.newPage()  # Start new page for each tile
+                if page_count > 0 or i > 0:
+                    printer.newPage()  # Start new page for each tile (or after metadata page)
 
                 # Instead of creating a separate tile pixmap, draw directly from source
                 # This is simpler and avoids the coordinate issues
@@ -492,21 +507,40 @@ class MainWindow(QMainWindow):
                         painter.drawPixmap(x, y, scaled_tile)
 
                         # Add page information
-                        self._add_print_page_info(painter, page_rect, i + 1, len(page_grid))
+                        total_pages = len(page_grid) + (1 if include_metadata else 0)
+                        current_page = i + 1 + (1 if include_metadata and metadata_position == "first" else 0)
+                        self._add_print_page_info(painter, page_rect, current_page, total_pages)
                     else:
                         print(f"ERROR: Failed to copy tile content for tile {i+1}")
                 else:
                     print(f"ERROR: Invalid source dimensions for tile {i+1}: {source_w}x{source_h}")
 
+                page_count += 1
+
+            # Add metadata page at the end if configured
+            if include_metadata and metadata_position == "last":
+                print("DEBUG: Printing metadata page last")
+                printer.newPage()
+                self._print_metadata_page(painter, printer, source_pixmap, page_grid, page_rect)
+                page_count += 1
+
             painter.end()
             print("DEBUG: Printing completed successfully")
 
             # Show success message
-            QMessageBox.information(
-                self,
-                "Print Complete",
-                f"Successfully printed {len(page_grid)} tiles."
-            )
+            total_printed = len(page_grid) + (1 if include_metadata else 0)
+            if include_metadata:
+                QMessageBox.information(
+                    self,
+                    "Print Complete",
+                    f"Successfully printed {total_printed} pages ({len(page_grid)} tiles + 1 metadata page)."
+                )
+            else:
+                QMessageBox.information(
+                    self,
+                    "Print Complete",
+                    f"Successfully printed {len(page_grid)} tiles."
+                )
 
         except Exception as e:
             print(f"ERROR: Print failed: {str(e)}")
@@ -515,6 +549,68 @@ class MainWindow(QMainWindow):
             if painter and painter.isActive():
                 painter.end()
             QMessageBox.critical(self, "Print Error", f"Failed to print tiles: {str(e)}")
+
+    def _print_metadata_page(self, painter, printer, source_pixmap, page_grid, page_rect):
+        """Print a metadata summary page."""
+        try:
+            print("DEBUG: Generating metadata page for printing")
+
+            # Import metadata page generator
+            from .utils.metadata_page import MetadataPageGenerator, create_document_info
+
+            # Create metadata page generator
+            metadata_generator = MetadataPageGenerator()
+
+            # Calculate grid dimensions
+            if page_grid:
+                tiles_x = len(set(page['x'] for page in page_grid))
+                tiles_y = len(set(page['y'] for page in page_grid))
+            else:
+                tiles_x = tiles_y = 0
+
+            # Get document information
+            document_info = self._get_document_info()
+
+            # Add additional info for metadata page
+            document_info['total_tiles'] = len(page_grid)
+            document_info['tiles_x'] = tiles_x
+            document_info['tiles_y'] = tiles_y
+            document_info['export_format'] = 'Print'
+            document_info['dpi'] = printer.resolution()
+
+            # Add source pixmap and page grid for plan view
+            document_info['source_pixmap'] = source_pixmap
+            document_info['page_grid'] = page_grid
+
+            print(f"DEBUG: Metadata info - tiles: {tiles_x}x{tiles_y}, total: {len(page_grid)}")
+
+            # Generate metadata page
+            metadata_pixmap = metadata_generator.generate_metadata_page(document_info, page_rect.size())
+
+            # Draw metadata page to print
+            if metadata_pixmap and not metadata_pixmap.isNull():
+                print(f"DEBUG: Drawing metadata page {metadata_pixmap.width()}x{metadata_pixmap.height()}")
+
+                # Scale to fit print page while maintaining aspect ratio
+                scaled_metadata = metadata_pixmap.scaled(
+                    page_rect.size(),
+                    Qt.KeepAspectRatio,
+                    Qt.SmoothTransformation
+                )
+
+                # Center on page
+                x = (page_rect.width() - scaled_metadata.width()) // 2
+                y = (page_rect.height() - scaled_metadata.height()) // 2
+
+                painter.drawPixmap(x, y, scaled_metadata)
+                print("DEBUG: Metadata page printed successfully")
+            else:
+                print("ERROR: Failed to generate metadata page pixmap")
+
+        except Exception as e:
+            print(f"ERROR: Failed to print metadata page: {str(e)}")
+            import traceback
+            traceback.print_exc()
 
     def _create_tile_pixmap(self, source_pixmap, page):
         """Create a pixmap for a single tile."""
