@@ -460,6 +460,7 @@ class MainWindow(QMainWindow):
 
     def _create_tile_pixmap(self, source_pixmap, page):
         """Create a pixmap for a single tile."""
+        painter = None
         try:
             # Extract the tile area from source pixmap
             tile_rect = QRect(
@@ -476,6 +477,11 @@ class MainWindow(QMainWindow):
             # Paint the source area onto the tile
             painter = QPainter(tile_pixmap)
 
+            # Check if painter is valid
+            if not painter.isActive():
+                print("Error: Painter is not active")
+                return QPixmap()
+
             # Calculate source rectangle (clamp to source pixmap bounds)
             source_rect = QRect(
                 max(0, int(page['x'])),
@@ -484,12 +490,17 @@ class MainWindow(QMainWindow):
                 min(int(page['height']), source_pixmap.height() - max(0, int(page['y'])))
             )
 
-            # Calculate destination position (offset if page extends beyond source)
-            dest_x = max(0, -int(page['x']))
-            dest_y = max(0, -int(page['y']))
+            # Only draw if source rectangle is valid
+            if not source_rect.isEmpty() and source_rect.isValid():
+                # Calculate destination position (offset if page extends beyond source)
+                dest_x = max(0, -int(page['x']))
+                dest_y = max(0, -int(page['y']))
 
-            # Draw the source area
-            painter.drawPixmap(dest_x, dest_y, source_pixmap, source_rect)
+                # Draw the source area using correct signature
+                # Use the copy method to extract the source rectangle first
+                source_crop = source_pixmap.copy(source_rect)
+                if not source_crop.isNull():
+                    painter.drawPixmap(dest_x, dest_y, source_crop)
 
             # Add gutter lines and page indicators if enabled
             self._add_tile_overlays(painter, tile_pixmap.size(), page)
@@ -499,6 +510,9 @@ class MainWindow(QMainWindow):
 
         except Exception as e:
             print(f"Error creating tile pixmap: {str(e)}")
+            # Ensure painter is properly ended even on error
+            if painter and painter.isActive():
+                painter.end()
             return QPixmap()
 
     def _add_print_page_info(self, painter, page_rect, page_num, total_pages):
