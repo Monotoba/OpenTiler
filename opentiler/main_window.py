@@ -455,10 +455,30 @@ class MainWindow(QMainWindow):
                     if not tile_content.isNull():
                         print(f"DEBUG: Copied tile content: {tile_content.width()}x{tile_content.height()}")
 
-                        # Scale to fit print page
+                        # Calculate the correct print size based on the document's scale factor
+                        # Get the scale factor from the document viewer
+                        scale_factor = getattr(self.document_viewer, 'scale_factor', 1.0)
+                        print(f"DEBUG: Document scale factor: {scale_factor} mm/pixel")
+
+                        # Calculate the real-world size of the tile content in mm
+                        tile_width_mm = tile_content.width() * scale_factor
+                        tile_height_mm = tile_content.height() * scale_factor
+                        print(f"DEBUG: Tile real-world size: {tile_width_mm:.2f}mm x {tile_height_mm:.2f}mm")
+
+                        # Get printer resolution to convert mm to printer pixels
+                        printer_dpi = printer.resolution()
+                        print(f"DEBUG: Printer DPI: {printer_dpi}")
+
+                        # Convert mm to printer pixels (1 inch = 25.4 mm)
+                        tile_width_printer_pixels = (tile_width_mm / 25.4) * printer_dpi
+                        tile_height_printer_pixels = (tile_height_mm / 25.4) * printer_dpi
+                        print(f"DEBUG: Tile printer size: {tile_width_printer_pixels:.1f}px x {tile_height_printer_pixels:.1f}px")
+
+                        # Scale the tile to the correct printer size (preserving original scale)
+                        target_size = QSize(int(tile_width_printer_pixels), int(tile_height_printer_pixels))
                         scaled_tile = tile_content.scaled(
-                            page_rect.size(),
-                            Qt.KeepAspectRatio,
+                            target_size,
+                            Qt.IgnoreAspectRatio,  # Use exact size to preserve scale
                             Qt.SmoothTransformation
                         )
 
