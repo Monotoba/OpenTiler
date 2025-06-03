@@ -482,25 +482,23 @@ class MainWindow(QMainWindow):
                 print("Error: Painter is not active")
                 return QPixmap()
 
-            # Calculate source rectangle (clamp to source pixmap bounds)
-            source_rect = QRect(
-                max(0, int(page['x'])),
-                max(0, int(page['y'])),
-                min(int(page['width']), source_pixmap.width() - max(0, int(page['x']))),
-                min(int(page['height']), source_pixmap.height() - max(0, int(page['y'])))
-            )
+            # Calculate intersection between page and source document
+            page_rect = QRect(int(page['x']), int(page['y']), int(page['width']), int(page['height']))
+            source_bounds = QRect(0, 0, source_pixmap.width(), source_pixmap.height())
 
-            # Only draw if source rectangle is valid
-            if not source_rect.isEmpty() and source_rect.isValid():
-                # Calculate destination position (offset if page extends beyond source)
-                dest_x = max(0, -int(page['x']))
-                dest_y = max(0, -int(page['y']))
+            # Find the intersection - this is what we actually need to draw
+            intersection = page_rect.intersected(source_bounds)
 
-                # Draw the source area using correct signature
-                # Use the copy method to extract the source rectangle first
-                source_crop = source_pixmap.copy(source_rect)
+            # Only draw if there's an intersection
+            if not intersection.isEmpty():
+                # Calculate destination position on the tile
+                dest_x = intersection.x() - page['x']
+                dest_y = intersection.y() - page['y']
+
+                # Extract the intersecting area from source
+                source_crop = source_pixmap.copy(intersection)
                 if not source_crop.isNull():
-                    painter.drawPixmap(dest_x, dest_y, source_crop)
+                    painter.drawPixmap(int(dest_x), int(dest_y), source_crop)
 
             # Add gutter lines and page indicators if enabled
             self._add_tile_overlays(painter, tile_pixmap.size(), page)
