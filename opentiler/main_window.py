@@ -346,107 +346,140 @@ class MainWindow(QMainWindow):
 
     def print_tiles(self):
         """Print the current document tiles directly to printer."""
-        # Check if we have a document and page grid
-        if not self.document_viewer.current_pixmap:
-            QMessageBox.warning(self, "Print", "No document loaded. Please load a document first.")
+        print("DEBUG: print_tiles() called")
+
+        # Prevent multiple simultaneous print operations
+        if hasattr(self, '_printing_in_progress') and self._printing_in_progress:
+            print("DEBUG: Print already in progress, ignoring")
             return
 
-        if not hasattr(self.document_viewer, 'page_grid') or not self.document_viewer.page_grid:
-            QMessageBox.warning(self, "Print", "No tiles generated. Please apply scaling first to generate tiles.")
-            return
+        try:
+            self._printing_in_progress = True
 
-        # Create printer with modern API
-        printer = QPrinter(QPrinter.HighResolution)
+            # Check if we have a document and page grid
+            if not self.document_viewer.current_pixmap:
+                QMessageBox.warning(self, "Print", "No document loaded. Please load a document first.")
+                return
 
-        # Set default page size and orientation using modern API
-        page_size = QPageSize(QPageSize.A4)
-        orientation = self._determine_print_orientation()
+            if not hasattr(self.document_viewer, 'page_grid') or not self.document_viewer.page_grid:
+                QMessageBox.warning(self, "Print", "No tiles generated. Please apply scaling first to generate tiles.")
+                return
 
-        printer.setPageSize(page_size)
-        printer.setPageLayout(QPageLayout(
-            page_size,
-            orientation,
-            QMarginsF(10, 10, 10, 10)  # 10mm margins
-        ))
+            print(f"DEBUG: Found {len(self.document_viewer.page_grid)} tiles to print")
 
-        # Show print dialog
-        print_dialog = QPrintDialog(printer, self)
-        print_dialog.setWindowTitle("Print Tiles")
+            # Create printer with modern API
+            printer = QPrinter(QPrinter.HighResolution)
 
-        # Enable print options
-        print_dialog.setOptions(
-            QPrintDialog.PrintToFile |
-            QPrintDialog.PrintSelection |
-            QPrintDialog.PrintPageRange |
-            QPrintDialog.PrintCurrentPage
-        )
+            # Set default page size and orientation using modern API
+            page_size = QPageSize(QPageSize.A4)
+            orientation = self._determine_print_orientation()
 
-        if print_dialog.exec() == QPrintDialog.Accepted:
-            self._print_tiles_to_printer(printer)
+            printer.setPageSize(page_size)
+            printer.setPageLayout(QPageLayout(
+                page_size,
+                orientation,
+                QMarginsF(10, 10, 10, 10)  # 10mm margins
+            ))
+
+            # Show print dialog
+            print_dialog = QPrintDialog(printer, self)
+            print_dialog.setWindowTitle("Print Tiles")
+
+            # Enable print options
+            print_dialog.setOptions(
+                QPrintDialog.PrintToFile |
+                QPrintDialog.PrintSelection |
+                QPrintDialog.PrintPageRange |
+                QPrintDialog.PrintCurrentPage
+            )
+
+            print("DEBUG: Showing print dialog")
+            if print_dialog.exec() == QPrintDialog.Accepted:
+                print("DEBUG: Print dialog accepted, starting print")
+                self._print_tiles_to_printer(printer)
+            else:
+                print("DEBUG: Print dialog cancelled")
+
+        finally:
+            self._printing_in_progress = False
+            print("DEBUG: print_tiles() completed")
 
     def _print_tiles_to_printer(self, printer):
         """Print tiles to the specified printer."""
+        print("DEBUG: _print_tiles_to_printer() called")
+        painter = None
         try:
             # Get page grid and source pixmap
             page_grid = self.document_viewer.page_grid
             source_pixmap = self.document_viewer.current_pixmap
 
+            print(f"DEBUG: Printing {len(page_grid)} tiles")
+            print(f"DEBUG: Source pixmap size: {source_pixmap.width()}x{source_pixmap.height()}")
+
             # Create painter for printing
             painter = QPainter()
             if not painter.begin(printer):
+                print("ERROR: Failed to start painter")
                 QMessageBox.critical(self, "Print Error", "Failed to start printing.")
                 return
+
+            print("DEBUG: Painter started successfully")
 
             # Get printer page size and layout
             page_layout = printer.pageLayout()
             page_rect = page_layout.paintRectPixels(printer.resolution())
 
-            # Print each tile
+            print(f"DEBUG: Print page rect: {page_rect.width()}x{page_rect.height()}")
+
+            # Print each tile - use the SAME logic as the working preview
             for i, page in enumerate(page_grid):
+                print(f"DEBUG: Printing tile {i+1}/{len(page_grid)}")
+
                 if i > 0:
                     printer.newPage()  # Start new page for each tile
 
-                # Create tile pixmap
-                tile_pixmap = self._create_tile_pixmap(source_pixmap, page)
+                # Instead of creating a separate tile pixmap, draw directly from source
+                # This is simpler and avoids the coordinate issues
 
-                if tile_pixmap and not tile_pixmap.isNull():
-                    # Determine if this tile should be rotated for better fit
-                    tile_aspect = tile_pixmap.width() / tile_pixmap.height()
-                    page_aspect = page_rect.width() / page_rect.height()
+                # Calculate source area to copy (same as preview logic)
+                source_x = max(0, int(page['x']))
+                source_y = max(0, int(page['y']))
+                source_w = min(int(page['width']), source_pixmap.width() - source_x)
+                source_h = min(int(page['height']), source_pixmap.height() - source_y)
 
-                    # Check if rotating the tile would provide a better fit
-                    should_rotate = False
-                    if page_layout.orientation() == QPageLayout.Portrait and tile_aspect > 1.5:
-                        # Wide tile on portrait page - consider rotating
-                        should_rotate = True
-                    elif page_layout.orientation() == QPageLayout.Landscape and tile_aspect < 0.7:
-                        # Tall tile on landscape page - consider rotating
-                        should_rotate = True
+                if source_w > 0 and source_h > 0:
+                    # Copy the relevant area from source
+                    source_rect = QRect(source_x, source_y, source_w, source_h)
+                    tile_content = source_pixmap.copy(source_rect)
 
-                    # Apply rotation if beneficial
-                    if should_rotate:
-                        transform = tile_pixmap.transform()
-                        transform = transform.rotate(90)
-                        tile_pixmap = tile_pixmap.transformed(transform)
+                    if not tile_content.isNull():
+                        print(f"DEBUG: Copied tile content: {tile_content.width()}x{tile_content.height()}")
 
-                    # Scale tile to fit printer page while maintaining aspect ratio
-                    scaled_tile = tile_pixmap.scaled(
-                        page_rect.size(),
-                        Qt.KeepAspectRatio,
-                        Qt.SmoothTransformation
-                    )
+                        # Scale to fit print page
+                        scaled_tile = tile_content.scaled(
+                            page_rect.size(),
+                            Qt.KeepAspectRatio,
+                            Qt.SmoothTransformation
+                        )
 
-                    # Center the tile on the page
-                    x = (page_rect.width() - scaled_tile.width()) // 2
-                    y = (page_rect.height() - scaled_tile.height()) // 2
+                        # Center on page
+                        x = (page_rect.width() - scaled_tile.width()) // 2
+                        y = (page_rect.height() - scaled_tile.height()) // 2
 
-                    # Draw the tile
-                    painter.drawPixmap(x, y, scaled_tile)
+                        print(f"DEBUG: Drawing scaled tile {scaled_tile.width()}x{scaled_tile.height()} at ({x}, {y})")
 
-                    # Add page information (optional)
-                    self._add_print_page_info(painter, page_rect, i + 1, len(page_grid))
+                        # Draw the tile
+                        painter.drawPixmap(x, y, scaled_tile)
+
+                        # Add page information
+                        self._add_print_page_info(painter, page_rect, i + 1, len(page_grid))
+                    else:
+                        print(f"ERROR: Failed to copy tile content for tile {i+1}")
+                else:
+                    print(f"ERROR: Invalid source dimensions for tile {i+1}: {source_w}x{source_h}")
 
             painter.end()
+            print("DEBUG: Printing completed successfully")
 
             # Show success message
             QMessageBox.information(
@@ -456,58 +489,74 @@ class MainWindow(QMainWindow):
             )
 
         except Exception as e:
+            print(f"ERROR: Print failed: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            if painter and painter.isActive():
+                painter.end()
             QMessageBox.critical(self, "Print Error", f"Failed to print tiles: {str(e)}")
 
     def _create_tile_pixmap(self, source_pixmap, page):
         """Create a pixmap for a single tile."""
         painter = None
         try:
-            # Extract the tile area from source pixmap
-            tile_rect = QRect(
-                int(page['x']),
-                int(page['y']),
-                int(page['width']),
-                int(page['height'])
-            )
+            print(f"DEBUG: Creating tile for page: x={page['x']}, y={page['y']}, w={page['width']}, h={page['height']}")
+            print(f"DEBUG: Source pixmap size: {source_pixmap.width()}x{source_pixmap.height()}")
 
-            # Create tile pixmap
-            tile_pixmap = QPixmap(tile_rect.size())
+            # Create tile pixmap with the page dimensions
+            tile_width = int(page['width'])
+            tile_height = int(page['height'])
+            tile_pixmap = QPixmap(tile_width, tile_height)
             tile_pixmap.fill(Qt.white)  # Fill with white background
+
+            print(f"DEBUG: Created tile pixmap: {tile_width}x{tile_height}")
 
             # Paint the source area onto the tile
             painter = QPainter(tile_pixmap)
 
             # Check if painter is valid
             if not painter.isActive():
-                print("Error: Painter is not active")
+                print("ERROR: Painter is not active")
                 return QPixmap()
 
-            # Calculate intersection between page and source document
-            page_rect = QRect(int(page['x']), int(page['y']), int(page['width']), int(page['height']))
-            source_bounds = QRect(0, 0, source_pixmap.width(), source_pixmap.height())
+            # Simple approach: copy the area directly from source to tile
+            # Calculate what part of the source we need to copy
+            source_x = max(0, int(page['x']))
+            source_y = max(0, int(page['y']))
+            source_w = min(source_pixmap.width() - source_x, tile_width)
+            source_h = min(source_pixmap.height() - source_y, tile_height)
 
-            # Find the intersection - this is what we actually need to draw
-            intersection = page_rect.intersected(source_bounds)
+            # Calculate where to place it on the tile
+            dest_x = max(0, -int(page['x']))
+            dest_y = max(0, -int(page['y']))
 
-            # Only draw if there's an intersection
-            if not intersection.isEmpty():
-                # Calculate destination position on the tile
-                dest_x = intersection.x() - page['x']
-                dest_y = intersection.y() - page['y']
+            print(f"DEBUG: Source rect: ({source_x}, {source_y}, {source_w}, {source_h})")
+            print(f"DEBUG: Dest position: ({dest_x}, {dest_y})")
 
-                # Extract the intersecting area from source
-                source_crop = source_pixmap.copy(intersection)
+            if source_w > 0 and source_h > 0:
+                # Copy the source area
+                source_rect = QRect(source_x, source_y, source_w, source_h)
+                source_crop = source_pixmap.copy(source_rect)
+
                 if not source_crop.isNull():
-                    painter.drawPixmap(int(dest_x), int(dest_y), source_crop)
+                    print(f"DEBUG: Drawing source crop {source_crop.width()}x{source_crop.height()} at ({dest_x}, {dest_y})")
+                    painter.drawPixmap(dest_x, dest_y, source_crop)
+                else:
+                    print("ERROR: Source crop is null")
+            else:
+                print(f"ERROR: Invalid source dimensions: {source_w}x{source_h}")
 
             # Add gutter lines and page indicators if enabled
             self._add_tile_overlays(painter, tile_pixmap.size(), page)
 
             painter.end()
+            print(f"DEBUG: Tile creation completed successfully")
             return tile_pixmap
 
         except Exception as e:
-            print(f"Error creating tile pixmap: {str(e)}")
+            print(f"ERROR creating tile pixmap: {str(e)}")
+            import traceback
+            traceback.print_exc()
             # Ensure painter is properly ended even on error
             if painter and painter.isActive():
                 painter.end()
