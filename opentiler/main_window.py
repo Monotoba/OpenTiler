@@ -285,6 +285,9 @@ class MainWindow(QMainWindow):
         if self.document_viewer.load_document(file_path):
             self.status_bar.showMessage(f"Loaded: {os.path.basename(file_path)}")
 
+            # Update title bar with filename
+            self.update_title_bar(file_path)
+
             # Add to recent files
             self.config.add_recent_file(file_path)
             self.update_recent_files_menu()
@@ -292,6 +295,20 @@ class MainWindow(QMainWindow):
         else:
             QMessageBox.warning(self, "Error", f"Failed to load document: {file_path}")
             return False
+
+    def update_title_bar(self, file_path=None):
+        """Update the title bar with the current filename."""
+        if file_path:
+            filename = os.path.basename(file_path)
+            self.setWindowTitle(f"OpenTiler - {filename}")
+        else:
+            # Check if we have a current document
+            current_file = getattr(self.document_viewer, 'current_document', None)
+            if current_file:
+                filename = os.path.basename(current_file)
+                self.setWindowTitle(f"OpenTiler - {filename}")
+            else:
+                self.setWindowTitle("OpenTiler")
 
     def export_document(self):
         """Export the current document as tiles."""
@@ -353,16 +370,20 @@ class MainWindow(QMainWindow):
             print("DEBUG: Print already in progress, ignoring")
             return
 
+        # Set the flag immediately to prevent multiple calls
+        self._printing_in_progress = True
+
         try:
-            self._printing_in_progress = True
 
             # Check if we have a document and page grid
             if not self.document_viewer.current_pixmap:
                 QMessageBox.warning(self, "Print", "No document loaded. Please load a document first.")
+                self._printing_in_progress = False
                 return
 
             if not hasattr(self.document_viewer, 'page_grid') or not self.document_viewer.page_grid:
                 QMessageBox.warning(self, "Print", "No tiles generated. Please apply scaling first to generate tiles.")
+                self._printing_in_progress = False
                 return
 
             print(f"DEBUG: Found {len(self.document_viewer.page_grid)} tiles to print")
@@ -399,7 +420,12 @@ class MainWindow(QMainWindow):
                 self._print_tiles_to_printer(printer)
             else:
                 print("DEBUG: Print dialog cancelled")
+                self._printing_in_progress = False
+                return
 
+        except Exception as e:
+            print(f"ERROR: Print setup failed: {str(e)}")
+            QMessageBox.critical(self, "Print Error", f"Failed to setup printing: {str(e)}")
         finally:
             self._printing_in_progress = False
             print("DEBUG: print_tiles() completed")
@@ -584,26 +610,29 @@ class MainWindow(QMainWindow):
 
             print(f"DEBUG: Metadata info - tiles: {tiles_x}x{tiles_y}, total: {len(page_grid)}")
 
-            # Generate metadata page
-            metadata_pixmap = metadata_generator.generate_metadata_page(document_info, page_rect.size())
+            # Generate metadata page at a reasonable size (A4 at 300 DPI)
+            # This ensures the metadata page has enough detail to scale up properly
+            metadata_size = QSize(2480, 3508)  # A4 at 300 DPI
+            metadata_pixmap = metadata_generator.generate_metadata_page(document_info, metadata_size)
 
             # Draw metadata page to print
             if metadata_pixmap and not metadata_pixmap.isNull():
-                print(f"DEBUG: Drawing metadata page {metadata_pixmap.width()}x{metadata_pixmap.height()}")
+                print(f"DEBUG: Generated metadata page {metadata_pixmap.width()}x{metadata_pixmap.height()}")
+                print(f"DEBUG: Print page size: {page_rect.width()}x{page_rect.height()}")
 
-                # Scale to fit print page while maintaining aspect ratio
+                # Scale metadata page to fill the entire print page
+                # Use IgnoreAspectRatio to fill the page completely
                 scaled_metadata = metadata_pixmap.scaled(
                     page_rect.size(),
-                    Qt.KeepAspectRatio,
+                    Qt.IgnoreAspectRatio,  # Fill entire page
                     Qt.SmoothTransformation
                 )
 
-                # Center on page
-                x = (page_rect.width() - scaled_metadata.width()) // 2
-                y = (page_rect.height() - scaled_metadata.height()) // 2
+                print(f"DEBUG: Scaled metadata page to {scaled_metadata.width()}x{scaled_metadata.height()}")
 
-                painter.drawPixmap(x, y, scaled_metadata)
-                print("DEBUG: Metadata page printed successfully")
+                # Draw at full page size (no centering needed)
+                painter.drawPixmap(0, 0, scaled_metadata)
+                print("DEBUG: Metadata page printed successfully at full page size")
             else:
                 print("ERROR: Failed to generate metadata page pixmap")
 

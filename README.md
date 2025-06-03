@@ -14,7 +14,7 @@ A PySide6-based desktop application for scaling and tiling architectural drawing
 
 ## Features
 
-- **Document Support**: Load and view PDF, image, and SVG documents
+- **Document Support**: Load and view PDF, and many image formats
 - **Precise Scaling**: Interactive scaling tool with real-world measurements
 - **Professional Tiling**: Multi-page PDF export with assembly guides
 - **Unit Conversion**: Convert between millimeters and inches
