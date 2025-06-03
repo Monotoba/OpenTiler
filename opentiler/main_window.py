@@ -566,7 +566,7 @@ class MainWindow(QMainWindow):
         """Add page information to printed tile."""
         from .settings.config import config
 
-        if not config.get_show_page_indicators():
+        if not config.get_page_indicator_print():
             return
 
         # Save painter state
@@ -600,7 +600,7 @@ class MainWindow(QMainWindow):
         painter.save()
 
         # Draw gutter lines if enabled
-        if config.get_show_crop_marks():
+        if config.get_crop_marks_display():
             gutter = page.get('gutter', 0)
             if gutter > 0:
                 painter.setPen(Qt.blue)
