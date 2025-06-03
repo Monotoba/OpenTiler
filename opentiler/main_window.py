@@ -8,9 +8,10 @@ from PySide6.QtWidgets import (
     QFileDialog, QMessageBox
 )
 from PySide6.QtCore import Qt, QSize, QRect
-from PySide6.QtGui import QIcon, QKeySequence, QAction, QPainter, QPixmap
+from PySide6.QtGui import QIcon, QKeySequence, QAction, QPainter, QPixmap, QPageSize, QPageLayout
 from PySide6.QtWidgets import QApplication
 from PySide6.QtPrintSupport import QPrinter, QPrintDialog, QPrintPreviewDialog
+from PySide6.QtCore import QMarginsF
 import os
 
 from .viewer.viewer import DocumentViewer
@@ -354,14 +355,31 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Print", "No tiles generated. Please apply scaling first to generate tiles.")
             return
 
-        # Create printer
+        # Create printer with modern API
         printer = QPrinter(QPrinter.HighResolution)
-        printer.setPageSize(QPrinter.A4)  # Default to A4, user can change in dialog
-        printer.setOrientation(QPrinter.Portrait)
+
+        # Set default page size and orientation using modern API
+        page_size = QPageSize(QPageSize.A4)
+        orientation = self._determine_print_orientation()
+
+        printer.setPageSize(page_size)
+        printer.setPageLayout(QPageLayout(
+            page_size,
+            orientation,
+            QMarginsF(10, 10, 10, 10)  # 10mm margins
+        ))
 
         # Show print dialog
         print_dialog = QPrintDialog(printer, self)
         print_dialog.setWindowTitle("Print Tiles")
+
+        # Enable print options
+        print_dialog.setOptions(
+            QPrintDialog.PrintToFile |
+            QPrintDialog.PrintSelection |
+            QPrintDialog.PrintPageRange |
+            QPrintDialog.PrintCurrentPage
+        )
 
         if print_dialog.exec() == QPrintDialog.Accepted:
             self._print_tiles_to_printer(printer)
@@ -379,8 +397,9 @@ class MainWindow(QMainWindow):
                 QMessageBox.critical(self, "Print Error", "Failed to start printing.")
                 return
 
-            # Get printer page size
-            page_rect = printer.pageRect()
+            # Get printer page size and layout
+            page_layout = printer.pageLayout()
+            page_rect = page_layout.paintRectPixels(printer.resolution())
 
             # Print each tile
             for i, page in enumerate(page_grid):
@@ -391,6 +410,25 @@ class MainWindow(QMainWindow):
                 tile_pixmap = self._create_tile_pixmap(source_pixmap, page)
 
                 if tile_pixmap and not tile_pixmap.isNull():
+                    # Determine if this tile should be rotated for better fit
+                    tile_aspect = tile_pixmap.width() / tile_pixmap.height()
+                    page_aspect = page_rect.width() / page_rect.height()
+
+                    # Check if rotating the tile would provide a better fit
+                    should_rotate = False
+                    if page_layout.orientation() == QPageLayout.Portrait and tile_aspect > 1.5:
+                        # Wide tile on portrait page - consider rotating
+                        should_rotate = True
+                    elif page_layout.orientation() == QPageLayout.Landscape and tile_aspect < 0.7:
+                        # Tall tile on landscape page - consider rotating
+                        should_rotate = True
+
+                    # Apply rotation if beneficial
+                    if should_rotate:
+                        transform = tile_pixmap.transform()
+                        transform = transform.rotate(90)
+                        tile_pixmap = tile_pixmap.transformed(transform)
+
                     # Scale tile to fit printer page while maintaining aspect ratio
                     scaled_tile = tile_pixmap.scaled(
                         page_rect.size(),
@@ -640,6 +678,47 @@ class MainWindow(QMainWindow):
             row += 1
 
         return pages
+
+    def _determine_print_orientation(self):
+        """Determine optimal print orientation based on tile content and user preferences."""
+        # Get user preference from settings
+        orientation_pref = self.config.get_page_orientation()
+
+        if orientation_pref == "landscape":
+            return QPageLayout.Landscape
+        elif orientation_pref == "portrait":
+            return QPageLayout.Portrait
+        elif orientation_pref == "auto":
+            # Auto-determine based on tile content
+            if not hasattr(self.document_viewer, 'page_grid') or not self.document_viewer.page_grid:
+                return QPageLayout.Portrait  # Default
+
+            page_grid = self.document_viewer.page_grid
+
+            # Calculate average tile aspect ratio
+            total_aspect_ratio = 0
+            valid_tiles = 0
+
+            for page in page_grid:
+                width = page.get('width', 0)
+                height = page.get('height', 0)
+                if width > 0 and height > 0:
+                    aspect_ratio = width / height
+                    total_aspect_ratio += aspect_ratio
+                    valid_tiles += 1
+
+            if valid_tiles > 0:
+                avg_aspect_ratio = total_aspect_ratio / valid_tiles
+
+                # If tiles are wider than they are tall, prefer landscape
+                if avg_aspect_ratio > 1.2:  # 20% wider than square
+                    return QPageLayout.Landscape
+                else:
+                    return QPageLayout.Portrait
+            else:
+                return QPageLayout.Portrait  # Default if no valid tiles
+        else:
+            return QPageLayout.Portrait  # Default fallback
 
     def _get_scale_info(self):
         """Get scale information from the document viewer for preview display."""

@@ -79,10 +79,14 @@ class PDFExporter(BaseExporter):
 
             pdf_writer.setPageSize(page_size_obj)
 
-            # Set page layout
+            # Determine optimal orientation for tiles
+            # Check if we should use landscape or portrait based on tile content
+            orientation = self._determine_optimal_orientation(page_grid, page_size_obj)
+
+            # Set page layout with determined orientation
             pdf_writer.setPageLayout(QPageLayout(
                 page_size_obj,
-                QPageLayout.Portrait,
+                orientation,
                 QMarginsF(10, 10, 10, 10)  # 10mm margins on all sides
             ))
 
@@ -353,3 +357,61 @@ class PDFExporter(BaseExporter):
         except Exception as e:
             print(f"Composite PDF export error: {str(e)}")
             return False
+
+    def _determine_optimal_orientation(self, page_grid: List[dict], page_size_obj: QPageSize) -> QPageLayout.Orientation:
+        """
+        Determine the optimal page orientation for tiles based on their content.
+
+        Args:
+            page_grid: List of page dictionaries
+            page_size_obj: QPageSize object for the target page size
+
+        Returns:
+            QPageLayout.Orientation (Portrait or Landscape)
+        """
+        from ..settings.config import config
+
+        # Get user preference from settings
+        orientation_pref = config.get_page_orientation()
+
+        if orientation_pref == "landscape":
+            return QPageLayout.Landscape
+        elif orientation_pref == "portrait":
+            return QPageLayout.Portrait
+        elif orientation_pref == "auto":
+            # Auto-determine based on tile content
+            if not page_grid:
+                return QPageLayout.Portrait  # Default
+
+            # Calculate average tile aspect ratio
+            total_aspect_ratio = 0
+            valid_tiles = 0
+
+            for page in page_grid:
+                width = page.get('width', 0)
+                height = page.get('height', 0)
+                if width > 0 and height > 0:
+                    aspect_ratio = width / height
+                    total_aspect_ratio += aspect_ratio
+                    valid_tiles += 1
+
+            if valid_tiles > 0:
+                avg_aspect_ratio = total_aspect_ratio / valid_tiles
+
+                # Get page size aspect ratios
+                page_size_mm = page_size_obj.sizePoints()
+                page_portrait_ratio = page_size_mm.width() / page_size_mm.height()
+                page_landscape_ratio = page_size_mm.height() / page_size_mm.width()
+
+                # Choose orientation that better matches tile content
+                portrait_diff = abs(avg_aspect_ratio - page_portrait_ratio)
+                landscape_diff = abs(avg_aspect_ratio - page_landscape_ratio)
+
+                if landscape_diff < portrait_diff:
+                    return QPageLayout.Landscape
+                else:
+                    return QPageLayout.Portrait
+            else:
+                return QPageLayout.Portrait  # Default if no valid tiles
+        else:
+            return QPageLayout.Portrait  # Default fallback
