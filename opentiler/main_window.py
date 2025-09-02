@@ -270,7 +270,6 @@ class MainWindow(QMainWindow):
         reg_action = QAction("Reg Marks", self)
         reg_action.setCheckable(True)
         reg_action.setChecked(self.config.get_reg_marks_display())
-        reg_action.setIcon(load_icon("registration-marks.png", fallback=style.StandardPixmap.SP_DialogYesButton))
         reg_action.setToolTip("Toggle registration marks in preview (circles with crosshairs at printable corners)")
         reg_action.toggled.connect(self.toggle_reg_marks_display)
 
@@ -279,7 +278,8 @@ class MainWindow(QMainWindow):
         overlays_menu.addAction(crop_action)
         overlays_menu.addAction(reg_action)
         overlays_menu_action = overlays_menu.menuAction()
-        overlays_menu_action.setIcon(load_icon("settings.png", fallback=style.StandardPixmap.SP_FileDialogDetailedView))
+        # Use an eye icon if present; fall back to an info-like icon
+        overlays_menu_action.setIcon(load_icon("eye.png", fallback=style.StandardPixmap.SP_FileDialogInfoView))
         toolbar.addAction(overlays_menu_action)
 
     def toggle_reg_marks_display(self, checked: bool):
