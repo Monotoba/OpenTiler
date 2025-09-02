@@ -517,36 +517,6 @@ class SettingsDialog(QDialog):
             self.scale_bar_length_slider.valueChanged.connect(
                 lambda v: self.scale_bar_length_value.setText(f"{v} cm")
             )
-        config.set_reg_marks_display(self.reg_display_check.isChecked())
-        config.set_reg_marks_print(self.reg_print_check.isChecked())
-        config.set_reg_mark_diameter_mm(self.reg_diameter_spin.value())
-        config.set_reg_mark_crosshair_mm(self.reg_crosshair_spin.value())
-
-        # Scale line and text settings
-        config.set_scale_line_display(self.scale_line_display_check.isChecked())
-        config.set_scale_line_print(self.scale_line_print_check.isChecked())
-        config.set_scale_text_display(self.scale_text_display_check.isChecked())
-        config.set_scale_text_print(self.scale_text_print_check.isChecked())
-
-        # Page indicator settings
-        config.set_page_indicator_display(self.indicator_display_check.isChecked())
-        config.set_page_indicator_print(self.indicator_print_check.isChecked())
-        config.set_page_indicator_position(self.position_combo.currentText())
-        config.set_page_indicator_font_size(self.font_size_spin.value())
-        config.set_page_indicator_font_style(self.font_style_combo.currentText())
-        config.set_page_indicator_font_color(self.current_color.name())
-        config.set_page_indicator_alpha(self.alpha_slider.value())
-
-        # Directory settings
-        config.set_last_input_dir(self.input_dir_edit.text())
-        config.set_last_output_dir(self.output_dir_edit.text())
-
-        # Metadata page settings
-        config.set_include_metadata_page(self.metadata_include_check.isChecked())
-        config.set_metadata_page_position(self.metadata_position_combo.currentText())
-
-        # Sync to disk
-        config.sync()
 
     def browse_input_dir(self):
         """Browse for default input directory."""
