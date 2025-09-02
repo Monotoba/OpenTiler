@@ -277,7 +277,7 @@ class MainWindow(QMainWindow):
         reg_action = QAction("Reg Marks", self)
         reg_action.setCheckable(True)
         reg_action.setChecked(self.config.get_reg_marks_display())
-        reg_action.setIcon(load_icon("reg-marks.png", fallback=style.StandardPixmap.SP_DialogYesButton))
+        reg_action.setIcon(load_icon("registration-marks.png", fallback=style.StandardPixmap.SP_DialogYesButton))
         reg_action.setToolTip("Toggle registration marks in preview (circles with crosshairs at printable corners)")
         reg_action.toggled.connect(self.toggle_reg_marks_display)
         toolbar.addAction(reg_action)
