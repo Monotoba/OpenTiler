@@ -477,6 +477,11 @@ class SettingsDialog(QDialog):
         config.set_gutter_lines_print(self.gutter_print_check.isChecked())
         config.set_crop_marks_display(self.crop_display_check.isChecked())
         config.set_crop_marks_print(self.crop_print_check.isChecked())
+        # Registration marks
+        config.set_reg_marks_display(self.reg_display_check.isChecked())
+        config.set_reg_marks_print(self.reg_print_check.isChecked())
+        config.set_reg_mark_diameter_mm(self.reg_diameter_spin.value())
+        config.set_reg_mark_crosshair_mm(self.reg_crosshair_spin.value())
         config.set_scale_bar_display(self.scale_bar_display_check.isChecked())
         config.set_scale_bar_print(self.scale_bar_print_check.isChecked())
         config.set_scale_bar_location(self.scale_bar_location_combo.currentText())
