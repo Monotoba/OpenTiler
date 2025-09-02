@@ -101,7 +101,7 @@ def main() -> int:
     # Build page grid
     pages = calc_page_grid_with_gutters(src.width(), src.height(), page_w_px, page_h_px, gutter_px)
 
-    # Export
+    # Export multipage
     out_dir = os.path.join(os.path.dirname(__file__), 'validation_output')
     os.makedirs(out_dir, exist_ok=True)
     out_pdf = os.path.join(out_dir, 'test_gutter_fix.pdf')
@@ -122,9 +122,25 @@ def main() -> int:
     )
 
     print(f"Validation PDF written: {out_pdf}, success={ok}")
-    return 0 if ok else 1
+    # Export composite
+    out_pdf_composite = os.path.join(out_dir, 'test_gutter_fix_composite.pdf')
+    ok2 = exporter.export(
+        source_pixmap=src,
+        page_grid=pages,
+        output_path=out_pdf_composite,
+        page_size=page_size,
+        document_name='Gutter Validation (Composite)',
+        original_file='',
+        scale_factor=scale_factor,
+        units='mm',
+        page_orientation='auto',
+        gutter_size=gutter_mm,
+        output_dir=out_dir,
+        composite=True
+    )
+    print(f"Validation composite PDF written: {out_pdf_composite}, success={ok2}")
+    return 0 if (ok and ok2) else 1
 
 
 if __name__ == '__main__':
     raise SystemExit(main())
-

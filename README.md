@@ -119,6 +119,10 @@ The application stores settings automatically, including:
 - Last used directories
 - Window layout
 
+Note on page margins and gutters:
+- OpenTiler interprets page margins in millimeters. When exporting or printing, the default margins are 10 mm on all sides unless configured otherwise.
+- Tile gutters are also specified in millimeters via Settings. The printable area per page is the page size minus margins, and tile drawing is clipped to the area inside the gutter per page for consistent assembly.
+
 ## Development
 
 ### Project Structure

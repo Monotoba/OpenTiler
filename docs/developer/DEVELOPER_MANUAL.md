@@ -270,6 +270,11 @@ class PDFExporter(BaseExporter):
 2. **Tile Generation**: Calculate page grid
 3. **Exporter Selection**: Based on format choice
 4. **Export Process**: `exporter.export()` with progress tracking
+
+Page layout and margins:
+- When constructing `QPageLayout`, use `QPageLayout.Millimeter` so `QMarginsF` values are interpreted in millimeters.
+- Use `pageLayout.paintRectPixels(deviceDpi)` to obtain the true printable rectangle; draw page/tile pixmaps into this rect rather than centering via `viewport()`.
+- Ensure tile pixmaps clip drawing to the printable area inside gutters to maintain consistent alignment between tiles, preview, and print/PDF.
 5. **Metadata Creation**: Assembly maps and project info
 6. **File Output**: Write to specified location
 
