@@ -93,6 +93,11 @@ class ExportDialog(QDialog):
         self.format_combo.currentTextChanged.connect(self.on_format_changed)
         format_layout.addRow("Format:", self.format_combo)
 
+        # Help text for format
+        self.format_help_label = QLabel("")
+        self.format_help_label.setWordWrap(True)
+        format_layout.addRow("", self.format_help_label)
+
         format_group.setLayout(format_layout)
         layout.addWidget(format_group)
 
@@ -123,6 +128,7 @@ class ExportDialog(QDialog):
 
         # Composite option (for images)
         self.composite_check = QCheckBox("Export as single composite image")
+        self.composite_check.toggled.connect(self.on_format_changed)
         output_layout.addRow("", self.composite_check)
 
         output_group.setLayout(output_layout)
@@ -172,6 +178,25 @@ class ExportDialog(QDialog):
         self.quality_spin.setVisible(is_image)
         self.page_size_combo.setVisible(is_pdf)
         self.composite_check.setVisible(is_image)
+
+        # Update format help text
+        if is_pdf and "Multi-page" in format_text:
+            self.format_help_label.setText(
+                "PDF (Multi-page): generates one PDF page per tile, drawn in the printable area with millimeter margins."
+            )
+        elif is_pdf and "Composite" in format_text:
+            self.format_help_label.setText(
+                "PDF (Single-page Composite): generates a single-page PDF showing all tiles composed and scaled to fit the printable area — useful for an overview, not for cut-and-assemble."
+            )
+        elif is_image:
+            if self.composite_check.isChecked():
+                self.format_help_label.setText(
+                    "Images (composite): exports a single image with all tiles composed."
+                )
+            else:
+                self.format_help_label.setText(
+                    "Images: exports one image file per tile into a chosen directory."
+                )
 
         # Update default extension
         if is_pdf:
