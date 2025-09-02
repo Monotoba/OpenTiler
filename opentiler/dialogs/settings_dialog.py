@@ -43,6 +43,7 @@ class SettingsDialog(QDialog):
         self.tab_widget.addTab(self.create_display_tab(), "Display")
         self.tab_widget.addTab(self.create_page_indicators_tab(), "Page Indicators")
         self.tab_widget.addTab(self.create_export_tab(), "Export")
+        self.tab_widget.addTab(self.create_project_tab(), "Project")
 
         layout.addWidget(self.tab_widget)
 
@@ -371,6 +372,25 @@ class SettingsDialog(QDialog):
         widget.setLayout(layout)
         return widget
 
+    def create_project_tab(self):
+        """Create the project settings tab."""
+        widget = QWidget()
+        layout = QFormLayout()
+
+        self.project_storage_combo = QComboBox()
+        self.project_storage_combo.addItems([
+            "reference",  # .otproj references original on disk
+            "sidecar",    # .otproj + <name>.dat holds compressed original
+            "embedded",   # .otprjz embeds original
+        ])
+        self.project_storage_combo.setToolTip(
+            "How to store the original file with a project: reference only, compressed sidecar, or embedded in a zip project."
+        )
+        layout.addRow("Original Storage:", self.project_storage_combo)
+
+        widget.setLayout(layout)
+        return widget
+
     def choose_color(self):
         """Open color chooser dialog."""
         color = QColorDialog.getColor(self.current_color, self, "Choose Font Color")
@@ -449,6 +469,9 @@ class SettingsDialog(QDialog):
         self.metadata_include_check.setChecked(config.get_include_metadata_page())
         self.metadata_position_combo.setCurrentText(config.get_metadata_page_position())
 
+        # Project settings
+        self.project_storage_combo.setCurrentText(config.get_project_original_storage())
+
     def apply_settings(self):
         """Apply settings without closing dialog."""
         self.save_settings()
@@ -497,6 +520,9 @@ class SettingsDialog(QDialog):
             # Centimeters, step = 1 cm
             cm = self.scale_bar_length_slider.value()
             config.set_scale_bar_length_cm(cm)
+
+        # Project settings
+        config.set_project_original_storage(self.project_storage_combo.currentText())
 
     def _configure_scale_bar_length_slider(self):
         """Configure the scale bar length slider according to current units."""

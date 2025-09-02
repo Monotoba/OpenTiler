@@ -1341,9 +1341,10 @@ class MainWindow(QMainWindow):
         )
         if not path:
             return False
-        # Ensure extension
+        # Ensure extension based on storage mode if user didn't specify
         if not (path.endswith('.otproj') or path.endswith('.otprjz')):
-            path += '.otproj'
+            mode = self.config.get_project_original_storage()
+            path += '.otprjz' if mode == 'embedded' else '.otproj'
         try:
             self._save_project_to_path(path)
             self.current_project_path = path
@@ -1367,8 +1368,25 @@ class MainWindow(QMainWindow):
                     arcname = f"original/{os.path.basename(original_path)}"
                     zf.write(original_path, arcname)
         else:
+            # Plain JSON project
             with open(path, 'w', encoding='utf-8') as f:
                 json.dump(state, f, indent=2)
+            # Optional sidecar compressed original based on setting
+            mode = self.config.get_project_original_storage()
+            if mode == 'sidecar':
+                self._write_sidecar_original(state.get('document_path'), path)
+
+    def _write_sidecar_original(self, original_path: str | None, project_path: str):
+        if not original_path or not os.path.exists(original_path):
+            return
+        base, _ = os.path.splitext(project_path)
+        sidecar = base + '.dat'
+        # Zip the single original file into the sidecar
+        try:
+            with zipfile.ZipFile(sidecar, 'w', zipfile.ZIP_DEFLATED) as zf:
+                zf.write(original_path, os.path.basename(original_path))
+        except Exception:
+            pass
 
     def open_project(self):
         """Open an existing project file (.otproj or .otprjz)."""
@@ -1402,7 +1420,26 @@ class MainWindow(QMainWindow):
             else:
                 with open(path, 'r', encoding='utf-8') as f:
                     state = json.load(f)
-                self._apply_project_state(state)
+                # Try sidecar first
+                base, _ = os.path.splitext(path)
+                sidecar = base + '.dat'
+                extracted_path = None
+                if os.path.exists(sidecar):
+                    try:
+                        with zipfile.ZipFile(sidecar, 'r') as zf:
+                            # Extract first file entry
+                            members = [m for m in zf.namelist() if not m.endswith('/')]
+                            if members:
+                                cache_dir = os.path.join(os.path.dirname(path), '.opentiler_cache')
+                                os.makedirs(cache_dir, exist_ok=True)
+                                member = members[0]
+                                out_path = os.path.join(cache_dir, os.path.basename(member))
+                                with zf.open(member) as src, open(out_path, 'wb') as dst:
+                                    dst.write(src.read())
+                                extracted_path = out_path
+                    except Exception:
+                        extracted_path = None
+                self._apply_project_state(state, extracted_path)
             self.current_project_path = path
             self._clear_project_dirty()
             self.status_bar.showMessage(f"Project opened: {path}")

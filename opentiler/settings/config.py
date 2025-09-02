@@ -149,6 +149,11 @@ class Config:
         if not self.settings.contains("metadata_page_position"):
             self.settings.setValue("metadata_page_position", "first")  # first, last
 
+        # Project storage settings
+        if not self.settings.contains("project_original_storage"):
+            # reference | sidecar | embedded
+            self.settings.setValue("project_original_storage", "reference")
+
     def get(self, key, default=None):
         """Get a configuration value."""
         return self.settings.value(key, default)
@@ -531,6 +536,17 @@ class Config:
     def set_metadata_page_position(self, position):
         """Set metadata page position."""
         self.set("metadata_page_position", position)
+
+    # Project storage settings
+    def get_project_original_storage(self):
+        """Get how to store the original with projects: reference | sidecar | embedded."""
+        return self.get("project_original_storage", "reference")
+
+    def set_project_original_storage(self, mode):
+        """Set original storage mode for projects."""
+        if mode not in ("reference", "sidecar", "embedded"):
+            mode = "reference"
+        self.set("project_original_storage", mode)
 
 
 # Global configuration instance
