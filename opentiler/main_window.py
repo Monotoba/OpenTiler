@@ -13,6 +13,10 @@ from PySide6.QtWidgets import QApplication
 from PySide6.QtPrintSupport import QPrinter, QPrintDialog, QPrintPreviewDialog
 from PySide6.QtCore import QMarginsF
 import os
+import json
+import zipfile
+from pathlib import Path
+import tempfile
 
 from .viewer.viewer import DocumentViewer
 from .viewer.preview_panel import PreviewPanel
@@ -37,6 +41,9 @@ class MainWindow(QMainWindow):
         self.settings_dialog = None
         self.export_dialog = None
         self.save_as_dialog = None
+        # Project state
+        self.current_project_path = None
+        self._project_dirty = False
         self.init_ui()
 
     def init_ui(self):
@@ -55,6 +62,11 @@ class MainWindow(QMainWindow):
         # Create document viewer
         self.document_viewer = DocumentViewer()
         main_splitter.addWidget(self.document_viewer)
+        # Mark project dirty when user selects points
+        try:
+            self.document_viewer.point_selected.connect(lambda *_: self._mark_project_dirty())
+        except Exception:
+            pass
 
         # Create preview panel
         self.preview_panel = PreviewPanel()
@@ -76,6 +88,27 @@ class MainWindow(QMainWindow):
     def create_menus(self):
         """Create application menus."""
         menubar = self.menuBar()
+
+        # Project menu
+        project_menu = menubar.addMenu("&Project")
+
+        proj_open_action = QAction("&Open Project...", self)
+        proj_open_action.triggered.connect(self.open_project)
+        project_menu.addAction(proj_open_action)
+
+        proj_save_action = QAction("&Save Project", self)
+        proj_save_action.triggered.connect(self.save_project)
+        project_menu.addAction(proj_save_action)
+
+        proj_save_as_action = QAction("Save Project &As...", self)
+        proj_save_as_action.triggered.connect(self.save_project_as)
+        project_menu.addAction(proj_save_as_action)
+
+        project_menu.addSeparator()
+
+        proj_close_action = QAction("&Close Project", self)
+        proj_close_action.triggered.connect(self.close_project)
+        project_menu.addAction(proj_close_action)
 
         # File menu
         file_menu = menubar.addMenu("&File")
@@ -363,6 +396,7 @@ class MainWindow(QMainWindow):
             # Add to recent files
             self.config.add_recent_file(file_path)
             self.update_recent_files_menu()
+            self._mark_project_dirty()
             return True
         else:
             QMessageBox.warning(self, "Error", f"Failed to load document: {file_path}")
@@ -946,6 +980,7 @@ class MainWindow(QMainWindow):
 
         # Update status
         self.status_bar.showMessage(f"Scale applied: {scale_factor:.6f} - {len(page_grid)} pages generated")
+        self._mark_project_dirty()
 
     def _calculate_page_grid_with_gutters(self, doc_width, doc_height, page_width, page_height, gutter_size):
         """Calculate page grid where drawable areas tile seamlessly with no gaps."""
@@ -1113,6 +1148,291 @@ class MainWindow(QMainWindow):
             self.on_scale_applied(self.document_viewer.scale_factor)
 
         self.status_bar.showMessage("Settings updated")
+        self._mark_project_dirty()
+
+    # ----------------------
+    # Project management
+    # ----------------------
+
+    def _mark_project_dirty(self):
+        self._project_dirty = True
+        self._update_window_title()
+
+    def _clear_project_dirty(self):
+        self._project_dirty = False
+        self._update_window_title()
+
+    def _update_window_title(self):
+        base = "OpenTiler"
+        if self.current_project_path:
+            name = os.path.basename(self.current_project_path)
+            dirty = "*" if self._project_dirty else ""
+            self.setWindowTitle(f"{base} - {name}{dirty}")
+        else:
+            self.setWindowTitle(base)
+
+    def _confirm_save_if_dirty(self):
+        if not self._project_dirty:
+            return True
+        reply = QMessageBox.question(
+            self,
+            "Save Project",
+            "The project has unsaved changes. Save now?",
+            QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel,
+            QMessageBox.Yes,
+        )
+        if reply == QMessageBox.Yes:
+            return self.save_project()
+        if reply == QMessageBox.No:
+            return True
+        return False
+
+    def _snapshot_config(self):
+        c = self.config
+        return {
+            # General / page
+            'default_units': c.get_default_units(),
+            'default_dpi': c.get_default_dpi(),
+            'default_page_size': c.get_default_page_size(),
+            'page_orientation': c.get_page_orientation(),
+            'gutter_size_mm': c.get_gutter_size_mm(),
+            # Overlays
+            'gutter_lines_display': c.get_gutter_lines_display(),
+            'gutter_lines_print': c.get_gutter_lines_print(),
+            'crop_marks_display': c.get_crop_marks_display(),
+            'crop_marks_print': c.get_crop_marks_print(),
+            'reg_marks_display': c.get_reg_marks_display(),
+            'reg_marks_print': c.get_reg_marks_print(),
+            'reg_mark_diameter_mm': c.get_reg_mark_diameter_mm(),
+            'reg_mark_crosshair_mm': c.get_reg_mark_crosshair_mm(),
+            # Scale bar
+            'scale_bar_display': c.get_scale_bar_display(),
+            'scale_bar_print': c.get_scale_bar_print(),
+            'scale_bar_location': c.get_scale_bar_location(),
+            'scale_bar_opacity': c.get_scale_bar_opacity(),
+            'scale_bar_length_in': c.get_scale_bar_length_in(),
+            'scale_bar_length_cm': c.get_scale_bar_length_cm(),
+            'scale_bar_thickness_mm': c.get_scale_bar_thickness_mm(),
+            'scale_bar_padding_mm': c.get_scale_bar_padding_mm(),
+            # Page indicator
+            'page_indicator_display': c.get_page_indicator_display(),
+            'page_indicator_print': c.get_page_indicator_print(),
+            'page_indicator_position': c.get_page_indicator_position(),
+            'page_indicator_font_size': c.get_page_indicator_font_size(),
+            'page_indicator_font_color': c.get_page_indicator_font_color(),
+            'page_indicator_font_style': c.get_page_indicator_font_style(),
+            'page_indicator_alpha': c.get_page_indicator_alpha(),
+            # Scale line/text
+            'scale_line_display': c.get_scale_line_display(),
+            'scale_line_print': c.get_scale_line_print(),
+            'scale_text_display': c.get_scale_text_display(),
+            'scale_text_print': c.get_scale_text_print(),
+            # Metadata page
+            'include_metadata_page': c.get_include_metadata_page(),
+            'metadata_page_position': c.get_metadata_page_position(),
+        }
+
+    def _apply_config_snapshot(self, snap: dict):
+        c = self.config
+        try:
+            # Apply with defaults if missing
+            c.set_default_units(snap.get('default_units', c.get_default_units()))
+            c.set_default_dpi(snap.get('default_dpi', c.get_default_dpi()))
+            c.set_default_page_size(snap.get('default_page_size', c.get_default_page_size()))
+            c.set_page_orientation(snap.get('page_orientation', c.get_page_orientation()))
+            c.set_gutter_size_mm(snap.get('gutter_size_mm', c.get_gutter_size_mm()))
+
+            c.set_gutter_lines_display(snap.get('gutter_lines_display', c.get_gutter_lines_display()))
+            c.set_gutter_lines_print(snap.get('gutter_lines_print', c.get_gutter_lines_print()))
+            c.set_crop_marks_display(snap.get('crop_marks_display', c.get_crop_marks_display()))
+            c.set_crop_marks_print(snap.get('crop_marks_print', c.get_crop_marks_print()))
+            c.set_reg_marks_display(snap.get('reg_marks_display', c.get_reg_marks_display()))
+            c.set_reg_marks_print(snap.get('reg_marks_print', c.get_reg_marks_print()))
+            c.set_reg_mark_diameter_mm(snap.get('reg_mark_diameter_mm', c.get_reg_mark_diameter_mm()))
+            c.set_reg_mark_crosshair_mm(snap.get('reg_mark_crosshair_mm', c.get_reg_mark_crosshair_mm()))
+
+            c.set_scale_bar_display(snap.get('scale_bar_display', c.get_scale_bar_display()))
+            c.set_scale_bar_print(snap.get('scale_bar_print', c.get_scale_bar_print()))
+            c.set_scale_bar_location(snap.get('scale_bar_location', c.get_scale_bar_location()))
+            c.set_scale_bar_opacity(snap.get('scale_bar_opacity', c.get_scale_bar_opacity()))
+            c.set_scale_bar_length_in(snap.get('scale_bar_length_in', c.get_scale_bar_length_in()))
+            c.set_scale_bar_length_cm(snap.get('scale_bar_length_cm', c.get_scale_bar_length_cm()))
+            c.set_scale_bar_thickness_mm(snap.get('scale_bar_thickness_mm', c.get_scale_bar_thickness_mm()))
+            c.set_scale_bar_padding_mm(snap.get('scale_bar_padding_mm', c.get_scale_bar_padding_mm()))
+
+            c.set_page_indicator_display(snap.get('page_indicator_display', c.get_page_indicator_display()))
+            c.set_page_indicator_print(snap.get('page_indicator_print', c.get_page_indicator_print()))
+            c.set_page_indicator_position(snap.get('page_indicator_position', c.get_page_indicator_position()))
+            c.set_page_indicator_font_size(snap.get('page_indicator_font_size', c.get_page_indicator_font_size()))
+            c.set_page_indicator_font_color(snap.get('page_indicator_font_color', c.get_page_indicator_font_color()))
+            c.set_page_indicator_font_style(snap.get('page_indicator_font_style', c.get_page_indicator_font_style()))
+            c.set_page_indicator_alpha(snap.get('page_indicator_alpha', c.get_page_indicator_alpha()))
+
+            c.set_scale_line_display(snap.get('scale_line_display', c.get_scale_line_display()))
+            c.set_scale_line_print(snap.get('scale_line_print', c.get_scale_line_print()))
+            c.set_scale_text_display(snap.get('scale_text_display', c.get_scale_text_display()))
+            c.set_scale_text_print(snap.get('scale_text_print', c.get_scale_text_print()))
+
+            c.set_include_metadata_page(snap.get('include_metadata_page', c.get_include_metadata_page()))
+            c.set_metadata_page_position(snap.get('metadata_page_position', c.get_metadata_page_position()))
+        except Exception:
+            pass
+
+    def _gather_project_state(self):
+        viewer = self.document_viewer
+        state = {
+            'version': 1,
+            'document_path': getattr(viewer, 'current_document', '') or '',
+            'document_name': os.path.basename(getattr(viewer, 'current_document', '') or '') or 'Untitled',
+            'viewer': {
+                'scale_factor': getattr(viewer, 'scale_factor', 1.0),
+                'selected_points': getattr(viewer, 'selected_points', []),
+                'measurement_text': getattr(viewer, 'measurement_text', ''),
+                'rotation': getattr(viewer, 'rotation', 0),
+                'zoom_factor': getattr(viewer, 'zoom_factor', 1.0),
+            },
+            'config': self._snapshot_config(),
+        }
+        return state
+
+    def _apply_project_state(self, state: dict, original_path: str | None = None):
+        # Apply config first
+        self._apply_config_snapshot(state.get('config', {}))
+
+        doc_path = original_path or state.get('document_path')
+        if doc_path and os.path.exists(doc_path):
+            self.load_document(doc_path)
+        # Apply viewer state
+        viewer = self.document_viewer
+        vstate = state.get('viewer', {})
+        viewer.set_scale(vstate.get('scale_factor', 1.0))
+        pts = vstate.get('selected_points') or []
+        viewer.selected_points = pts
+        viewer.set_measurement_text(vstate.get('measurement_text', ''))
+        viewer.rotation = vstate.get('rotation', 0)
+        viewer.zoom_factor = vstate.get('zoom_factor', 1.0)
+
+        # Regenerate tiling based on scale
+        if viewer.scale_factor and viewer.current_pixmap:
+            self.on_scale_applied(viewer.scale_factor)
+        else:
+            viewer.refresh_display()
+
+    def save_project(self):
+        """Save current project to existing path or prompt Save As."""
+        if not self.current_project_path:
+            return self.save_project_as()
+        try:
+            self._save_project_to_path(self.current_project_path)
+            self._clear_project_dirty()
+            self.status_bar.showMessage(f"Project saved: {self.current_project_path}")
+            return True
+        except Exception as e:
+            QMessageBox.critical(self, "Save Project", f"Failed to save project: {str(e)}")
+            return False
+
+    def save_project_as(self):
+        """Prompt for a project file and save."""
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Project As",
+            self.config.get_last_output_dir(),
+            "OpenTiler Project (*.otproj);;OpenTiler Zipped Project (*.otprjz)"
+        )
+        if not path:
+            return False
+        # Ensure extension
+        if not (path.endswith('.otproj') or path.endswith('.otprjz')):
+            path += '.otproj'
+        try:
+            self._save_project_to_path(path)
+            self.current_project_path = path
+            self.config.set_last_output_dir(os.path.dirname(path))
+            self._clear_project_dirty()
+            self.status_bar.showMessage(f"Project saved: {path}")
+            return True
+        except Exception as e:
+            QMessageBox.critical(self, "Save Project", f"Failed to save project: {str(e)}")
+            return False
+
+    def _save_project_to_path(self, path: str):
+        state = self._gather_project_state()
+        # Decide embed by extension
+        if path.endswith('.otprjz'):
+            # Embed original file if available
+            original_path = state.get('document_path')
+            with zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED) as zf:
+                zf.writestr('project.json', json.dumps(state, indent=2))
+                if original_path and os.path.exists(original_path):
+                    arcname = f"original/{os.path.basename(original_path)}"
+                    zf.write(original_path, arcname)
+        else:
+            with open(path, 'w', encoding='utf-8') as f:
+                json.dump(state, f, indent=2)
+
+    def open_project(self):
+        """Open an existing project file (.otproj or .otprjz)."""
+        if not self._confirm_save_if_dirty():
+            return
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Open Project",
+            self.config.get_last_input_dir(),
+            "OpenTiler Project (*.otproj *.otprjz)"
+        )
+        if not path:
+            return
+        try:
+            if path.endswith('.otprjz'):
+                with zipfile.ZipFile(path, 'r') as zf:
+                    with zf.open('project.json') as jf:
+                        state = json.loads(jf.read().decode('utf-8'))
+                    # Extract original to cache folder next to project
+                    original_members = [m for m in zf.namelist() if m.startswith('original/') and not m.endswith('/')]
+                    extracted_path = None
+                    if original_members:
+                        cache_dir = os.path.join(os.path.dirname(path), '.opentiler_cache')
+                        os.makedirs(cache_dir, exist_ok=True)
+                        member = original_members[0]
+                        out_path = os.path.join(cache_dir, os.path.basename(member))
+                        with zf.open(member) as src, open(out_path, 'wb') as dst:
+                            dst.write(src.read())
+                        extracted_path = out_path
+                self._apply_project_state(state, extracted_path)
+            else:
+                with open(path, 'r', encoding='utf-8') as f:
+                    state = json.load(f)
+                self._apply_project_state(state)
+            self.current_project_path = path
+            self._clear_project_dirty()
+            self.status_bar.showMessage(f"Project opened: {path}")
+        except Exception as e:
+            QMessageBox.critical(self, "Open Project", f"Failed to open project: {str(e)}")
+
+    def close_project(self):
+        """Close current project, prompting to save if dirty."""
+        if not self._confirm_save_if_dirty():
+            return
+        # Clear viewer and preview
+        self.document_viewer.current_pixmap = None
+        self.document_viewer.current_document = None
+        self.document_viewer.selected_points = []
+        self.document_viewer.zoom_factor = 1.0
+        self.document_viewer.rotation = 0
+        self.document_viewer.page_grid = []
+        self.document_viewer.gutter_size = 0
+        self.document_viewer.refresh_display()
+        self.preview_panel.update_preview(None, None)
+        self.current_project_path = None
+        self._clear_project_dirty()
+        self.status_bar.showMessage("Project closed")
+
+    def closeEvent(self, event):
+        # Prompt to save project on app exit
+        if self._confirm_save_if_dirty():
+            event.accept()
+        else:
+            event.ignore()
 
     def update_recent_files_menu(self):
         """Update the recent files menu."""
