@@ -23,7 +23,7 @@ from .dialogs.settings_dialog import SettingsDialog
 from .dialogs.export_dialog import ExportDialog
 from .dialogs.save_as_dialog import SaveAsDialog
 from .settings.config import Config
-from .utils.helpers import calculate_tile_grid, get_page_size_mm, mm_to_pixels
+from .utils.helpers import calculate_tile_grid, get_page_size_mm, mm_to_pixels, load_icon
 
 
 class MainWindow(QMainWindow):
@@ -41,6 +41,7 @@ class MainWindow(QMainWindow):
     def init_ui(self):
         """Initialize the user interface."""
         self.setWindowTitle("OpenTiler")
+        self.setWindowIcon(load_icon("opentiler-icon.png", fallback=None))
         self.setMinimumSize(QSize(1024, 768))
 
         # Create central widget and layout
@@ -146,6 +147,7 @@ class MainWindow(QMainWindow):
         preferences_action.triggered.connect(self.show_settings)
         settings_menu.addAction(preferences_action)
 
+
     def create_toolbars(self):
         """Create application toolbars."""
         toolbar = QToolBar("Main Toolbar")
@@ -155,13 +157,13 @@ class MainWindow(QMainWindow):
         # Get standard icon theme for fallback
         style = QApplication.style()
 
-        # Helper function to load custom icon with fallback
-        def load_icon(icon_name, fallback_standard_icon):
-            icon_path = os.path.join(os.path.dirname(__file__), "assets", f"{icon_name}.png")
-            if os.path.exists(icon_path):
-                return QIcon(icon_path)
-            else:
-                return style.standardIcon(fallback_standard_icon)
+        # # Helper function to load custom icon with fallback
+        # def load_icon(icon_name, fallback_standard_icon):
+        #     icon_path = os.path.join(os.path.dirname(__file__), "assets", f"{icon_name}.png")
+        #     if os.path.exists(icon_path):
+        #         return QIcon(icon_path)
+        #     else:
+        #         return style.standardIcon(fallback_standard_icon)
 
         # NEW ORDER: Open, Export, Print, Rotate Left, Rotate Right, Fit to Window, Zoom In, Zoom Out, Settings, Scale tool
 
@@ -177,7 +179,7 @@ class MainWindow(QMainWindow):
 
         # 2. Export action
         export_action = QAction("Export", self)
-        export_action.setIcon(load_icon("export", style.StandardPixmap.SP_DialogSaveButton))
+        export_action.setIcon(load_icon("export.png", fallback=style.StandardPixmap.SP_DialogSaveButton))
         export_action.setToolTip("Export document as tiles (Ctrl+E)")
         export_action.setShortcut("Ctrl+E")
         export_action.triggered.connect(self.export_document)
@@ -185,7 +187,7 @@ class MainWindow(QMainWindow):
 
         # 3. Print action
         print_action = QAction("Print", self)
-        print_action.setIcon(load_icon("printer", style.StandardPixmap.SP_FileDialogDetailedView))
+        print_action.setIcon(load_icon("printer.png", fallback=style.StandardPixmap.SP_FileDialogDetailedView))
         print_action.setToolTip("Print tiles directly (Ctrl+P)")
         print_action.setShortcut("Ctrl+P")
         print_action.triggered.connect(self.print_tiles)
@@ -195,14 +197,14 @@ class MainWindow(QMainWindow):
 
         # 4. Rotate Left action
         rotate_left_action = QAction("Rotate Left", self)
-        rotate_left_action.setIcon(load_icon("rotate-left", style.StandardPixmap.SP_BrowserReload))
+        rotate_left_action.setIcon(load_icon("rotate-left.png", fallback=style.StandardPixmap.SP_BrowserReload))
         rotate_left_action.setToolTip("Rotate document 90° counterclockwise")
         rotate_left_action.triggered.connect(self.document_viewer.rotate_counterclockwise)
         toolbar.addAction(rotate_left_action)
 
         # 5. Rotate Right action
         rotate_right_action = QAction("Rotate Right", self)
-        rotate_right_action.setIcon(load_icon("rotate-right", style.StandardPixmap.SP_BrowserReload))
+        rotate_right_action.setIcon(load_icon("rotate-right.png", fallback=style.StandardPixmap.SP_BrowserReload))
         rotate_right_action.setToolTip("Rotate document 90° clockwise")
         rotate_right_action.triggered.connect(self.document_viewer.rotate_clockwise)
         toolbar.addAction(rotate_right_action)
@@ -211,7 +213,7 @@ class MainWindow(QMainWindow):
 
         # 6. Fit to Window action
         fit_action = QAction("Fit to Window", self)
-        fit_action.setIcon(load_icon("fit-to-window", style.StandardPixmap.SP_ComputerIcon))
+        fit_action.setIcon(load_icon("fit-to-window.png", fallback=style.StandardPixmap.SP_ComputerIcon))
         fit_action.setToolTip("Fit document to window (Ctrl+0)")
         fit_action.setShortcut("Ctrl+0")
         fit_action.triggered.connect(self.document_viewer.zoom_fit)
@@ -219,7 +221,7 @@ class MainWindow(QMainWindow):
 
         # 7. Zoom In action
         zoom_in_action = QAction("Zoom In", self)
-        zoom_in_action.setIcon(load_icon("zoom-in", style.StandardPixmap.SP_FileDialogDetailedView))
+        zoom_in_action.setIcon(load_icon("zoom-in.png", fallback=style.StandardPixmap.SP_FileDialogDetailedView))
         zoom_in_action.setToolTip("Zoom in (+)")
         zoom_in_action.setShortcut(QKeySequence.ZoomIn)
         zoom_in_action.triggered.connect(self.document_viewer.zoom_in)
@@ -227,7 +229,7 @@ class MainWindow(QMainWindow):
 
         # 8. Zoom Out action
         zoom_out_action = QAction("Zoom Out", self)
-        zoom_out_action.setIcon(load_icon("zoom-out", style.StandardPixmap.SP_FileDialogListView))
+        zoom_out_action.setIcon(load_icon("zoom-out.png", fallback=style.StandardPixmap.SP_FileDialogListView))
         zoom_out_action.setToolTip("Zoom out (-)")
         zoom_out_action.setShortcut(QKeySequence.ZoomOut)
         zoom_out_action.triggered.connect(self.document_viewer.zoom_out)
@@ -237,7 +239,7 @@ class MainWindow(QMainWindow):
 
         # 9. Settings action (2nd from right end)
         settings_action = QAction("Settings", self)
-        settings_action.setIcon(load_icon("settings", style.StandardPixmap.SP_FileDialogDetailedView))
+        settings_action.setIcon(load_icon("settings.png", fallback=style.StandardPixmap.SP_FileDialogDetailedView))
         settings_action.setToolTip("Open application settings (Ctrl+,)")
         settings_action.setShortcut("Ctrl+,")
         settings_action.triggered.connect(self.show_settings)
@@ -245,7 +247,7 @@ class MainWindow(QMainWindow):
 
         # 10. Scale tool action (rightmost - most used)
         scale_action = QAction("Scale Tool", self)
-        scale_action.setIcon(load_icon("scale-tool", style.StandardPixmap.SP_FileDialogInfoView))
+        scale_action.setIcon(load_icon("scale-tool.png", fallback=style.StandardPixmap.SP_FileDialogInfoView))
         scale_action.setToolTip("Open scaling tool to set real-world measurements (Ctrl+S)")
         scale_action.setShortcut("Ctrl+S")
         scale_action.triggered.connect(self.show_scaling_dialog)
@@ -396,10 +398,12 @@ class MainWindow(QMainWindow):
             orientation = self._determine_print_orientation()
 
             printer.setPageSize(page_size)
+            # Use millimeter units so margins match configured gutter scale
             printer.setPageLayout(QPageLayout(
                 page_size,
                 orientation,
-                QMarginsF(10, 10, 10, 10)  # 10mm margins
+                QMarginsF(10, 10, 10, 10),
+                QPageLayout.Millimeter
             ))
 
             # Show print dialog
@@ -472,74 +476,27 @@ class MainWindow(QMainWindow):
                 self._print_metadata_page(painter, printer, source_pixmap, page_grid, page_rect)
                 page_count += 1
 
-            # Print each tile - use the SAME logic as the working preview
+            # Print each tile - align with exporter/preview logic
             for i, page in enumerate(page_grid):
                 print(f"DEBUG: Printing tile {i+1}/{len(page_grid)}")
 
                 if page_count > 0 or i > 0:
                     printer.newPage()  # Start new page for each tile (or after metadata page)
 
-                # Instead of creating a separate tile pixmap, draw directly from source
-                # This is simpler and avoids the coordinate issues
+                # Create a full tile pixmap including gutters and clip to printable area
+                tile_pixmap = self._create_tile_pixmap(source_pixmap, page)
 
-                # Calculate source area to copy (same as preview logic)
-                source_x = max(0, int(page['x']))
-                source_y = max(0, int(page['y']))
-                source_w = min(int(page['width']), source_pixmap.width() - source_x)
-                source_h = min(int(page['height']), source_pixmap.height() - source_y)
+                if tile_pixmap and not tile_pixmap.isNull():
+                    print(f"DEBUG: Drawing tile to paint rect: {page_rect.width()}x{page_rect.height()}")
+                    # Draw the tile scaled to the printable rect so physical size matches
+                    painter.drawPixmap(page_rect, tile_pixmap, tile_pixmap.rect())
 
-                if source_w > 0 and source_h > 0:
-                    # Copy the relevant area from source
-                    source_rect = QRect(source_x, source_y, source_w, source_h)
-                    tile_content = source_pixmap.copy(source_rect)
-
-                    if not tile_content.isNull():
-                        print(f"DEBUG: Copied tile content: {tile_content.width()}x{tile_content.height()}")
-
-                        # Calculate the correct print size based on the document's scale factor
-                        # Get the scale factor from the document viewer
-                        scale_factor = getattr(self.document_viewer, 'scale_factor', 1.0)
-                        print(f"DEBUG: Document scale factor: {scale_factor} mm/pixel")
-
-                        # Calculate the real-world size of the tile content in mm
-                        tile_width_mm = tile_content.width() * scale_factor
-                        tile_height_mm = tile_content.height() * scale_factor
-                        print(f"DEBUG: Tile real-world size: {tile_width_mm:.2f}mm x {tile_height_mm:.2f}mm")
-
-                        # Get printer resolution to convert mm to printer pixels
-                        printer_dpi = printer.resolution()
-                        print(f"DEBUG: Printer DPI: {printer_dpi}")
-
-                        # Convert mm to printer pixels (1 inch = 25.4 mm)
-                        tile_width_printer_pixels = (tile_width_mm / 25.4) * printer_dpi
-                        tile_height_printer_pixels = (tile_height_mm / 25.4) * printer_dpi
-                        print(f"DEBUG: Tile printer size: {tile_width_printer_pixels:.1f}px x {tile_height_printer_pixels:.1f}px")
-
-                        # Scale the tile to the correct printer size (preserving original scale)
-                        target_size = QSize(int(tile_width_printer_pixels), int(tile_height_printer_pixels))
-                        scaled_tile = tile_content.scaled(
-                            target_size,
-                            Qt.IgnoreAspectRatio,  # Use exact size to preserve scale
-                            Qt.SmoothTransformation
-                        )
-
-                        # Center on page
-                        x = (page_rect.width() - scaled_tile.width()) // 2
-                        y = (page_rect.height() - scaled_tile.height()) // 2
-
-                        print(f"DEBUG: Drawing scaled tile {scaled_tile.width()}x{scaled_tile.height()} at ({x}, {y})")
-
-                        # Draw the tile
-                        painter.drawPixmap(x, y, scaled_tile)
-
-                        # Add page information
-                        total_pages = len(page_grid) + (1 if include_metadata else 0)
-                        current_page = i + 1 + (1 if include_metadata and metadata_position == "first" else 0)
-                        self._add_print_page_info(painter, page_rect, current_page, total_pages)
-                    else:
-                        print(f"ERROR: Failed to copy tile content for tile {i+1}")
+                    # Add page information
+                    total_pages = len(page_grid) + (1 if include_metadata else 0)
+                    current_page = i + 1 + (1 if include_metadata and metadata_position == "first" else 0)
+                    self._add_print_page_info(painter, page_rect, current_page, total_pages)
                 else:
-                    print(f"ERROR: Invalid source dimensions for tile {i+1}: {source_w}x{source_h}")
+                    print(f"ERROR: Failed to create tile pixmap for tile {i+1}")
 
                 page_count += 1
 
@@ -664,7 +621,17 @@ class MainWindow(QMainWindow):
                 print("ERROR: Painter is not active")
                 return QPixmap()
 
-            # Simple approach: copy the area directly from source to tile
+            # Set clipping region to printable area (inside gutters)
+            gutter = int(page.get('gutter', 0) or 0)
+            if gutter > 0:
+                printable_rect = QRect(
+                    gutter, gutter,
+                    max(0, tile_width - 2 * gutter),
+                    max(0, tile_height - 2 * gutter)
+                )
+                painter.setClipRect(printable_rect)
+
+            # Copy the area directly from source to tile
             # Calculate what part of the source we need to copy
             source_x = max(0, int(page['x']))
             source_y = max(0, int(page['y']))
@@ -850,6 +817,11 @@ class MainWindow(QMainWindow):
         # This ensures all document content falls within a drawable area
         drawable_width = page_width - (2 * gutter_size)
         drawable_height = page_height - (2 * gutter_size)
+
+        # Ensure drawable dimensions are positive to prevent infinite loops
+        if drawable_width <= 0 or drawable_height <= 0:
+            print(f"WARNING: Drawable area is non-positive. page_width={page_width}, page_height={page_height}, gutter_size={gutter_size}")
+            return [] # Return empty list if drawable area is invalid
 
         # Step size equals drawable area size for seamless tiling
         step_x = drawable_width

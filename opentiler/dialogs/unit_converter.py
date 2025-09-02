@@ -102,6 +102,7 @@ class UnitConverterDialog(QDialog):
 
     def convert_units(self):
         """Convert between units."""
+        print("DEBUG: convert_units called")
         try:
             input_text = self.input_value.text()
             if not input_text:

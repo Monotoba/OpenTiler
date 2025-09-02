@@ -3,7 +3,111 @@ Helper utilities for OpenTiler.
 """
 
 import math
-from typing import Tuple, List, Optional
+import os
+from typing import Tuple, List, Optional, Union
+
+from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import QApplication
+
+def _find_assets_dir(start_dir: Optional[str] = None, max_depth: int = 6) -> Optional[str]:
+    """
+    Walk up from start_dir (or this file's dir) up to max_depth levels looking for an 'assets' dir.
+    Returns absolute path to the assets dir or None if not found.
+    """
+    cur = os.path.abspath(start_dir or os.path.dirname(__file__))
+    root = os.path.abspath(os.sep)
+    depth = 0
+
+    while True:
+        candidate = os.path.join(cur, "assets")
+        if os.path.isdir(candidate):
+            return candidate
+        if cur == root or depth >= max_depth:
+            break
+        cur = os.path.dirname(cur)
+        depth += 1
+
+    return None
+
+
+def load_icon(icon_name: Union[str, QIcon],
+              fallback: Optional[Union[int, QIcon, str]] = None) -> QIcon:
+    """
+    Load an icon from the repository 'assets' folder. If not found, fall back to one of:
+      - a QIcon instance (returned directly)
+      - a QStyle.StandardPixmap enum / int (uses QApplication.style().standardIcon(...))
+      - a filesystem path (string) pointing to an icon file
+      - a theme name string (QIcon.fromTheme)
+    The loader also attempts QIcon.fromTheme(base_name) before returning an empty QIcon.
+
+    icon_name may be:
+      - a QIcon (returned immediately),
+      - an absolute path or path-like string,
+      - a basename (without extension) — we try .png, .svg, .ico extensions.
+    """
+    # If caller passed a QIcon already, return it
+    if isinstance(icon_name, QIcon):
+        return icon_name
+
+    # Canonicalize string
+    if not isinstance(icon_name, str):
+        return QIcon()
+
+    # If absolute or contains path separators, check directly
+    if os.path.isabs(icon_name) or os.path.sep in icon_name:
+        if os.path.exists(icon_name):
+            return QIcon(icon_name)
+
+    # Build candidate filenames (if extension not given)
+    base, ext = os.path.splitext(icon_name)
+    if ext:
+        candidates = [icon_name]
+    else:
+        candidates = [f"{base}.png", f"{base}.svg", f"{base}.ico"]
+
+    # 1) Look for an 'assets' folder up the tree (handles opentiler/assets)
+    assets_dir = _find_assets_dir()
+    if assets_dir:
+        for candidate in candidates:
+            path = os.path.join(assets_dir, candidate)
+            if os.path.exists(path):
+                return QIcon(path)
+
+    # 2) Handle fallback if provided
+    # If fallback is a QIcon instance
+    if isinstance(fallback, QIcon):
+        return fallback
+
+    # If fallback is a path-like string, use that
+    if isinstance(fallback, str):
+        fp = os.fspath(fallback)
+        if os.path.exists(fp):
+            return QIcon(fp)
+        # Try as theme name
+        theme_icon = QIcon.fromTheme(fp)
+        if not theme_icon.isNull():
+            return theme_icon
+
+    # If fallback is an enum/int for QStyle.StandardPixmap, try to use style
+    if fallback is not None and not isinstance(fallback, str):
+        try:
+            app = QApplication.instance()
+            if app is not None:
+                style = app.style()
+                # style.standardIcon accepts QStyle.StandardPixmap (enum/int)
+                return style.standardIcon(fallback)
+        except Exception:
+            # swallow and continue to next fallback
+            pass
+
+    # 3) Try the icon theme using the base name
+    if base:
+        theme_icon = QIcon.fromTheme(base)
+        if not theme_icon.isNull():
+            return theme_icon
+
+    # final fallback: empty icon
+    return QIcon()
 
 
 def convert_units(value: float, from_unit: str, to_unit: str) -> float:

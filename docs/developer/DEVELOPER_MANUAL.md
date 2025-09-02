@@ -1,4 +1,6 @@
+![OpenTiler Architecture Diagram](docs/resources/images/opentiler-icon.png)
 # OpenTiler Developer Manual
+
 
 ## Table of Contents
 1. [Architecture Overview](#architecture-overview)

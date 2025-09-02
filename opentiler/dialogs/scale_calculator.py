@@ -180,6 +180,7 @@ class ScaleCalculatorDialog(QDialog):
 
     def calculate_scale(self):
         """Calculate scale factor from document and real-world measurements."""
+        print("DEBUG: calculate_scale called")
         try:
             doc_text = self.doc_length.text()
             real_text = self.real_length.text()
@@ -236,6 +237,7 @@ class ScaleCalculatorDialog(QDialog):
 
     def use_scale_calculate(self):
         """Calculate length using scale factor."""
+        print("DEBUG: use_scale_calculate called")
         try:
             scale_text = self.scale_input.text()
             known_text = self.known_length.text()

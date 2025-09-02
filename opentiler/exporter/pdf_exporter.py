@@ -87,7 +87,8 @@ class PDFExporter(BaseExporter):
             pdf_writer.setPageLayout(QPageLayout(
                 page_size_obj,
                 orientation,
-                QMarginsF(10, 10, 10, 10)  # 10mm margins on all sides
+                QMarginsF(10, 10, 10, 10),  # 10mm margins on all sides
+                QPageLayout.Millimeter
             ))
 
             # Set resolution (300 DPI for high quality)
@@ -122,19 +123,10 @@ class PDFExporter(BaseExporter):
 
                 # Draw page to PDF
                 if page_pixmap and not page_pixmap.isNull():
-                    # Scale to fit PDF page while maintaining aspect ratio
-                    pdf_rect = painter.viewport()
-                    scaled_pixmap = page_pixmap.scaled(
-                        pdf_rect.size(),
-                        Qt.KeepAspectRatio,
-                        Qt.SmoothTransformation
-                    )
-
-                    # Center the image on the page
-                    x = (pdf_rect.width() - scaled_pixmap.width()) // 2
-                    y = (pdf_rect.height() - scaled_pixmap.height()) // 2
-
-                    painter.drawPixmap(x, y, scaled_pixmap)
+                    # Draw into the printable rect to respect margins in mm
+                    page_layout = pdf_writer.pageLayout()
+                    pdf_rect = page_layout.paintRectPixels(pdf_writer.resolution())
+                    painter.drawPixmap(pdf_rect, page_pixmap, page_pixmap.rect())
 
                 page_count += 1
 
@@ -245,8 +237,9 @@ class PDFExporter(BaseExporter):
             doc_info['source_pixmap'] = source_pixmap
             doc_info['page_grid'] = page_grid
 
-            # Generate metadata page
-            pdf_rect = painter.viewport()
+            # Generate metadata page sized to the printable rect
+            page_layout = pdf_writer.pageLayout()
+            pdf_rect = page_layout.paintRectPixels(pdf_writer.resolution())
             metadata_pixmap = metadata_generator.generate_metadata_page(doc_info, pdf_rect.size())
 
             # Draw metadata page to PDF
@@ -258,10 +251,9 @@ class PDFExporter(BaseExporter):
                     Qt.SmoothTransformation
                 )
 
-                # Center on page
+                # Center on printable page area
                 x = (pdf_rect.width() - scaled_metadata.width()) // 2
                 y = (pdf_rect.height() - scaled_metadata.height()) // 2
-
                 painter.drawPixmap(x, y, scaled_metadata)
 
         except Exception as e:
@@ -322,7 +314,8 @@ class PDFExporter(BaseExporter):
             pdf_writer.setPageLayout(QPageLayout(
                 page_size_obj,
                 orientation,
-                QMarginsF(10, 10, 10, 10)  # 10mm margins on all sides
+                QMarginsF(10, 10, 10, 10),  # 10mm margins on all sides
+                QPageLayout.Millimeter
             ))
 
             # Set resolution (300 DPI for high quality)
@@ -337,14 +330,15 @@ class PDFExporter(BaseExporter):
             pdf_painter = QPainter(pdf_writer)
 
             # Scale composite to fit PDF page while maintaining aspect ratio
-            pdf_rect = pdf_painter.viewport()
+            page_layout = pdf_writer.pageLayout()
+            pdf_rect = page_layout.paintRectPixels(pdf_writer.resolution())
             scaled_composite = composite.scaled(
                 pdf_rect.size(),
                 Qt.KeepAspectRatio,
                 Qt.SmoothTransformation
             )
 
-            # Center the composite on the page
+            # Center the composite in the printable area
             x = (pdf_rect.width() - scaled_composite.width()) // 2
             y = (pdf_rect.height() - scaled_composite.height()) // 2
 

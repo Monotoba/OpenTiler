@@ -1,3 +1,5 @@
+![Open Tiler](docs/resources/images/opentiler-icon.png)
+
 # OpenTiler
 
 [![CI/CD Pipeline](https://github.com/Monotoba/OpenTiler/actions/workflows/ci.yml/badge.svg)](https://github.com/Monotoba/OpenTiler/actions/workflows/ci.yml)
