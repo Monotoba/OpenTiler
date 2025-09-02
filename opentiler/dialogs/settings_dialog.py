@@ -65,10 +65,12 @@ class SettingsDialog(QDialog):
         # Default units
         self.units_combo = QComboBox()
         self.units_combo.addItems(["mm", "inches"])
+        self.units_combo.setToolTip("Default measurement units used in scaling, gutters, and metadata.")
         layout.addRow("Default Units:", self.units_combo)
 
         # Default DPI
         self.dpi_combo = QComboBox()
+        self.dpi_combo.setToolTip("Default DPI used for export/printing where applicable (e.g., PDF rendering).")
         available_dpi = config.get_available_dpi_options()
         for dpi in available_dpi:
             self.dpi_combo.addItem(f"{dpi} DPI", dpi)
@@ -77,12 +79,14 @@ class SettingsDialog(QDialog):
         # Default page size
         self.page_size_combo = QComboBox()
         self.page_size_combo.addItems(["A4", "A3", "A2", "A1", "A0", "Letter", "Legal", "Tabloid"])
+        self.page_size_combo.setToolTip("Default target page size used when tiling documents.")
         layout.addRow("Default Page Size:", self.page_size_combo)
 
         # Max recent files
         self.max_recent_spin = QSpinBox()
         self.max_recent_spin.setRange(1, 20)
         self.max_recent_spin.setSuffix(" files")
+        self.max_recent_spin.setToolTip("How many recent files to list in the menu.")
         layout.addRow("Max Recent Files:", self.max_recent_spin)
 
         # Default input directory
@@ -124,11 +128,17 @@ class SettingsDialog(QDialog):
         self.gutter_size_spin.setRange(0.0, 50.0)
         self.gutter_size_spin.setSuffix(" mm")
         self.gutter_size_spin.setDecimals(1)
+        self.gutter_size_spin.setToolTip(
+            "Width of the inner white margin inside each page tile; content is clipped to this area."
+        )
         layout.addRow("Gutter Size:", self.gutter_size_spin)
 
         # Page orientation
         self.orientation_combo = QComboBox()
         self.orientation_combo.addItems(["auto", "landscape", "portrait"])
+        self.orientation_combo.setToolTip(
+            "Auto chooses orientation based on tile aspect ratio; or force landscape/portrait."
+        )
         layout.addRow("Page Orientation:", self.orientation_combo)
 
         widget.setLayout(layout)
@@ -144,9 +154,11 @@ class SettingsDialog(QDialog):
         gutter_layout = QFormLayout()
 
         self.gutter_display_check = QCheckBox("Show on screen")
+        self.gutter_display_check.setToolTip("Show a blue outline indicating the printable area (inside the gutter) in the preview.")
         gutter_layout.addRow(self.gutter_display_check)
 
         self.gutter_print_check = QCheckBox("Include when printing")
+        self.gutter_print_check.setToolTip("Include the blue gutter outline when printing/exporting (if enabled).")
         gutter_layout.addRow(self.gutter_print_check)
 
         gutter_group.setLayout(gutter_layout)
@@ -157,9 +169,11 @@ class SettingsDialog(QDialog):
         crop_layout = QFormLayout()
 
         self.crop_display_check = QCheckBox("Show on screen")
+        self.crop_display_check.setToolTip("Draw crop marks at gutter intersections in the preview.")
         crop_layout.addRow(self.crop_display_check)
 
         self.crop_print_check = QCheckBox("Include when printing")
+        self.crop_print_check.setToolTip("Include crop marks at gutter intersections in printed/exported output.")
         crop_layout.addRow(self.crop_print_check)
 
         crop_group.setLayout(crop_layout)
@@ -170,15 +184,19 @@ class SettingsDialog(QDialog):
         scale_layout = QFormLayout()
 
         self.scale_line_display_check = QCheckBox("Show scale line on screen")
+        self.scale_line_display_check.setToolTip("Draw the red measured scale line on pages that contain it in the preview.")
         scale_layout.addRow(self.scale_line_display_check)
 
         self.scale_line_print_check = QCheckBox("Include scale line when printing")
+        self.scale_line_print_check.setToolTip("Include the red measured scale line when printing/exporting.")
         scale_layout.addRow(self.scale_line_print_check)
 
         self.scale_text_display_check = QCheckBox("Show scale text on screen")
+        self.scale_text_display_check.setToolTip("Show the measured distance (text) alongside the scale line in the preview.")
         scale_layout.addRow(self.scale_text_display_check)
 
         self.scale_text_print_check = QCheckBox("Include scale text when printing")
+        self.scale_text_print_check.setToolTip("Include the measured distance text when printing/exporting.")
         scale_layout.addRow(self.scale_text_print_check)
 
         scale_group.setLayout(scale_layout)
@@ -198,9 +216,11 @@ class SettingsDialog(QDialog):
         display_layout = QFormLayout()
 
         self.indicator_display_check = QCheckBox("Show on screen")
+        self.indicator_display_check.setToolTip("Display page indicator labels (e.g., P1) over each tile in the preview.")
         display_layout.addRow(self.indicator_display_check)
 
         self.indicator_print_check = QCheckBox("Include when printing")
+        self.indicator_print_check.setToolTip("Include page indicator labels when printing/exporting.")
         display_layout.addRow(self.indicator_print_check)
 
         display_group.setLayout(display_layout)
@@ -215,17 +235,20 @@ class SettingsDialog(QDialog):
         self.position_combo.addItems([
             "upper-left", "upper-right", "bottom-left", "bottom-right", "center-page"
         ])
+        self.position_combo.setToolTip("Where to place the page indicator label within the printable area.")
         style_layout.addRow("Position:", self.position_combo)
 
         # Font size
         self.font_size_spin = QSpinBox()
         self.font_size_spin.setRange(6, 72)
         self.font_size_spin.setSuffix(" pt")
+        self.font_size_spin.setToolTip("Font size for the page indicator label.")
         style_layout.addRow("Font Size:", self.font_size_spin)
 
         # Font style
         self.font_style_combo = QComboBox()
         self.font_style_combo.addItems(["normal", "bold", "italic"])
+        self.font_style_combo.setToolTip("Font style for the page indicator label.")
         style_layout.addRow("Font Style:", self.font_style_combo)
 
         # Font color
@@ -233,6 +256,7 @@ class SettingsDialog(QDialog):
         self.color_button = QPushButton()
         self.color_button.setFixedSize(50, 30)
         self.color_button.clicked.connect(self.choose_color)
+        self.color_button.setToolTip("Choose the font color for the page indicator label.")
         color_layout.addWidget(self.color_button)
         color_layout.addStretch()
         style_layout.addRow("Font Color:", color_layout)
@@ -243,6 +267,7 @@ class SettingsDialog(QDialog):
         self.alpha_slider.setRange(0, 255)
         self.alpha_label = QLabel("255")
         self.alpha_slider.valueChanged.connect(lambda v: self.alpha_label.setText(str(v)))
+        self.alpha_slider.setToolTip("Opacity of the page indicator label (0 = transparent, 255 = opaque).")
         alpha_layout.addWidget(self.alpha_slider)
         alpha_layout.addWidget(self.alpha_label)
         style_layout.addRow("Opacity:", alpha_layout)
