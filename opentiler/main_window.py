@@ -253,6 +253,25 @@ class MainWindow(QMainWindow):
         scale_action.triggered.connect(self.show_scaling_dialog)
         toolbar.addAction(scale_action)
 
+        # Quick toggle: Gutter lines (preview only)
+        toolbar.addSeparator()
+        gutter_action = QAction("Gutters", self)
+        gutter_action.setCheckable(True)
+        gutter_action.setChecked(self.config.get_gutter_lines_display())
+        gutter_action.setIcon(load_icon("gutters.png", fallback=style.StandardPixmap.SP_BrowserStop))
+        gutter_action.setToolTip("Toggle gutter (printable area) outlines in preview")
+        gutter_action.toggled.connect(self.toggle_gutter_display)
+        toolbar.addAction(gutter_action)
+
+        # Quick toggle: Crop marks (preview only)
+        crop_action = QAction("Crop Marks", self)
+        crop_action.setCheckable(True)
+        crop_action.setChecked(self.config.get_crop_marks_display())
+        crop_action.setIcon(load_icon("crop-marks.png", fallback=style.StandardPixmap.SP_DialogResetButton))
+        crop_action.setToolTip("Toggle crop marks at gutter intersections in preview")
+        crop_action.toggled.connect(self.toggle_crop_marks_display)
+        toolbar.addAction(crop_action)
+
         # Quick toggle: Registration marks (preview only)
         toolbar.addSeparator()
         reg_action = QAction("Reg Marks", self)
@@ -268,6 +287,22 @@ class MainWindow(QMainWindow):
         try:
             self.config.set_reg_marks_display(bool(checked))
             # Refresh overlays and thumbnails to reflect the change
+            self.on_settings_changed()
+        except Exception:
+            pass
+
+    def toggle_gutter_display(self, checked: bool):
+        """Quickly toggle gutter outline visibility in preview."""
+        try:
+            self.config.set_gutter_lines_display(bool(checked))
+            self.on_settings_changed()
+        except Exception:
+            pass
+
+    def toggle_crop_marks_display(self, checked: bool):
+        """Quickly toggle crop marks visibility in preview."""
+        try:
+            self.config.set_crop_marks_display(bool(checked))
             self.on_settings_changed()
         except Exception:
             pass
