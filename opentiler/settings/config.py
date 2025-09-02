@@ -152,7 +152,7 @@ class Config:
         # Project storage settings
         if not self.settings.contains("project_original_storage"):
             # reference | sidecar | embedded
-            self.settings.setValue("project_original_storage", "reference")
+            self.settings.setValue("project_original_storage", "embedded")
 
     def get(self, key, default=None):
         """Get a configuration value."""

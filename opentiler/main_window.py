@@ -1337,14 +1337,14 @@ class MainWindow(QMainWindow):
             self,
             "Save Project As",
             self.config.get_last_output_dir(),
-            "OpenTiler Project (*.otproj);;OpenTiler Zipped Project (*.otprjz)"
+            "OpenTiler Project (*.otprj);;Legacy: JSON Project (*.otproj);;Legacy: Zipped Project (*.otprjz)"
         )
         if not path:
             return False
         # Ensure extension based on storage mode if user didn't specify
-        if not (path.endswith('.otproj') or path.endswith('.otprjz')):
-            mode = self.config.get_project_original_storage()
-            path += '.otprjz' if mode == 'embedded' else '.otproj'
+        if not (path.endswith('.otproj') or path.endswith('.otprjz') or path.endswith('.otprj')):
+            # Default to modern single-asset project
+            path += '.otprj'
         try:
             self._save_project_to_path(path)
             self.current_project_path = path
@@ -1358,8 +1358,8 @@ class MainWindow(QMainWindow):
 
     def _save_project_to_path(self, path: str):
         state = self._gather_project_state()
-        # Decide embed by extension
-        if path.endswith('.otprjz'):
+        # Decide embed by extension (modern .otprj and legacy .otprjz both zip+embed)
+        if path.endswith('.otprjz') or path.endswith('.otprj'):
             # Embed original file if available
             original_path = state.get('document_path')
             with zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED) as zf:
@@ -1368,7 +1368,7 @@ class MainWindow(QMainWindow):
                     arcname = f"original/{os.path.basename(original_path)}"
                     zf.write(original_path, arcname)
         else:
-            # Plain JSON project
+            # Legacy: Plain JSON project
             with open(path, 'w', encoding='utf-8') as f:
                 json.dump(state, f, indent=2)
             # Optional sidecar compressed original based on setting
@@ -1396,12 +1396,12 @@ class MainWindow(QMainWindow):
             self,
             "Open Project",
             self.config.get_last_input_dir(),
-            "OpenTiler Project (*.otproj *.otprjz)"
+            "OpenTiler Project (*.otprj *.otprjz *.otproj)"
         )
         if not path:
             return
         try:
-            if path.endswith('.otprjz'):
+            if path.endswith('.otprjz') or path.endswith('.otprj'):
                 with zipfile.ZipFile(path, 'r') as zf:
                     with zf.open('project.json') as jf:
                         state = json.loads(jf.read().decode('utf-8'))
@@ -1416,6 +1416,9 @@ class MainWindow(QMainWindow):
                         with zf.open(member) as src, open(out_path, 'wb') as dst:
                             dst.write(src.read())
                         extracted_path = out_path
+                # If no embedded original, attempt to use referenced path or relink
+                if not extracted_path:
+                    extracted_path = self._maybe_relink_original(state)
                 self._apply_project_state(state, extracted_path)
             else:
                 with open(path, 'r', encoding='utf-8') as f:
@@ -1439,12 +1442,37 @@ class MainWindow(QMainWindow):
                                 extracted_path = out_path
                     except Exception:
                         extracted_path = None
+                if not extracted_path:
+                    extracted_path = self._maybe_relink_original(state)
                 self._apply_project_state(state, extracted_path)
             self.current_project_path = path
             self._clear_project_dirty()
             self.status_bar.showMessage(f"Project opened: {path}")
         except Exception as e:
             QMessageBox.critical(self, "Open Project", f"Failed to open project: {str(e)}")
+
+    def _maybe_relink_original(self, state: dict):
+        """If original file is missing, prompt user to relink. Returns chosen path or None."""
+        orig = state.get('document_path')
+        if orig and os.path.exists(orig):
+            return orig
+        # Prompt user to locate the original file
+        reply = QMessageBox.question(
+            self,
+            "Missing Original",
+            "The original document for this project is missing. Would you like to locate it?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.Yes,
+        )
+        if reply == QMessageBox.Yes:
+            start_dir = os.path.dirname(orig) if orig else self.config.get_last_input_dir()
+            file_path, _ = QFileDialog.getOpenFileName(self, "Locate Original Document", start_dir,
+                "All Supported (*.pdf *.png *.jpg *.jpeg *.tiff *.svg *.dxf *.FCStd);;All Files (*)")
+            if file_path:
+                # Update state so further saves reference the new path
+                state['document_path'] = file_path
+                return file_path
+        return None
 
     def close_project(self):
         """Close current project, prompting to save if dirty."""
