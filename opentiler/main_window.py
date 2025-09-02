@@ -4,7 +4,7 @@ Main window for OpenTiler application.
 
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QMenuBar, QToolBar, QStatusBar, QSplitter,
+    QMenuBar, QMenu, QToolBar, QStatusBar, QSplitter,
     QFileDialog, QMessageBox
 )
 from PySide6.QtCore import Qt, QSize, QRect
@@ -253,34 +253,34 @@ class MainWindow(QMainWindow):
         scale_action.triggered.connect(self.show_scaling_dialog)
         toolbar.addAction(scale_action)
 
-        # Quick toggle: Gutter lines (preview only)
+        # Overlays group: Gutters, Crop Marks, Registration Marks as submenu in toolbar
         toolbar.addSeparator()
         gutter_action = QAction("Gutters", self)
         gutter_action.setCheckable(True)
         gutter_action.setChecked(self.config.get_gutter_lines_display())
-        gutter_action.setIcon(load_icon("gutters.png", fallback=style.StandardPixmap.SP_BrowserStop))
         gutter_action.setToolTip("Toggle gutter (printable area) outlines in preview")
         gutter_action.toggled.connect(self.toggle_gutter_display)
-        toolbar.addAction(gutter_action)
 
-        # Quick toggle: Crop marks (preview only)
         crop_action = QAction("Crop Marks", self)
         crop_action.setCheckable(True)
         crop_action.setChecked(self.config.get_crop_marks_display())
-        crop_action.setIcon(load_icon("crop-marks.png", fallback=style.StandardPixmap.SP_DialogResetButton))
         crop_action.setToolTip("Toggle crop marks at gutter intersections in preview")
         crop_action.toggled.connect(self.toggle_crop_marks_display)
-        toolbar.addAction(crop_action)
 
-        # Quick toggle: Registration marks (preview only)
-        toolbar.addSeparator()
         reg_action = QAction("Reg Marks", self)
         reg_action.setCheckable(True)
         reg_action.setChecked(self.config.get_reg_marks_display())
         reg_action.setIcon(load_icon("registration-marks.png", fallback=style.StandardPixmap.SP_DialogYesButton))
         reg_action.setToolTip("Toggle registration marks in preview (circles with crosshairs at printable corners)")
         reg_action.toggled.connect(self.toggle_reg_marks_display)
-        toolbar.addAction(reg_action)
+
+        overlays_menu = QMenu("Overlays", self)
+        overlays_menu.addAction(gutter_action)
+        overlays_menu.addAction(crop_action)
+        overlays_menu.addAction(reg_action)
+        overlays_menu_action = overlays_menu.menuAction()
+        overlays_menu_action.setIcon(load_icon("settings.png", fallback=style.StandardPixmap.SP_FileDialogDetailedView))
+        toolbar.addAction(overlays_menu_action)
 
     def toggle_reg_marks_display(self, checked: bool):
         """Quickly toggle registration marks visibility in preview."""
