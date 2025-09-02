@@ -4,8 +4,8 @@ Metadata page generator for OpenTiler exports.
 
 import os
 from datetime import datetime
-from PySide6.QtCore import QSize, QPoint, Qt
-from PySide6.QtGui import QPixmap, QPainter, QFont, QColor, QPen, QBrush
+from PySide6.QtCore import QSize, QPoint, Qt, QRect
+from PySide6.QtGui import QPixmap, QPainter, QFont, QColor, QPen
 
 
 class MetadataPageGenerator:
@@ -215,7 +215,10 @@ class MetadataPageGenerator:
             plan_y = y
 
             # Create a composite image showing the document with page overlays
-            composite = self._create_plan_view_composite(source_pixmap, page_grid, total_width, total_height, min_x, min_y)
+            scale_factor = info.get('scale_factor', 1.0)
+            composite = self._create_plan_view_composite(
+                source_pixmap, page_grid, total_width, total_height, min_x, min_y, scale_factor
+            )
 
             if composite and not composite.isNull():
                 # Scale the composite to fit
@@ -242,7 +245,7 @@ class MetadataPageGenerator:
             painter.setPen(QColor(255, 0, 0))
             painter.drawText(self.margin, y + 20, f"Plan view error: {str(e)}")
 
-    def _create_plan_view_composite(self, source_pixmap, page_grid, total_width, total_height, offset_x, offset_y):
+    def _create_plan_view_composite(self, source_pixmap, page_grid, total_width, total_height, offset_x, offset_y, scale_factor: float = 1.0):
         """Create a composite image showing the document with page boundaries."""
         try:
             # Create canvas for the composite
@@ -279,6 +282,36 @@ class MetadataPageGenerator:
 
                         if gutter_width > 0 and gutter_height > 0:
                             painter.drawRect(int(gutter_x), int(gutter_y), int(gutter_width), int(gutter_height))
+
+                            # Registration marks at printable corners (quarters), using doc scale to size
+                            try:
+                                from ..settings.config import config
+                                if config.get_reg_marks_display():
+                                    px_per_mm = (1.0 / scale_factor) if scale_factor and scale_factor > 0 else 2.0
+                                    diameter_mm = config.get_reg_mark_diameter_mm()
+                                    cross_mm = config.get_reg_mark_crosshair_mm()
+                                    radius_px = int((diameter_mm * px_per_mm) / 2)
+                                    cross_len_px = int(cross_mm * px_per_mm)
+
+                                    # Clip to printable rect
+                                    printable_rect = QRect(int(gutter_x), int(gutter_y), int(gutter_width), int(gutter_height))
+                                    painter.save()
+                                    painter.setClipRect(printable_rect)
+                                    painter.setPen(QPen(QColor(0, 0, 0), 1))
+
+                                    centers = [
+                                        (int(gutter_x), int(gutter_y)),
+                                        (int(gutter_x + gutter_width), int(gutter_y)),
+                                        (int(gutter_x), int(gutter_y + gutter_height)),
+                                        (int(gutter_x + gutter_width), int(gutter_y + gutter_height)),
+                                    ]
+                                    for cx, cy in centers:
+                                        painter.drawEllipse(cx - radius_px, cy - radius_px, radius_px * 2, radius_px * 2)
+                                        painter.drawLine(cx - cross_len_px, cy, cx + cross_len_px, cy)
+                                        painter.drawLine(cx, cy - cross_len_px, cx, cy + cross_len_px)
+                                    painter.restore()
+                            except Exception:
+                                pass
 
                     # Draw page number
                     painter.setPen(QPen(QColor(255, 255, 255), 2))
