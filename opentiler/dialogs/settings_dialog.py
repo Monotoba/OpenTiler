@@ -231,6 +231,43 @@ class SettingsDialog(QDialog):
         scale_group.setLayout(scale_layout)
         layout.addWidget(scale_group)
 
+        # Scale bar overlay group
+        bar_group = QGroupBox("Scale Bar Overlay")
+        bar_layout = QFormLayout()
+
+        self.scale_bar_display_check = QCheckBox("Show on screen")
+        self.scale_bar_display_check.setToolTip("Show the alternating light/dark scale bar overlay in the selected location.")
+        bar_layout.addRow(self.scale_bar_display_check)
+
+        self.scale_bar_print_check = QCheckBox("Include when printing")
+        self.scale_bar_print_check.setToolTip("Include the scale bar in exported/printed output.")
+        bar_layout.addRow(self.scale_bar_print_check)
+
+        self.scale_bar_location_combo = QComboBox()
+        locations = [
+            "Page-N", "Page-NE", "Page-E", "Page-SE", "Page-S", "Page-SW", "Page-W", "Page-NW",
+            "Gutter-N", "Gutter-NE", "Gutter-E", "Gutter-SE", "Gutter-S", "Gutter-SW", "Gutter-W", "Gutter-NW",
+        ]
+        self.scale_bar_location_combo.addItems(locations)
+        bar_layout.addRow("Location:", self.scale_bar_location_combo)
+
+        # Length slider + label (dynamic units)
+        self.scale_bar_length_slider = QSlider(Qt.Horizontal)
+        self.scale_bar_length_value = QLabel("")
+        bar_layout.addRow("Length:", self.scale_bar_length_slider)
+        bar_layout.addRow("", self.scale_bar_length_value)
+
+        # Opacity slider
+        self.scale_bar_opacity_slider = QSlider(Qt.Horizontal)
+        self.scale_bar_opacity_slider.setRange(0, 100)
+        self.scale_bar_opacity_value = QLabel("60%")
+        self.scale_bar_opacity_slider.valueChanged.connect(lambda v: self.scale_bar_opacity_value.setText(f"{v}%"))
+        bar_layout.addRow("Opacity:", self.scale_bar_opacity_slider)
+        bar_layout.addRow("", self.scale_bar_opacity_value)
+
+        bar_group.setLayout(bar_layout)
+        layout.addWidget(bar_group)
+
         layout.addStretch()
         widget.setLayout(layout)
         return widget
@@ -371,6 +408,13 @@ class SettingsDialog(QDialog):
         self.gutter_print_check.setChecked(config.get_gutter_lines_print())
         self.crop_display_check.setChecked(config.get_crop_marks_display())
         self.crop_print_check.setChecked(config.get_crop_marks_print())
+        self.scale_bar_display_check.setChecked(config.get_scale_bar_display())
+        self.scale_bar_print_check.setChecked(config.get_scale_bar_print())
+        self.scale_bar_location_combo.setCurrentText(config.get_scale_bar_location())
+        self.scale_bar_opacity_slider.setValue(config.get_scale_bar_opacity())
+
+        # Configure length slider based on units
+        self._configure_scale_bar_length_slider()
         self.reg_display_check.setChecked(config.get_reg_marks_display())
         self.reg_print_check.setChecked(config.get_reg_marks_print())
         self.reg_diameter_spin.setValue(config.get_reg_mark_diameter_mm())
@@ -433,6 +477,46 @@ class SettingsDialog(QDialog):
         config.set_gutter_lines_print(self.gutter_print_check.isChecked())
         config.set_crop_marks_display(self.crop_display_check.isChecked())
         config.set_crop_marks_print(self.crop_print_check.isChecked())
+        config.set_scale_bar_display(self.scale_bar_display_check.isChecked())
+        config.set_scale_bar_print(self.scale_bar_print_check.isChecked())
+        config.set_scale_bar_location(self.scale_bar_location_combo.currentText())
+        config.set_scale_bar_opacity(self.scale_bar_opacity_slider.value())
+
+        # Save length according to units
+        units = config.get_default_units()
+        if units == 'inches':
+            # Slider step = 0.5 inch; store as inches
+            half_in = self.scale_bar_length_slider.value() / 2.0
+            config.set_scale_bar_length_in(half_in)
+        else:
+            # Centimeters, step = 1 cm
+            cm = self.scale_bar_length_slider.value()
+            config.set_scale_bar_length_cm(cm)
+
+    def _configure_scale_bar_length_slider(self):
+        """Configure the scale bar length slider according to current units."""
+        units = config.get_default_units()
+        if units == 'inches':
+            # Range 1–24 inches, step 0.5; encode as halves
+            self.scale_bar_length_slider.setRange(2, 48)
+            self.scale_bar_length_slider.setSingleStep(1)
+            val_in = config.get_scale_bar_length_in()
+            slider_val = int(round(val_in * 2.0))
+            self.scale_bar_length_slider.setValue(slider_val)
+            self.scale_bar_length_value.setText(f"{val_in:.1f} in")
+            self.scale_bar_length_slider.valueChanged.connect(
+                lambda v: self.scale_bar_length_value.setText(f"{v/2.0:.1f} in")
+            )
+        else:
+            # Range 1–50 cm, step 1
+            self.scale_bar_length_slider.setRange(1, 50)
+            self.scale_bar_length_slider.setSingleStep(1)
+            val_cm = int(round(config.get_scale_bar_length_cm()))
+            self.scale_bar_length_slider.setValue(val_cm)
+            self.scale_bar_length_value.setText(f"{val_cm} cm")
+            self.scale_bar_length_slider.valueChanged.connect(
+                lambda v: self.scale_bar_length_value.setText(f"{v} cm")
+            )
         config.set_reg_marks_display(self.reg_display_check.isChecked())
         config.set_reg_marks_print(self.reg_print_check.isChecked())
         config.set_reg_mark_diameter_mm(self.reg_diameter_spin.value())

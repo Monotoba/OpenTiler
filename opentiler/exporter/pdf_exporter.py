@@ -6,6 +6,7 @@ import os
 from typing import List, Tuple, Optional
 from PySide6.QtCore import QRect, Qt, QMarginsF
 from PySide6.QtGui import QPixmap, QPainter, QPdfWriter, QPageSize, QPageLayout, QPen, QColor
+from ..utils.overlays import draw_scale_bar
 from PySide6.QtWidgets import QMessageBox
 
 from .base_exporter import BaseExporter
@@ -211,6 +212,32 @@ class PDFExporter(BaseExporter):
                     painter.drawEllipse(cx - radius_px, cy - radius_px, radius_px * 2, radius_px * 2)
                     painter.drawLine(cx - cross_len_px, cy, cx + cross_len_px, cy)
                     painter.drawLine(cx, cy - cross_len_px, cx, cy + cross_len_px)
+            # Scale bar overlay
+            if config.get_scale_bar_print():
+                try:
+                    units = config.get_default_units()
+                    location = config.get_scale_bar_location()
+                    opacity = config.get_scale_bar_opacity()
+                    length_in = config.get_scale_bar_length_in()
+                    length_cm = config.get_scale_bar_length_cm()
+                    thickness_mm = config.get_scale_bar_thickness_mm()
+                    padding_mm = config.get_scale_bar_padding_mm()
+                    draw_scale_bar(
+                        painter,
+                        int(width),
+                        int(height),
+                        int(gutter),
+                        scale_factor,
+                        units,
+                        location,
+                        length_in,
+                        length_cm,
+                        opacity,
+                        thickness_mm,
+                        padding_mm,
+                    )
+                except Exception:
+                    pass
         except Exception:
             pass
 

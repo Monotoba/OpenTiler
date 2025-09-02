@@ -12,6 +12,7 @@ from PySide6.QtGui import QPixmap, QPainter, QPen, QColor, QFont
 from ..dialogs.page_viewer_dialog import ClickablePageThumbnail
 from ..utils.metadata_page import MetadataPageGenerator, create_document_info
 from ..settings.config import config
+from ..utils.overlays import draw_scale_bar
 
 
 class PreviewPanel(QWidget):
@@ -473,6 +474,33 @@ class PreviewPanel(QWidget):
             # Draw main text with alpha
             painter.setPen(QPen(color, 1))
             painter.drawText(int(text_x), int(text_y), text)
+
+        # Draw scale bar overlay (preview)
+        if config.get_scale_bar_display():
+            try:
+                units = config.get_default_units()
+                location = config.get_scale_bar_location()
+                opacity = config.get_scale_bar_opacity()
+                length_in = config.get_scale_bar_length_in()
+                length_cm = config.get_scale_bar_length_cm()
+                thickness_mm = config.get_scale_bar_thickness_mm()
+                padding_mm = config.get_scale_bar_padding_mm()
+                draw_scale_bar(
+                    painter,
+                    width,
+                    height,
+                    int(gutter_size),
+                    scale_factor,
+                    units,
+                    location,
+                    length_in,
+                    length_cm,
+                    opacity,
+                    thickness_mm,
+                    padding_mm,
+                )
+            except Exception:
+                pass
 
         # Draw scale line and text if this page contains the scaling points
         if scale_info and page_info:

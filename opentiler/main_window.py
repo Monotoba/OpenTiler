@@ -24,6 +24,7 @@ from .dialogs.export_dialog import ExportDialog
 from .dialogs.save_as_dialog import SaveAsDialog
 from .settings.config import Config
 from .utils.helpers import calculate_tile_grid, get_page_size_mm, mm_to_pixels, load_icon
+from .utils.overlays import draw_scale_bar
 
 
 class MainWindow(QMainWindow):
@@ -277,6 +278,13 @@ class MainWindow(QMainWindow):
         overlays_menu.addAction(gutter_action)
         overlays_menu.addAction(crop_action)
         overlays_menu.addAction(reg_action)
+        # Scale bar toggle
+        scale_bar_action = QAction("Scale Bar", self)
+        scale_bar_action.setCheckable(True)
+        scale_bar_action.setChecked(self.config.get_scale_bar_display())
+        scale_bar_action.setToolTip("Toggle scale bar overlay in preview")
+        scale_bar_action.toggled.connect(self.toggle_scale_bar_display)
+        overlays_menu.addAction(scale_bar_action)
         overlays_menu_action = overlays_menu.menuAction()
         # Use an eye icon if present; fall back to an info-like icon
         overlays_menu_action.setIcon(load_icon("eye.png", fallback=style.StandardPixmap.SP_FileDialogInfoView))
@@ -303,6 +311,14 @@ class MainWindow(QMainWindow):
         """Quickly toggle crop marks visibility in preview."""
         try:
             self.config.set_crop_marks_display(bool(checked))
+            self.on_settings_changed()
+        except Exception:
+            pass
+
+    def toggle_scale_bar_display(self, checked: bool):
+        """Quickly toggle scale bar visibility in preview."""
+        try:
+            self.config.set_scale_bar_display(bool(checked))
             self.on_settings_changed()
         except Exception:
             pass
@@ -816,6 +832,37 @@ class MainWindow(QMainWindow):
                     painter.drawLine(cx - cross_len_px, cy, cx + cross_len_px, cy)
                     painter.drawLine(cx, cy - cross_len_px, cx, cy + cross_len_px)
                 painter.restore()
+
+        # Scale bar overlay for print/export if enabled
+        if config.get_scale_bar_print():
+            try:
+                gutter = int(page.get('gutter', 0) or 0)
+                width = tile_size.width()
+                height = tile_size.height()
+                units = self.config.get_default_units()
+                location = self.config.get_scale_bar_location()
+                opacity = self.config.get_scale_bar_opacity()
+                length_in = self.config.get_scale_bar_length_in()
+                length_cm = self.config.get_scale_bar_length_cm()
+                thickness_mm = self.config.get_scale_bar_thickness_mm()
+                padding_mm = self.config.get_scale_bar_padding_mm()
+                scale_factor = getattr(self.document_viewer, 'scale_factor', 1.0)
+                draw_scale_bar(
+                    painter,
+                    width,
+                    height,
+                    gutter,
+                    scale_factor,
+                    units,
+                    location,
+                    length_in,
+                    length_cm,
+                    opacity,
+                    thickness_mm,
+                    padding_mm,
+                )
+            except Exception:
+                pass
 
         # Restore painter state
         painter.restore()

@@ -95,6 +95,33 @@ class Config:
         if not self.settings.contains("reg_mark_crosshair_mm"):
             self.settings.setValue("reg_mark_crosshair_mm", 8.0)
 
+        # Scale bar overlay settings
+        if not self.settings.contains("scale_bar_display"):
+            self.settings.setValue("scale_bar_display", True)
+
+        if not self.settings.contains("scale_bar_print"):
+            self.settings.setValue("scale_bar_print", True)
+
+        if not self.settings.contains("scale_bar_location"):
+            # Examples: Page-N, Page-NE, Page-E, Page-SE, Page-S, Page-SW, Page-W, Page-NW
+            #           Gutter-N, Gutter-NE, ...
+            self.settings.setValue("scale_bar_location", "Page-S")
+
+        if not self.settings.contains("scale_bar_opacity"):
+            self.settings.setValue("scale_bar_opacity", 60)  # percent
+
+        if not self.settings.contains("scale_bar_length_in"):
+            self.settings.setValue("scale_bar_length_in", 6.0)  # inches
+
+        if not self.settings.contains("scale_bar_length_cm"):
+            self.settings.setValue("scale_bar_length_cm", 10.0)  # centimeters
+
+        if not self.settings.contains("scale_bar_thickness_mm"):
+            self.settings.setValue("scale_bar_thickness_mm", 5.0)
+
+        if not self.settings.contains("scale_bar_padding_mm"):
+            self.settings.setValue("scale_bar_padding_mm", 5.0)
+
         # Scale line and text settings
         if not self.settings.contains("scale_line_display"):
             self.settings.setValue("scale_line_display", True)
@@ -313,6 +340,57 @@ class Config:
     def set_crop_marks_print(self, print_enabled):
         """Set whether to print crop marks."""
         self.set("crop_marks_print", bool(print_enabled))
+
+    # Scale bar overlay settings
+    def get_scale_bar_display(self):
+        value = self.get("scale_bar_display", True)
+        return str(value).lower() == 'true' if isinstance(value, str) else bool(value)
+
+    def set_scale_bar_display(self, display):
+        self.set("scale_bar_display", bool(display))
+
+    def get_scale_bar_print(self):
+        value = self.get("scale_bar_print", True)
+        return str(value).lower() == 'true' if isinstance(value, str) else bool(value)
+
+    def set_scale_bar_print(self, print_enabled):
+        self.set("scale_bar_print", bool(print_enabled))
+
+    def get_scale_bar_location(self):
+        return self.get("scale_bar_location", "Page-S")
+
+    def set_scale_bar_location(self, location):
+        self.set("scale_bar_location", location)
+
+    def get_scale_bar_opacity(self):
+        return int(self.get("scale_bar_opacity", 60))
+
+    def set_scale_bar_opacity(self, percent):
+        self.set("scale_bar_opacity", int(percent))
+
+    def get_scale_bar_length_in(self):
+        return float(self.get("scale_bar_length_in", 6.0))
+
+    def set_scale_bar_length_in(self, length_in):
+        self.set("scale_bar_length_in", float(length_in))
+
+    def get_scale_bar_length_cm(self):
+        return float(self.get("scale_bar_length_cm", 10.0))
+
+    def set_scale_bar_length_cm(self, length_cm):
+        self.set("scale_bar_length_cm", float(length_cm))
+
+    def get_scale_bar_thickness_mm(self):
+        return float(self.get("scale_bar_thickness_mm", 5.0))
+
+    def set_scale_bar_thickness_mm(self, mm):
+        self.set("scale_bar_thickness_mm", float(mm))
+
+    def get_scale_bar_padding_mm(self):
+        return float(self.get("scale_bar_padding_mm", 5.0))
+
+    def set_scale_bar_padding_mm(self, mm):
+        self.set("scale_bar_padding_mm", float(mm))
 
     # Registration marks settings
     def get_reg_marks_display(self):
