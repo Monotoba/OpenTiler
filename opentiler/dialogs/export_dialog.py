@@ -90,6 +90,9 @@ class ExportDialog(QDialog):
             "JPEG Images",
             "TIFF Images"
         ])
+        self.format_combo.setToolTip(
+            "Choose between multi-page (one tile per page) or single-page composite (overview)."
+        )
         self.format_combo.currentTextChanged.connect(self.on_format_changed)
         format_layout.addRow("Format:", self.format_combo)
 
@@ -128,6 +131,9 @@ class ExportDialog(QDialog):
 
         # Composite option (for images)
         self.composite_check = QCheckBox("Export as single composite image")
+        self.composite_check.setToolTip(
+            "Exports a single image combining all tiles. Best for overview; not intended for cut-and-assemble."
+        )
         self.composite_check.toggled.connect(self.on_format_changed)
         output_layout.addRow("", self.composite_check)
 
@@ -197,6 +203,15 @@ class ExportDialog(QDialog):
                 self.format_help_label.setText(
                     "Images: exports one image file per tile into a chosen directory."
                 )
+
+        # Toggle a subtle hint in the preview panel when composite-like outputs are selected
+        try:
+            mw = self.parent()
+            composite_like = (is_pdf and "Composite" in format_text) or (is_image and self.composite_check.isChecked())
+            if hasattr(mw, 'preview_panel') and mw.preview_panel:
+                mw.preview_panel.set_composite_hint_visible(composite_like)
+        except Exception:
+            pass
 
         # Update default extension
         if is_pdf:

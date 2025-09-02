@@ -70,6 +70,16 @@ class PreviewPanel(QWidget):
         self.scale_label = QLabel("Scale: Not set")
         layout.addWidget(self.scale_label, 0)  # No stretch = fixed size
 
+        # Composite mode hint (hidden by default)
+        self.composite_hint_label = QLabel(
+            "Composite export: overview only — tiles are for cut-and-assemble."
+        )
+        self.composite_hint_label.setStyleSheet(
+            "color: #555; font-style: italic; padding: 4px;"
+        )
+        self.composite_hint_label.setVisible(False)
+        layout.addWidget(self.composite_hint_label, 0)
+
         # Remove the addStretch() call - we want the scroll area to take all space
         self.setLayout(layout)
 
@@ -127,6 +137,10 @@ class PreviewPanel(QWidget):
             self.scale_label.setText(f"Scale: {scale_factor:.6f} mm/px")
         else:
             self.scale_label.setText("Scale: Not set")
+
+    def set_composite_hint_visible(self, visible: bool):
+        """Show/hide a subtle hint about composite export semantics."""
+        self.composite_hint_label.setVisible(bool(visible))
 
     def _clear_thumbnails(self):
         """Clear all existing thumbnail widgets."""
@@ -543,5 +557,4 @@ class PreviewPanel(QWidget):
         # Check if bounding boxes intersect
         return not (line_right < page_x or line_left > page_right or
                    line_bottom < page_y or line_top > page_bottom)
-
 
