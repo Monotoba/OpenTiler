@@ -253,6 +253,25 @@ class MainWindow(QMainWindow):
         scale_action.triggered.connect(self.show_scaling_dialog)
         toolbar.addAction(scale_action)
 
+        # Quick toggle: Registration marks (preview only)
+        toolbar.addSeparator()
+        reg_action = QAction("Reg Marks", self)
+        reg_action.setCheckable(True)
+        reg_action.setChecked(self.config.get_reg_marks_display())
+        reg_action.setIcon(load_icon("reg-marks.png", fallback=style.StandardPixmap.SP_DialogYesButton))
+        reg_action.setToolTip("Toggle registration marks in preview (circles with crosshairs at printable corners)")
+        reg_action.toggled.connect(self.toggle_reg_marks_display)
+        toolbar.addAction(reg_action)
+
+    def toggle_reg_marks_display(self, checked: bool):
+        """Quickly toggle registration marks visibility in preview."""
+        try:
+            self.config.set_reg_marks_display(bool(checked))
+            # Refresh overlays and thumbnails to reflect the change
+            self.on_settings_changed()
+        except Exception:
+            pass
+
     def create_status_bar(self):
         """Create status bar."""
         self.status_bar = QStatusBar()
