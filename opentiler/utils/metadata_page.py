@@ -161,7 +161,11 @@ class MetadataPageGenerator:
     def _draw_plan_view(self, painter: QPainter, info: dict):
         """Draw a scaled-down plan view with page layout overlay."""
         try:
-            y = self.margin + 950
+            # Place the plan view in the lower half of the page
+            # Reserve space near the bottom for the footer and a small legend
+            lower_half_y = self.page_size.height() // 2
+            footer_reserved = 160  # pixels reserved for footer and spacing
+            y = lower_half_y
 
             # Section header
             self._draw_section_header(painter, "Page Assembly Map", y)
@@ -183,9 +187,9 @@ class MetadataPageGenerator:
                 painter.drawText(self.margin, y + 20, "Plan view: Invalid source document")
                 return
 
-            # Calculate available space for plan view
+            # Calculate available space for plan view: fill most of lower half
             available_width = self.page_size.width() - (2 * self.margin)
-            available_height = 300  # Fixed height for plan view section
+            available_height = max(100, self.page_size.height() - y - self.margin - footer_reserved)
 
             # Calculate the total area covered by all pages
             if page_grid:
