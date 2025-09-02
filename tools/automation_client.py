@@ -64,7 +64,7 @@ class OpenTilerAutomationClient:
                 {'action': 'open_settings_dialog', 'delay': 2, 'description': 'Open settings dialog'},
                 {'action': 'capture_screenshot', 'params': {'filename': 'opentiler-settings-dialog.png'}, 'description': 'Settings dialog open'},
                 {'action': 'open_scale_tool', 'delay': 2, 'description': 'Open scale tool'},
-                {'action': 'capture_screenshot', 'params': {'filename': 'opentiler-scale-tool.png'}, 'description': 'Scale tool open'},
+                {'action': 'capture_screenshot', 'params': {'filename': 'opentiler-scale-tool2.png'}, 'description': 'Scale tool open'},
                 {'action': 'open_about_dialog', 'delay': 2, 'description': 'Open about dialog'},
                 {'action': 'capture_screenshot', 'params': {'filename': 'opentiler-about-dialog.png'}, 'description': 'About dialog open'},
             ],

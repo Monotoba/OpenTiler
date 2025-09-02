@@ -247,7 +247,9 @@ class PageViewerDialog(QDialog):
 
         # Set up pen for scale line
         pen = QPen(QColor(255, 0, 0), 3)  # Red color, 3px width for page viewer
-        pen.setStyle(Qt.DashLine)
+        # Dot–dash–dot pattern
+        pen.setStyle(Qt.CustomDashLine)
+        pen.setDashPattern([10, 4, 2, 4, 2, 4])
         painter.setPen(pen)
 
         # Draw scale line

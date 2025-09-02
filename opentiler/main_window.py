@@ -898,6 +898,53 @@ class MainWindow(QMainWindow):
             except Exception:
                 pass
 
+        # Print the scale line/text if enabled
+        try:
+            if config.get_scale_line_print():
+                scale_info = self._get_scale_info()
+                if scale_info:
+                    point1 = scale_info.get('point1')
+                    point2 = scale_info.get('point2')
+                    measurement_text = scale_info.get('measurement_text', '')
+                    if point1 and point2:
+                        # Page boundaries in document coords
+                        page_x = page['x']
+                        page_y = page['y']
+                        page_doc_w = page['width']
+                        page_doc_h = page['height']
+
+                        # Convert to tile pixmap coords
+                        p1_x = (point1[0] - page_x) * (tile_size.width() / page_doc_w)
+                        p1_y = (point1[1] - page_y) * (tile_size.height() / page_doc_h)
+                        p2_x = (point2[0] - page_x) * (tile_size.width() / page_doc_w)
+                        p2_y = (point2[1] - page_y) * (tile_size.height() / page_doc_h)
+
+                        pen = QPen(QColor(255, 0, 0), 2)
+                        pen.setStyle(Qt.CustomDashLine)
+                        pen.setDashPattern([8, 3, 2, 3, 2, 3])
+                        painter.setPen(pen)
+                        painter.drawLine(int(p1_x), int(p1_y), int(p2_x), int(p2_y))
+
+                        # Optional text
+                        if config.get_scale_text_print() and measurement_text:
+                            mid_x = (p1_x + p2_x) / 2
+                            mid_y = (p1_y + p2_y) / 2
+                            font = painter.font()
+                            font.setPointSize(10)
+                            font.setBold(True)
+                            painter.setFont(font)
+                            text_pen = QPen(QColor(255, 0, 0), 1)
+                            painter.setPen(text_pen)
+                            text_rect = painter.fontMetrics().boundingRect(measurement_text)
+                            tx = mid_x - text_rect.width() / 2
+                            ty = mid_y - 12
+                            bg_rect = text_rect.adjusted(-3, -2, 3, 2)
+                            bg_rect.moveTopLeft(QPoint(int(tx - 3), int(ty - text_rect.height() - 2)))
+                            painter.fillRect(bg_rect, QColor(255, 255, 255, 200))
+                            painter.drawText(int(tx), int(ty), measurement_text)
+        except Exception:
+            pass
+
         # Restore painter state
         painter.restore()
 

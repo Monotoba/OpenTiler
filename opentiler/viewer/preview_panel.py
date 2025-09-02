@@ -561,7 +561,9 @@ class PreviewPanel(QWidget):
 
         # Set up pen for scale line
         pen = QPen(QColor(255, 0, 0), 2)  # Red color, 2px width
-        pen.setStyle(Qt.DashLine)
+        # Dot–dash–dot pattern
+        pen.setStyle(Qt.CustomDashLine)
+        pen.setDashPattern([8, 3, 2, 3, 2, 3])
         painter.setPen(pen)
 
         # Draw scale line (clipped to page boundaries)

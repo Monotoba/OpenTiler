@@ -127,7 +127,7 @@ class Config:
             self.settings.setValue("scale_line_display", True)
 
         if not self.settings.contains("scale_line_print"):
-            self.settings.setValue("scale_line_print", True)
+            self.settings.setValue("scale_line_print", False)
 
         if not self.settings.contains("scale_text_display"):
             self.settings.setValue("scale_text_display", True)

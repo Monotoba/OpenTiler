@@ -442,7 +442,9 @@ class DocumentViewer(QWidget):
 
             # Draw scale line if enabled
             if config.get_scale_line_display():
-                pen.setStyle(Qt.DashLine)
+                # Dot–dash–dot pattern for the scale line
+                pen.setStyle(Qt.CustomDashLine)
+                pen.setDashPattern([8, 3, 2, 3, 2, 3])
                 painter.setPen(pen)
                 painter.drawLine(int(p1_x), int(p1_y), int(p2_x), int(p2_y))
 
