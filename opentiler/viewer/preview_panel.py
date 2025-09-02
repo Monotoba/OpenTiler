@@ -111,7 +111,7 @@ class PreviewPanel(QWidget):
 
         # Generate thumbnail for each tile page
         for i, page in enumerate(page_grid):
-            page_thumbnail = self._create_page_thumbnail(pixmap, page, page_number, scale_info)
+            page_thumbnail = self._create_page_thumbnail(pixmap, page, page_number, scale_info, scale_factor)
             self.thumbnail_layout.addWidget(page_thumbnail)
             page_number += 1
 
@@ -150,7 +150,7 @@ class PreviewPanel(QWidget):
             if child.widget() and child.widget() != self.no_pages_label:
                 child.widget().deleteLater()
 
-    def _create_page_thumbnail(self, source_pixmap, page, page_number, scale_info=None):
+    def _create_page_thumbnail(self, source_pixmap, page, page_number, scale_info=None, scale_factor: float = 1.0):
         """Create a thumbnail widget for a single page."""
         # Extract the page area from the source document
         x, y = page['x'], page['y']
@@ -192,8 +192,8 @@ class PreviewPanel(QWidget):
         painter.end()
 
         # Add crop marks, page info, and scale line/text based on settings
-        page_pixmap = self._add_page_decorations(page_pixmap, page_number, gutter, page, scale_info)
-
+        page_pixmap = self._add_page_decorations(page_pixmap, page_number, gutter, page, scale_info, scale_factor)
+        
         # Create thumbnail widget
         thumbnail_widget = QFrame()
         thumbnail_widget.setFrameStyle(QFrame.Box)
@@ -320,7 +320,7 @@ class PreviewPanel(QWidget):
             print(f"Error creating metadata thumbnail: {str(e)}")
             return None
 
-    def _add_page_decorations(self, page_pixmap, page_number, gutter_size, page_info=None, scale_info=None):
+    def _add_page_decorations(self, page_pixmap, page_number, gutter_size, page_info=None, scale_info=None, scale_factor: float = 1.0):
         """Add crop marks, gutter lines, page number, and scale line/text to page thumbnail."""
         # Import config here to avoid circular imports
         from ..settings.config import config
@@ -371,6 +371,44 @@ class PreviewPanel(QWidget):
             # Bottom-right gutter corner
             painter.drawLine(gutter_right - crop_length, gutter_bottom, gutter_right + crop_length, gutter_bottom)
             painter.drawLine(gutter_right, gutter_bottom - crop_length, gutter_right, gutter_bottom + crop_length)
+
+        # Registration marks at printable-area corners (quarters), if enabled
+        if config.get_reg_marks_display() and gutter_size > 0:
+            try:
+                # Convert mm to pixels using scale_factor (mm/px)
+                # Fallback: if scale_factor is invalid, use a small default size
+                diameter_mm = config.get_reg_mark_diameter_mm()
+                cross_mm = config.get_reg_mark_crosshair_mm()
+                px_per_mm = (1.0 / scale_factor) if scale_factor and scale_factor > 0 else 2.0
+                radius_px = int((diameter_mm * px_per_mm) / 2)
+                cross_len_px = int(cross_mm * px_per_mm)
+
+                # Clip to printable rect so only quarters are visible per tile
+                printable_rect = QRect(
+                    int(gutter_size), int(gutter_size),
+                    int(width - 2 * gutter_size), int(height - 2 * gutter_size)
+                )
+                painter.save()
+                painter.setClipRect(printable_rect)
+                painter.setPen(QPen(QColor(0, 0, 0), 1))
+
+                centers = [
+                    (int(gutter_size), int(gutter_size)),
+                    (int(width - gutter_size), int(gutter_size)),
+                    (int(gutter_size), int(height - gutter_size)),
+                    (int(width - gutter_size), int(height - gutter_size)),
+                ]
+
+                for cx, cy in centers:
+                    # Circle
+                    painter.drawEllipse(cx - radius_px, cy - radius_px, radius_px * 2, radius_px * 2)
+                    # Crosshair
+                    painter.drawLine(cx - cross_len_px, cy, cx + cross_len_px, cy)
+                    painter.drawLine(cx, cy - cross_len_px, cx, cy + cross_len_px)
+
+                painter.restore()
+            except Exception:
+                pass
 
         # Draw page number based on settings
         if config.get_page_indicator_display():

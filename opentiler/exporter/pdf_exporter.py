@@ -5,7 +5,7 @@ PDF exporter for OpenTiler.
 import os
 from typing import List, Tuple, Optional
 from PySide6.QtCore import QRect, Qt, QMarginsF
-from PySide6.QtGui import QPixmap, QPainter, QPdfWriter, QPageSize, QPageLayout
+from PySide6.QtGui import QPixmap, QPainter, QPdfWriter, QPageSize, QPageLayout, QPen, QColor
 from PySide6.QtWidgets import QMessageBox
 
 from .base_exporter import BaseExporter
@@ -119,7 +119,7 @@ class PDFExporter(BaseExporter):
                     pdf_writer.newPage()
 
                 # Create page pixmap
-                page_pixmap = self._create_page_pixmap(source_pixmap, page)
+                page_pixmap = self._create_page_pixmap(source_pixmap, page, kwargs.get('scale_factor', 1.0))
 
                 # Draw page to PDF
                 if page_pixmap and not page_pixmap.isNull():
@@ -146,7 +146,7 @@ class PDFExporter(BaseExporter):
             print(f"PDFExporter: Full traceback: {error_details}")
             return False
 
-    def _create_page_pixmap(self, source_pixmap: QPixmap, page: dict) -> QPixmap:
+    def _create_page_pixmap(self, source_pixmap: QPixmap, page: dict, scale_factor: float = 1.0) -> QPixmap:
         """Create a pixmap for a single page."""
         # Extract page information
         x, y = page['x'], page['y']
@@ -184,6 +184,35 @@ class PDFExporter(BaseExporter):
             dest_y = intersection.y() - y
 
             painter.drawPixmap(int(dest_x), int(dest_y), source_crop)
+
+        # Registration marks at printable corners (for export)
+        try:
+            from ..settings.config import config
+            if gutter > 0 and config.get_reg_marks_print():
+                px_per_mm = (1.0 / scale_factor) if scale_factor and scale_factor > 0 else 2.0
+                diameter_mm = config.get_reg_mark_diameter_mm()
+                cross_mm = config.get_reg_mark_crosshair_mm()
+                radius_px = int((diameter_mm * px_per_mm) / 2)
+                cross_len_px = int(cross_mm * px_per_mm)
+
+                printable_rect = QRect(
+                    int(gutter), int(gutter),
+                    int(width - 2 * gutter), int(height - 2 * gutter)
+                )
+                painter.setClipRect(printable_rect)
+                painter.setPen(QPen(QColor(0, 0, 0), 1))
+                centers = [
+                    (int(gutter), int(gutter)),
+                    (int(width - gutter), int(gutter)),
+                    (int(gutter), int(height - gutter)),
+                    (int(width - gutter), int(height - gutter)),
+                ]
+                for cx, cy in centers:
+                    painter.drawEllipse(cx - radius_px, cy - radius_px, radius_px * 2, radius_px * 2)
+                    painter.drawLine(cx - cross_len_px, cy, cx + cross_len_px, cy)
+                    painter.drawLine(cx, cy - cross_len_px, cx, cy + cross_len_px)
+        except Exception:
+            pass
 
         painter.end()
         return page_pixmap
@@ -287,7 +316,7 @@ class PDFExporter(BaseExporter):
 
             # Draw each page
             for page in page_grid:
-                page_pixmap = self._create_page_pixmap(source_pixmap, page)
+                page_pixmap = self._create_page_pixmap(source_pixmap, page, kwargs.get('scale_factor', 1.0))
                 if page_pixmap and not page_pixmap.isNull():
                     painter.drawPixmap(int(page['x']), int(page['y']), page_pixmap)
 

@@ -179,6 +179,35 @@ class SettingsDialog(QDialog):
         crop_group.setLayout(crop_layout)
         layout.addWidget(crop_group)
 
+        # Registration marks group
+        reg_group = QGroupBox("Registration Marks (Circle + Crosshair)")
+        reg_layout = QFormLayout()
+
+        self.reg_display_check = QCheckBox("Show on screen")
+        self.reg_display_check.setToolTip("Display registration marks at printable-area corners in the preview.")
+        reg_layout.addRow(self.reg_display_check)
+
+        self.reg_print_check = QCheckBox("Include when printing")
+        self.reg_print_check.setToolTip("Include registration marks on exported/printed tiles.")
+        reg_layout.addRow(self.reg_print_check)
+
+        self.reg_diameter_spin = QDoubleSpinBox()
+        self.reg_diameter_spin.setRange(2.0, 50.0)
+        self.reg_diameter_spin.setDecimals(1)
+        self.reg_diameter_spin.setSuffix(" mm")
+        self.reg_diameter_spin.setToolTip("Diameter of the registration circle.")
+        reg_layout.addRow("Circle Diameter:", self.reg_diameter_spin)
+
+        self.reg_crosshair_spin = QDoubleSpinBox()
+        self.reg_crosshair_spin.setRange(2.0, 50.0)
+        self.reg_crosshair_spin.setDecimals(1)
+        self.reg_crosshair_spin.setSuffix(" mm")
+        self.reg_crosshair_spin.setToolTip("Length of each crosshair axis from center.")
+        reg_layout.addRow("Crosshair Length:", self.reg_crosshair_spin)
+
+        reg_group.setLayout(reg_layout)
+        layout.addWidget(reg_group)
+
         # Scale line and text group
         scale_group = QGroupBox("Scale Line and Text (Red)")
         scale_layout = QFormLayout()
@@ -342,6 +371,10 @@ class SettingsDialog(QDialog):
         self.gutter_print_check.setChecked(config.get_gutter_lines_print())
         self.crop_display_check.setChecked(config.get_crop_marks_display())
         self.crop_print_check.setChecked(config.get_crop_marks_print())
+        self.reg_display_check.setChecked(config.get_reg_marks_display())
+        self.reg_print_check.setChecked(config.get_reg_marks_print())
+        self.reg_diameter_spin.setValue(config.get_reg_mark_diameter_mm())
+        self.reg_crosshair_spin.setValue(config.get_reg_mark_crosshair_mm())
 
         # Scale line and text settings
         self.scale_line_display_check.setChecked(config.get_scale_line_display())
@@ -400,6 +433,10 @@ class SettingsDialog(QDialog):
         config.set_gutter_lines_print(self.gutter_print_check.isChecked())
         config.set_crop_marks_display(self.crop_display_check.isChecked())
         config.set_crop_marks_print(self.crop_print_check.isChecked())
+        config.set_reg_marks_display(self.reg_display_check.isChecked())
+        config.set_reg_marks_print(self.reg_print_check.isChecked())
+        config.set_reg_mark_diameter_mm(self.reg_diameter_spin.value())
+        config.set_reg_mark_crosshair_mm(self.reg_crosshair_spin.value())
 
         # Scale line and text settings
         config.set_scale_line_display(self.scale_line_display_check.isChecked())

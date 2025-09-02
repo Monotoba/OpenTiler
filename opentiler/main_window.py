@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
     QFileDialog, QMessageBox
 )
 from PySide6.QtCore import Qt, QSize, QRect
-from PySide6.QtGui import QIcon, QKeySequence, QAction, QPainter, QPixmap, QPageSize, QPageLayout
+from PySide6.QtGui import QIcon, QKeySequence, QAction, QPainter, QPixmap, QPageSize, QPageLayout, QPen, QColor
 from PySide6.QtWidgets import QApplication
 from PySide6.QtPrintSupport import QPrinter, QPrintDialog, QPrintPreviewDialog
 from PySide6.QtCore import QMarginsF
@@ -725,6 +725,43 @@ class MainWindow(QMainWindow):
                     int(tile_size.height() - 2 * gutter)
                 )
                 painter.drawRect(gutter_rect)
+
+        # Registration marks for print/export if enabled
+        if config.get_reg_marks_print():
+            gutter = int(page.get('gutter', 0) or 0)
+            if gutter > 0:
+                width = tile_size.width()
+                height = tile_size.height()
+                # Convert mm to px using document scale (mm/px)
+                scale_factor = getattr(self.document_viewer, 'scale_factor', 1.0)
+                px_per_mm = (1.0 / scale_factor) if scale_factor and scale_factor > 0 else 2.0
+                diameter_mm = config.get_reg_mark_diameter_mm()
+                cross_mm = config.get_reg_mark_crosshair_mm()
+                radius_px = int((diameter_mm * px_per_mm) / 2)
+                cross_len_px = int(cross_mm * px_per_mm)
+
+                # Clip to printable area so only quarters render
+                printable_rect = QRect(
+                    gutter, gutter,
+                    max(0, width - 2 * gutter),
+                    max(0, height - 2 * gutter)
+                )
+                painter.save()
+                painter.setClipRect(printable_rect)
+                painter.setOpacity(1.0)
+                painter.setPen(QPen(Qt.black, 1))
+
+                centers = [
+                    (gutter, gutter),
+                    (width - gutter, gutter),
+                    (gutter, height - gutter),
+                    (width - gutter, height - gutter),
+                ]
+                for cx, cy in centers:
+                    painter.drawEllipse(cx - radius_px, cy - radius_px, radius_px * 2, radius_px * 2)
+                    painter.drawLine(cx - cross_len_px, cy, cx + cross_len_px, cy)
+                    painter.drawLine(cx, cy - cross_len_px, cx, cy + cross_len_px)
+                painter.restore()
 
         # Restore painter state
         painter.restore()

@@ -82,6 +82,19 @@ class Config:
         if not self.settings.contains("crop_marks_print"):
             self.settings.setValue("crop_marks_print", True)
 
+        # Registration marks settings
+        if not self.settings.contains("reg_marks_display"):
+            self.settings.setValue("reg_marks_display", True)
+
+        if not self.settings.contains("reg_marks_print"):
+            self.settings.setValue("reg_marks_print", True)
+
+        if not self.settings.contains("reg_mark_diameter_mm"):
+            self.settings.setValue("reg_mark_diameter_mm", 8.0)
+
+        if not self.settings.contains("reg_mark_crosshair_mm"):
+            self.settings.setValue("reg_mark_crosshair_mm", 8.0)
+
         # Scale line and text settings
         if not self.settings.contains("scale_line_display"):
             self.settings.setValue("scale_line_display", True)
@@ -300,6 +313,41 @@ class Config:
     def set_crop_marks_print(self, print_enabled):
         """Set whether to print crop marks."""
         self.set("crop_marks_print", bool(print_enabled))
+
+    # Registration marks settings
+    def get_reg_marks_display(self):
+        """Get whether to display registration marks."""
+        value = self.get("reg_marks_display", True)
+        return str(value).lower() == 'true' if isinstance(value, str) else bool(value)
+
+    def set_reg_marks_display(self, display):
+        """Set whether to display registration marks."""
+        self.set("reg_marks_display", bool(display))
+
+    def get_reg_marks_print(self):
+        """Get whether to print registration marks."""
+        value = self.get("reg_marks_print", True)
+        return str(value).lower() == 'true' if isinstance(value, str) else bool(value)
+
+    def set_reg_marks_print(self, print_enabled):
+        """Set whether to print registration marks."""
+        self.set("reg_marks_print", bool(print_enabled))
+
+    def get_reg_mark_diameter_mm(self):
+        """Get registration mark diameter in millimeters."""
+        return float(self.get("reg_mark_diameter_mm", 8.0))
+
+    def set_reg_mark_diameter_mm(self, size):
+        """Set registration mark diameter in millimeters."""
+        self.set("reg_mark_diameter_mm", float(size))
+
+    def get_reg_mark_crosshair_mm(self):
+        """Get registration mark crosshair length in millimeters (each axis)."""
+        return float(self.get("reg_mark_crosshair_mm", 8.0))
+
+    def set_reg_mark_crosshair_mm(self, size):
+        """Set registration mark crosshair length in millimeters (each axis)."""
+        self.set("reg_mark_crosshair_mm", float(size))
 
     # Scale line and text settings
     def get_scale_line_display(self):
