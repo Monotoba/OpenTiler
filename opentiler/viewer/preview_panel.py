@@ -4,7 +4,7 @@ Preview panel for showing tiled layout preview.
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QScrollArea,
-    QFrame, QSizePolicy, QHBoxLayout
+    QFrame, QSizePolicy
 )
 from PySide6.QtCore import Qt, QRect, QPoint
 from PySide6.QtGui import QPixmap, QPainter, QPen, QColor, QFont
@@ -394,7 +394,6 @@ class PreviewPanel(QWidget):
             # Set up color with alpha
             color = QColor(font_color)
             color.setAlpha(alpha)
-            text_pen = QPen(color, 1)
 
             # Calculate text position within printable area (inside gutters)
             text = f"P{page_number}"
@@ -557,4 +556,3 @@ class PreviewPanel(QWidget):
         # Check if bounding boxes intersect
         return not (line_right < page_x or line_left > page_right or
                    line_bottom < page_y or line_top > page_bottom)
-

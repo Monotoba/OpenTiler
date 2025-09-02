@@ -90,6 +90,34 @@ class ExportDialog(QDialog):
             "JPEG Images",
             "TIFF Images"
         ])
+        # Per-item tooltips
+        tips = {
+            "PDF (Multi-page)": (
+                "Generates one PDF page per tile. Drawn in the printable area "
+                "with millimeter margins. Ideal for printing and assembly."
+            ),
+            "PDF (Single-page Composite)": (
+                "A single-page overview with all tiles composed and scaled to fit. "
+                "Useful for review, not for cut-and-assemble."
+            ),
+            "PNG Images": (
+                "Exports one PNG per tile into a directory; or a single composite "
+                "PNG if 'Export as single composite image' is enabled."
+            ),
+            "JPEG Images": (
+                "Exports one JPEG per tile into a directory; or a single composite "
+                "JPEG if 'Export as single composite image' is enabled."
+            ),
+            "TIFF Images": (
+                "Exports one TIFF per tile into a directory; or a single composite "
+                "TIFF if 'Export as single composite image' is enabled."
+            ),
+        }
+        for i in range(self.format_combo.count()):
+            text = self.format_combo.itemText(i)
+            tip = tips.get(text)
+            if tip:
+                self.format_combo.setItemData(i, tip, role=Qt.ToolTipRole)
         self.format_combo.setToolTip(
             "Choose between multi-page (one tile per page) or single-page composite (overview)."
         )
