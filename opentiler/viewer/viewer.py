@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QScrollArea, QLabel,
     QMessageBox, QSizePolicy
 )
-from PySide6.QtCore import Qt, QSize, Signal, QPoint, QEvent
+from PySide6.QtCore import Qt, QSize, Signal, QPoint, QEvent, QRect
 from PySide6.QtGui import QPixmap, QPainter, QPen, QColor, QCursor, QFont
 
 try:
@@ -577,6 +577,69 @@ class DocumentViewer(QWidget):
 
                 if gutter_width > 0 and gutter_height > 0:
                     painter.drawRect(int(gutter_x), int(gutter_y), int(gutter_width), int(gutter_height))
+
+            # Crop marks at printable-area corners (gutter intersections), if enabled
+            if config.get_crop_marks_display() and gutter > 0:
+                crop_pen = QPen(QColor(0, 0, 0), 1)
+                painter.setPen(crop_pen)
+
+                crop_length = 8  # pixels in display space (post-zoom)
+
+                gutter_left = int(x + gutter)
+                gutter_right = int(x + width - gutter)
+                gutter_top = int(y + gutter)
+                gutter_bottom = int(y + height - gutter)
+
+                # Top-left
+                painter.drawLine(gutter_left - crop_length, gutter_top, gutter_left + crop_length, gutter_top)
+                painter.drawLine(gutter_left, gutter_top - crop_length, gutter_left, gutter_top + crop_length)
+                # Top-right
+                painter.drawLine(gutter_right - crop_length, gutter_top, gutter_right + crop_length, gutter_top)
+                painter.drawLine(gutter_right, gutter_top - crop_length, gutter_right, gutter_top + crop_length)
+                # Bottom-left
+                painter.drawLine(gutter_left - crop_length, gutter_bottom, gutter_left + crop_length, gutter_bottom)
+                painter.drawLine(gutter_left, gutter_bottom - crop_length, gutter_left, gutter_bottom + crop_length)
+                # Bottom-right
+                painter.drawLine(gutter_right - crop_length, gutter_bottom, gutter_right + crop_length, gutter_bottom)
+                painter.drawLine(gutter_right, gutter_bottom - crop_length, gutter_right, gutter_bottom + crop_length)
+
+            # Registration marks at printable-area corners (quarters), if enabled
+            if config.get_reg_marks_display() and page.get('gutter', 0) > 0:
+                try:
+                    # Convert mm to pixels using document scale (mm/px)
+                    diameter_mm = config.get_reg_mark_diameter_mm()
+                    cross_mm = config.get_reg_mark_crosshair_mm()
+                    scale_factor = getattr(self, 'scale_factor', 1.0)
+                    px_per_mm_doc = (1.0 / scale_factor) if scale_factor and scale_factor > 0 else 2.0
+                    # Scale by current zoom because we're drawing on the zoomed pixmap
+                    radius_px = int((diameter_mm * px_per_mm_doc * self.zoom_factor) / 2)
+                    cross_len_px = int(cross_mm * px_per_mm_doc * self.zoom_factor)
+
+                    # Clip to printable area so only quarters render per page
+                    printable_rect = QRect(
+                        int(x + gutter), int(y + gutter),
+                        int(max(0, width - 2 * gutter)), int(max(0, height - 2 * gutter))
+                    )
+                    painter.save()
+                    painter.setClipRect(printable_rect)
+                    painter.setOpacity(1.0)
+                    painter.setPen(QPen(QColor(0, 0, 0), 1))
+
+                    centers = [
+                        (int(x + gutter), int(y + gutter)),
+                        (int(x + width - gutter), int(y + gutter)),
+                        (int(x + gutter), int(y + height - gutter)),
+                        (int(x + width - gutter), int(y + height - gutter)),
+                    ]
+
+                    for cx, cy in centers:
+                        painter.drawEllipse(cx - radius_px, cy - radius_px, radius_px * 2, radius_px * 2)
+                        painter.drawLine(cx - cross_len_px, cy, cx + cross_len_px, cy)
+                        painter.drawLine(cx, cy - cross_len_px, cx, cy + cross_len_px)
+
+                    painter.restore()
+                except Exception:
+                    pass
 
             # Draw page number based on settings
             if config.get_page_indicator_display():
