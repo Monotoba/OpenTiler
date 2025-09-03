@@ -181,6 +181,7 @@ class DocumentViewer(QWidget):
         self.page_grid = []  # Store page grid for display
         self.gutter_size = 0  # Gutter size in pixels
         self.measurement_text = ""  # Store measurement text for display
+        self.hover_endpoint = None   # which endpoint is hovered (0/1)
         self.init_ui()
 
     def init_ui(self):
@@ -462,21 +463,32 @@ class DocumentViewer(QWidget):
         result = QPixmap(pixmap)
         painter = QPainter(result)
 
-        # Set up pen for drawing points
+        # Set up pen for datum line
         pen = QPen(QColor(255, 0, 0), 3)  # Red color, 3px width
         painter.setPen(pen)
 
-        # Draw each selected point
+        # Draw each selected point with visible handles
+        handle_radius = 8  # pixels in display space
         for i, (x, y) in enumerate(self.selected_points):
             # Convert original coordinates to current display coordinates
             display_x = x * self.zoom_factor
             display_y = y * self.zoom_factor
 
-            # Draw a circle at the point
-            painter.drawEllipse(int(display_x - 5), int(display_y - 5), 10, 10)
+            # Handle style: filled circle with outline; highlight if hovered
+            if self.hover_endpoint == i:
+                fill = QColor(255, 255, 0, 220)  # yellow highlight
+                outline = QPen(QColor(0, 0, 0), 2)
+            else:
+                fill = QColor(0, 150, 255, 220)  # cyan
+                outline = QPen(QColor(0, 0, 0), 2)
+            painter.setPen(outline)
+            painter.setBrush(fill)
+            painter.drawEllipse(int(display_x - handle_radius), int(display_y - handle_radius), handle_radius * 2, handle_radius * 2)
+            painter.setBrush(Qt.NoBrush)
 
-            # Draw point number
-            painter.drawText(int(display_x + 10), int(display_y - 10), f"P{i + 1}")
+            # Draw point number label slightly offset
+            painter.setPen(QPen(QColor(0, 0, 0), 1))
+            painter.drawText(int(display_x + handle_radius + 4), int(display_y - handle_radius - 2), f"P{i + 1}")
 
         # Draw line between points if we have two
         if len(self.selected_points) == 2:
@@ -888,6 +900,30 @@ class DocumentViewer(QWidget):
     def mouseMoveEvent(self, event):
         """Handle mouse move for endpoint dragging."""
         if self.parent_viewer and self.parent_viewer.point_selection_mode:
+            # Hover highlight: detect nearest endpoint within radius
+            if len(self.parent_viewer.selected_points) >= 2 and self.pixmap():
+                try:
+                    p1 = self.parent_viewer.selected_points[0]
+                    p2 = self.parent_viewer.selected_points[1]
+                    z = max(0.0001, self.parent_viewer.zoom_factor)
+                    p1_disp = QPoint(int(p1[0] * z), int(p1[1] * z))
+                    p2_disp = QPoint(int(p2[0] * z), int(p2[1] * z))
+                    label_size = self.size()
+                    pixmap_size = self.pixmap().size()
+                    x_offset = (label_size.width() - pixmap_size.width()) // 2
+                    y_offset = (label_size.height() - pixmap_size.height()) // 2
+                    cur_disp = event.pos() - QPoint(x_offset, y_offset)
+                    d1 = (cur_disp.x() - p1_disp.x())**2 + (cur_disp.y() - p1_disp.y())**2
+                    d2 = (cur_disp.x() - p2_disp.x())**2 + (cur_disp.y() - p2_disp.y())**2
+                    r2 = (self.hit_radius) ** 2
+                    new_hover = None
+                    if d1 <= r2 or d2 <= r2:
+                        new_hover = 0 if d1 <= d2 else 1
+                    if new_hover != self.parent_viewer.hover_endpoint:
+                        self.parent_viewer.hover_endpoint = new_hover
+                        self.parent_viewer._update_display()
+                except Exception:
+                    pass
             # If not already dragging, allow capture when moving with left button held near an endpoint
             if (not self.dragging) and (event.buttons() & Qt.LeftButton) and len(self.parent_viewer.selected_points) >= 2:
                 # Attempt to initiate dragging if cursor is near an endpoint (forgiving radius)
@@ -909,10 +945,10 @@ class DocumentViewer(QWidget):
                     self.dragging_index = 0 if d1 <= d2 else 1
                     self.setCursor(QCursor(Qt.ClosedHandCursor))
 
-        if self.dragging and self.parent_viewer and self.parent_viewer.point_selection_mode and self.dragging_index is not None:
+        if self.dragging and self.parent_viewer and self.parent_viewer.point_selection_mode and self.dragging_index is not None and self.pixmap():
             # Map cursor pos to image coordinates
             label_size = self.size()
-            pixmap_size = self.pixmap().size() if self.pixmap() else QSize(1, 1)
+            pixmap_size = self.pixmap().size()
             x_offset = (label_size.width() - pixmap_size.width()) // 2
             y_offset = (label_size.height() - pixmap_size.height()) // 2
             image_x = event.pos().x() - x_offset
@@ -958,4 +994,14 @@ class DocumentViewer(QWidget):
             else:
                 self.setCursor(QCursor(Qt.OpenHandCursor))
         super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        # Clear hover highlight on leave
+        if self.parent_viewer and self.parent_viewer.hover_endpoint is not None:
+            self.parent_viewer.hover_endpoint = None
+            try:
+                self.parent_viewer._update_display()
+            except Exception:
+                pass
+        super().leaveEvent(event)
         return super().eventFilter(obj, event)
