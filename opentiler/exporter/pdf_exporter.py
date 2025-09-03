@@ -8,6 +8,7 @@ from PySide6.QtCore import QRect, Qt, QMarginsF
 from PySide6.QtGui import QPixmap, QPainter, QPdfWriter, QPageSize, QPageLayout, QPen, QColor
 from ..utils.overlays import draw_scale_bar
 from PySide6.QtWidgets import QMessageBox
+from ..utils.app_logger import get_logger
 
 from .base_exporter import BaseExporter
 from ..utils.metadata_page import MetadataPageGenerator, create_document_info
@@ -57,11 +58,12 @@ class PDFExporter(BaseExporter):
                               **kwargs) -> bool:
         """Export as multi-page PDF (original functionality)."""
         try:
-            print(f"PDFExporter: Starting multi-page PDF export")
-            print(f"PDFExporter: Output path: {output_path}")
-            print(f"PDFExporter: Page size: {page_size}")
-            print(f"PDFExporter: Page grid count: {len(page_grid)}")
-            print(f"PDFExporter: Source pixmap: {source_pixmap.width()}x{source_pixmap.height()}")
+            log = get_logger('export')
+            log.info("Starting multi-page PDF export")
+            log.debug(f"Output path: {output_path}")
+            log.debug(f"Page size: {page_size}")
+            log.debug(f"Page grid count: {len(page_grid)}")
+            log.debug(f"Source pixmap: {source_pixmap.width()}x{source_pixmap.height()}")
             # Ensure output directory exists
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
@@ -158,14 +160,14 @@ class PDFExporter(BaseExporter):
                 self._add_metadata_page(painter, pdf_writer, source_pixmap, page_grid, **kwargs)
 
             painter.end()
-            print(f"PDFExporter: Multi-page PDF export completed successfully")
+            log.info("Multi-page PDF export completed successfully")
             return True
 
         except Exception as e:
             import traceback
             error_details = traceback.format_exc()
-            print(f"PDFExporter: Multi-page PDF export error: {str(e)}")
-            print(f"PDFExporter: Full traceback: {error_details}")
+            log.error(f"Multi-page PDF export error: {str(e)}")
+            log.debug(f"Full traceback: {error_details}")
             return False
 
     def _create_page_pixmap(self, source_pixmap: QPixmap, page: dict, scale_factor: float = 1.0) -> QPixmap:

@@ -29,6 +29,7 @@ from .dialogs.save_as_dialog import SaveAsDialog
 from .settings.config import Config
 from .utils.helpers import calculate_tile_grid, get_page_size_mm, mm_to_pixels, load_icon
 from .utils.overlays import draw_scale_bar
+from .utils.app_logger import configure_from_config, get_logger
 
 
 class MainWindow(QMainWindow):
@@ -48,6 +49,11 @@ class MainWindow(QMainWindow):
 
     def init_ui(self):
         """Initialize the user interface."""
+        # Configure logging from current settings
+        try:
+            configure_from_config(self.config)
+        except Exception:
+            pass
         self.setWindowTitle("OpenTiler")
         self.setWindowIcon(load_icon("opentiler-icon.png", fallback=None))
         self.setMinimumSize(QSize(1024, 768))
@@ -97,6 +103,9 @@ class MainWindow(QMainWindow):
                         self._open_project_path(last)
         except Exception:
             pass
+
+        # Logger for main window
+        self.log = get_logger('projects')
 
     def create_menus(self):
         """Create application menus in order: File, Project, Tools, Settings, Help."""
@@ -488,11 +497,11 @@ class MainWindow(QMainWindow):
 
     def print_tiles(self):
         """Print the current document tiles directly to printer."""
-        print("DEBUG: print_tiles() called")
+            get_logger('printing').debug("print_tiles() called")
 
         # Prevent multiple simultaneous print operations
         if hasattr(self, '_printing_in_progress') and self._printing_in_progress:
-            print("DEBUG: Print already in progress, ignoring")
+            get_logger('printing').warning("Print already in progress; ignoring new request")
             return
 
         # Set the flag immediately to prevent multiple calls
@@ -511,7 +520,7 @@ class MainWindow(QMainWindow):
                 self._printing_in_progress = False
                 return
 
-            print(f"DEBUG: Found {len(self.document_viewer.page_grid)} tiles to print")
+            get_logger('printing').info(f"Printing {len(self.document_viewer.page_grid)} tiles")
 
             # Create printer with modern API
             printer = QPrinter(QPrinter.HighResolution)
@@ -543,9 +552,9 @@ class MainWindow(QMainWindow):
                 QPrintDialog.PrintCurrentPage
             )
 
-            print("DEBUG: Showing print dialog")
+            get_logger('printing').debug("Showing print dialog")
             if print_dialog.exec() == QPrintDialog.Accepted:
-                print("DEBUG: Print dialog accepted, starting print")
+                get_logger('printing').debug("Print dialog accepted; starting print")
                 # Decide first page orientation: metadata-first => Portrait; else tile orientation
                 include_metadata = self.config.get_include_metadata_page()
                 metadata_position = self.config.get_metadata_page_position()
@@ -564,16 +573,16 @@ class MainWindow(QMainWindow):
                 ))
                 self._print_tiles_to_printer(printer)
             else:
-                print("DEBUG: Print dialog cancelled")
+                get_logger('printing').info("Print dialog cancelled")
                 self._printing_in_progress = False
                 return
 
         except Exception as e:
-            print(f"ERROR: Print setup failed: {str(e)}")
+            get_logger('printing').error(f"Print setup failed: {str(e)}")
             QMessageBox.critical(self, "Print Error", f"Failed to setup printing: {str(e)}")
         finally:
             self._printing_in_progress = False
-            print("DEBUG: print_tiles() completed")
+            get_logger('printing').debug("print_tiles() completed")
 
     def _print_tiles_to_printer(self, printer):
         """Print tiles to the specified printer."""
@@ -692,7 +701,7 @@ class MainWindow(QMainWindow):
                 )
 
         except Exception as e:
-            print(f"ERROR: Print failed: {str(e)}")
+            get_logger('printing').error(f"Print failed: {str(e)}")
             import traceback
             traceback.print_exc()
             if painter and painter.isActive():

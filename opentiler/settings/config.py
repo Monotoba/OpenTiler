@@ -169,6 +169,19 @@ class Config:
             self.settings.setValue("max_recent_projects", 10)
         if not self.settings.contains("open_last_project_on_startup"):
             self.settings.setValue("open_last_project_on_startup", False)
+
+        # Logging settings
+        if not self.settings.contains("logging_enabled"):
+            self.settings.setValue("logging_enabled", False)
+        if not self.settings.contains("logging_level"):
+            self.settings.setValue("logging_level", "WARNING")
+        # Per-component toggles (default True)
+        for comp in [
+            'printing', 'projects', 'preview', 'viewer', 'export', 'metadata', 'settings'
+        ]:
+            key = f"logging_{comp}"
+            if not self.settings.contains(key):
+                self.settings.setValue(key, True)
         # Project storage settings
         if not self.settings.contains("project_original_storage"):
             # reference | sidecar | embedded
@@ -643,6 +656,27 @@ class Config:
 
     def set_open_last_project_on_startup(self, enabled):
         self.set("open_last_project_on_startup", bool(enabled))
+
+    # Logging settings
+    def get_logging_enabled(self):
+        val = self.get("logging_enabled", False)
+        return str(val).lower() == 'true' if isinstance(val, str) else bool(val)
+
+    def set_logging_enabled(self, enabled):
+        self.set("logging_enabled", bool(enabled))
+
+    def get_logging_level(self):
+        return str(self.get("logging_level", "WARNING")).upper()
+
+    def set_logging_level(self, level_name):
+        self.set("logging_level", str(level_name).upper())
+
+    def get_logging_component_enabled(self, component: str):
+        val = self.get(f"logging_{component}", True)
+        return str(val).lower() == 'true' if isinstance(val, str) else bool(val)
+
+    def set_logging_component_enabled(self, component: str, enabled: bool):
+        self.set(f"logging_{component}", bool(enabled))
 
 
 # Global configuration instance

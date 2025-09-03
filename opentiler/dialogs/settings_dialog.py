@@ -44,6 +44,7 @@ class SettingsDialog(QDialog):
         self.tab_widget.addTab(self.create_page_indicators_tab(), "Page Indicators")
         self.tab_widget.addTab(self.create_export_tab(), "Export")
         self.tab_widget.addTab(self.create_project_tab(), "Project")
+        self.tab_widget.addTab(self.create_logging_tab(), "Logging")
 
         layout.addWidget(self.tab_widget)
 
@@ -432,6 +433,45 @@ class SettingsDialog(QDialog):
         widget.setLayout(layout)
         return widget
 
+    def create_logging_tab(self):
+        """Create the logging settings tab."""
+        widget = QWidget()
+        layout = QFormLayout()
+
+        # Enable logging
+        self.logging_enabled_check = QCheckBox("Enable logging")
+        self.logging_enabled_check.setToolTip("Turn on application logging. Errors are always allowed; other levels honor per-component toggles.")
+        layout.addRow(self.logging_enabled_check)
+
+        # Level
+        self.logging_level_combo = QComboBox()
+        self.logging_level_combo.addItems(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"])
+        self.logging_level_combo.setToolTip("Minimum log level to emit.")
+        layout.addRow("Log Level:", self.logging_level_combo)
+
+        # Components
+        comp_box = QGroupBox("Components")
+        comp_form = QFormLayout()
+        self.log_printing_check = QCheckBox("Printing")
+        self.log_projects_check = QCheckBox("Projects")
+        self.log_preview_check = QCheckBox("Preview")
+        self.log_viewer_check = QCheckBox("Viewer")
+        self.log_export_check = QCheckBox("Export")
+        self.log_metadata_check = QCheckBox("Metadata")
+        self.log_settings_check = QCheckBox("Settings")
+        comp_form.addRow(self.log_printing_check)
+        comp_form.addRow(self.log_projects_check)
+        comp_form.addRow(self.log_preview_check)
+        comp_form.addRow(self.log_viewer_check)
+        comp_form.addRow(self.log_export_check)
+        comp_form.addRow(self.log_metadata_check)
+        comp_form.addRow(self.log_settings_check)
+        comp_box.setLayout(comp_form)
+        layout.addRow(comp_box)
+
+        widget.setLayout(layout)
+        return widget
+
     def choose_color(self):
         """Open color chooser dialog."""
         color = QColorDialog.getColor(self.current_color, self, "Choose Font Color")
@@ -515,6 +555,17 @@ class SettingsDialog(QDialog):
         # Project settings
         self.project_storage_combo.setCurrentText(config.get_project_original_storage())
 
+        # Logging settings
+        self.logging_enabled_check.setChecked(config.get_logging_enabled())
+        self.logging_level_combo.setCurrentText(config.get_logging_level())
+        self.log_printing_check.setChecked(config.get_logging_component_enabled('printing'))
+        self.log_projects_check.setChecked(config.get_logging_component_enabled('projects'))
+        self.log_preview_check.setChecked(config.get_logging_component_enabled('preview'))
+        self.log_viewer_check.setChecked(config.get_logging_component_enabled('viewer'))
+        self.log_export_check.setChecked(config.get_logging_component_enabled('export'))
+        self.log_metadata_check.setChecked(config.get_logging_component_enabled('metadata'))
+        self.log_settings_check.setChecked(config.get_logging_component_enabled('settings'))
+
         # Datum line settings
         self.datum_display_check.setChecked(config.get_datum_line_display())
         self.datum_print_check.setChecked(config.get_datum_line_print())
@@ -574,6 +625,17 @@ class SettingsDialog(QDialog):
             # Centimeters, step = 1 cm
             cm = self.scale_bar_length_slider.value()
             config.set_scale_bar_length_cm(cm)
+
+        # Logging settings
+        config.set_logging_enabled(self.logging_enabled_check.isChecked())
+        config.set_logging_level(self.logging_level_combo.currentText())
+        config.set_logging_component_enabled('printing', self.log_printing_check.isChecked())
+        config.set_logging_component_enabled('projects', self.log_projects_check.isChecked())
+        config.set_logging_component_enabled('preview', self.log_preview_check.isChecked())
+        config.set_logging_component_enabled('viewer', self.log_viewer_check.isChecked())
+        config.set_logging_component_enabled('export', self.log_export_check.isChecked())
+        config.set_logging_component_enabled('metadata', self.log_metadata_check.isChecked())
+        config.set_logging_component_enabled('settings', self.log_settings_check.isChecked())
 
         # Project settings
         config.set_project_original_storage(self.project_storage_combo.currentText())
