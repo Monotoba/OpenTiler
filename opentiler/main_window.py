@@ -658,8 +658,31 @@ class MainWindow(QMainWindow):
 
                 if tile_pixmap and not tile_pixmap.isNull():
                     print(f"DEBUG: Drawing tile to paint rect: {page_rect.width()}x{page_rect.height()}")
-                    # Draw the tile scaled to the printable rect so physical size matches
-                    painter.drawPixmap(page_rect, tile_pixmap, tile_pixmap.rect())
+                    # Map the tile's drawable (inside gutters) to an inner rect on paper defined in mm
+                    gutter_mm = self.config.get_gutter_size_mm()
+                    ppmm = printer.resolution() / 25.4
+                    g_px = int(round(gutter_mm * ppmm))
+
+                    # Source (inner) rect from tile pixmap
+                    g_tile = int(page.get('gutter', 0) or 0)
+                    src_inner = QRect(g_tile, g_tile,
+                                      max(0, tile_pixmap.width() - 2 * g_tile),
+                                      max(0, tile_pixmap.height() - 2 * g_tile))
+
+                    # Destination inner rect on paper (leave mm gutters on page)
+                    dest_inner = QRect(page_rect.x() + g_px,
+                                       page_rect.y() + g_px,
+                                       max(0, page_rect.width() - 2 * g_px),
+                                       max(0, page_rect.height() - 2 * g_px))
+
+                    painter.drawPixmap(dest_inner, tile_pixmap, src_inner)
+
+                    # Draw simple gutter rectangle overlay for visual guidance
+                    if self.config.get_gutter_lines_print():
+                        painter.save()
+                        painter.setPen(QPen(Qt.blue, 1))
+                        painter.drawRect(dest_inner)
+                        painter.restore()
 
                     # Add page information
                     total_pages = len(page_grid) + (1 if include_metadata else 0)

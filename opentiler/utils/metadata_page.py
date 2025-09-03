@@ -42,19 +42,19 @@ class MetadataPageGenerator:
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.Antialiasing)
 
-        # Draw the metadata page
-        self._draw_header(painter, document_info)
-        self._draw_document_info(painter, document_info)
-        self._draw_scale_info(painter, document_info)
-        self._draw_tiling_info(painter, document_info)
-        self._draw_export_info(painter, document_info)
-        self._draw_plan_view(painter, document_info)
-        self._draw_footer(painter, document_info)
+        # Draw the metadata page (flowing layout)
+        y = self._draw_header(painter, document_info)
+        y = self._draw_document_info(painter, document_info, y + max(12, int(16 * self._scale)))
+        y = self._draw_scale_info(painter, document_info, y + max(12, int(16 * self._scale)))
+        y = self._draw_tiling_info(painter, document_info, y + max(12, int(16 * self._scale)))
+        y = self._draw_export_info(painter, document_info, y + max(12, int(16 * self._scale)))
+        y = self._draw_plan_view(painter, document_info, y + max(20, int(24 * self._scale)))
+        self._draw_footer(painter, document_info, y + max(20, int(24 * self._scale)))
 
         painter.end()
         return pixmap
 
-    def _draw_header(self, painter: QPainter, info: dict):
+    def _draw_header(self, painter: QPainter, info: dict) -> int:
         """Draw the page header with project title and right-justified brand."""
         page_w = self.page_size.width()
 
@@ -104,6 +104,7 @@ class MetadataPageGenerator:
         painter.setPen(QPen(QColor(200, 200, 200), 2))
         sep_y = sub_y + max(12, int(16 * self._scale))
         painter.drawLine(self.margin, sep_y, page_w - self.margin, sep_y)
+        return sep_y
 
     def _draw_document_info(self, painter: QPainter, info: dict, y: int) -> int:
         """Draw document information section, return new y."""
@@ -177,15 +178,12 @@ class MetadataPageGenerator:
         y = self._draw_details_list(painter, details, y)
         return y
 
-    def _draw_plan_view(self, painter: QPainter, info: dict):
-        """Draw a scaled-down plan view with page layout overlay."""
+    def _draw_plan_view(self, painter: QPainter, info: dict, y_start: int) -> int:
+        """Draw a scaled-down plan view with page layout overlay. Return bottom y."""
         try:
-            # Place the plan view in the lower half of the page
-            # Reserve space near the bottom for the footer and a small legend
-            # Position plan view higher on the page (around 38% from top)
-            start_fraction = 0.38
-            y = int(self.page_size.height() * start_fraction)
-            footer_reserved = 140  # pixels reserved for footer and spacing
+            # Place plan view after previous sections
+            footer_reserved = max(140, int(160 * self._scale))
+            y = max(y_start, self.margin + max(200, int(250 * self._scale)))
 
             # Section header
             self._draw_section_header(painter, "Page Assembly Map", y)
@@ -207,9 +205,9 @@ class MetadataPageGenerator:
                 painter.drawText(self.margin, y + 20, "Plan view: Invalid source document")
                 return
 
-            # Calculate available space for plan view: fill most of lower half
+            # Calculate available space beneath current y
             available_width = self.page_size.width() - (2 * self.margin)
-            available_height = max(100, self.page_size.height() - y - self.margin - footer_reserved)
+            available_height = max(120, self.page_size.height() - y - self.margin - footer_reserved)
 
             # Calculate the total area covered by all pages
             if page_grid:
@@ -260,14 +258,16 @@ class MetadataPageGenerator:
                 painter.drawRect(plan_x, plan_y, scaled_composite.width(), scaled_composite.height())
 
                 # Add legend below the plan view
-                legend_y = plan_y + scaled_composite.height() + 20
+                legend_y = plan_y + scaled_composite.height() + max(12, int(16 * self._scale))
                 self._draw_plan_view_legend(painter, legend_y)
+                return legend_y + max(24, int(28 * self._scale))
 
         except Exception as e:
             print(f"Error drawing plan view: {str(e)}")
             # Draw error message
             painter.setPen(QColor(255, 0, 0))
-            painter.drawText(self.margin, y + 20, f"Plan view error: {str(e)}")
+            painter.drawText(self.margin, y_start + 20, f"Plan view error: {str(e)}")
+        return y_start + max(80, int(100 * self._scale))
 
     def _create_plan_view_composite(self, source_pixmap, page_grid, total_width, total_height, offset_x, offset_y, scale_factor: float = 1.0):
         """Create a composite image showing the document with page boundaries."""
@@ -341,7 +341,7 @@ class MetadataPageGenerator:
                     painter.setPen(QPen(QColor(255, 255, 255), 2))
                     font = painter.font()
                     font.setBold(True)
-                    font.setPixelSize(max(12, int(32 * self._scale)))
+                    font.setPointSize(12)
                     painter.setFont(font)
 
                     # Calculate text position (center of page)
@@ -394,9 +394,9 @@ class MetadataPageGenerator:
         painter.setPen(QColor(0, 0, 0))
         painter.drawText(x, y + 5, "P1, P2, etc. = Page numbers for assembly")
 
-    def _draw_footer(self, painter: QPainter, info: dict):
-        """Draw page footer."""
-        y = self.page_size.height() - self.margin - 80
+    def _draw_footer(self, painter: QPainter, info: dict, y_start: int):
+        """Draw page footer starting at y_start."""
+        y = y_start
 
         # Instructions
         instruction_font = QFont("Arial")
