@@ -440,12 +440,26 @@ class DocumentViewer(QWidget):
             p2_x = self.selected_points[1][0] * self.zoom_factor
             p2_y = self.selected_points[1][1] * self.zoom_factor
 
-            # Draw scale line if enabled
-            if config.get_scale_line_display():
-                # Dot–dash–dot pattern for the scale line
-                pen.setStyle(Qt.CustomDashLine)
-                pen.setDashPattern([8, 3, 2, 3, 2, 3])
-                painter.setPen(pen)
+            # Draw datum line if enabled
+            if config.get_datum_line_display():
+                datum_pen = QPen(QColor(config.get_datum_line_color()), max(1, config.get_datum_line_width_px()))
+                style = str(config.get_datum_line_style()).lower()
+                if style == 'solid':
+                    datum_pen.setStyle(Qt.SolidLine)
+                elif style == 'dash':
+                    datum_pen.setStyle(Qt.DashLine)
+                elif style == 'dot':
+                    datum_pen.setStyle(Qt.DotLine)
+                elif style == 'dashdot':
+                    datum_pen.setStyle(Qt.DashDotLine)
+                elif style == 'dashdotdot':
+                    datum_pen.setStyle(Qt.DashDotDotLine)
+                elif style == 'dot-dash-dot':
+                    datum_pen.setStyle(Qt.CustomDashLine)
+                    datum_pen.setDashPattern([8, 3, 2, 3, 2, 3])
+                else:
+                    datum_pen.setStyle(Qt.DashLine)
+                painter.setPen(datum_pen)
                 painter.drawLine(int(p1_x), int(p1_y), int(p2_x), int(p2_y))
 
             # Draw measurement text above the line if available and enabled

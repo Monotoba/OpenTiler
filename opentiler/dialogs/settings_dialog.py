@@ -232,6 +232,35 @@ class SettingsDialog(QDialog):
         scale_group.setLayout(scale_layout)
         layout.addWidget(scale_group)
 
+        # Datum line group
+        datum_group = QGroupBox("Datum Line (Selected Points)")
+        datum_layout = QFormLayout()
+
+        self.datum_display_check = QCheckBox("Show datum line on screen")
+        self.datum_display_check.setToolTip("Draw a line between the two selected scale points during preview.")
+        datum_layout.addRow(self.datum_display_check)
+
+        self.datum_print_check = QCheckBox("Include datum line when printing")
+        self.datum_print_check.setToolTip("Include the datum line on printed/exported tiles.")
+        datum_layout.addRow(self.datum_print_check)
+
+        self.datum_style_combo = QComboBox()
+        self.datum_style_combo.addItems(["solid", "dash", "dot", "dashdot", "dashdotdot", "dot-dash-dot"]) 
+        datum_layout.addRow("Line Style:", self.datum_style_combo)
+
+        self.datum_width_spin = QSpinBox()
+        self.datum_width_spin.setRange(1, 8)
+        self.datum_width_spin.setSuffix(" px")
+        datum_layout.addRow("Line Width:", self.datum_width_spin)
+
+        self.datum_color_button = QPushButton()
+        self.datum_color_button.setFixedSize(50, 24)
+        self.datum_color_button.clicked.connect(self.choose_datum_color)
+        datum_layout.addRow("Line Color:", self.datum_color_button)
+
+        datum_group.setLayout(datum_layout)
+        layout.addWidget(datum_group)
+
         # Scale bar overlay group
         bar_group = QGroupBox("Scale Bar Overlay")
         bar_layout = QFormLayout()
@@ -472,6 +501,15 @@ class SettingsDialog(QDialog):
         # Project settings
         self.project_storage_combo.setCurrentText(config.get_project_original_storage())
 
+        # Datum line settings
+        self.datum_display_check.setChecked(config.get_datum_line_display())
+        self.datum_print_check.setChecked(config.get_datum_line_print())
+        self.datum_style_combo.setCurrentText(config.get_datum_line_style())
+        self.datum_width_spin.setValue(config.get_datum_line_width_px())
+        # Color
+        self.datum_color = QColor(config.get_datum_line_color())
+        self.update_datum_color_button()
+
     def apply_settings(self):
         """Apply settings without closing dialog."""
         self.save_settings()
@@ -523,6 +561,23 @@ class SettingsDialog(QDialog):
 
         # Project settings
         config.set_project_original_storage(self.project_storage_combo.currentText())
+
+        # Datum line settings
+        config.set_datum_line_display(self.datum_display_check.isChecked())
+        config.set_datum_line_print(self.datum_print_check.isChecked())
+        config.set_datum_line_style(self.datum_style_combo.currentText())
+        config.set_datum_line_width_px(self.datum_width_spin.value())
+        config.set_datum_line_color(self.datum_color.name())
+
+    def choose_datum_color(self):
+        color = QColorDialog.getColor(self.datum_color, self, "Choose Datum Line Color")
+        if color.isValid():
+            self.datum_color = color
+            self.update_datum_color_button()
+
+    def update_datum_color_button(self):
+        if hasattr(self, 'datum_color') and self.datum_color:
+            self.datum_color_button.setStyleSheet(f"background-color: {self.datum_color.name()}; border: 1px solid #888;")
 
     def _configure_scale_bar_length_slider(self):
         """Configure the scale bar length slider according to current units."""

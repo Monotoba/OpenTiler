@@ -945,6 +945,43 @@ class MainWindow(QMainWindow):
         except Exception:
             pass
 
+        # Print the datum line if enabled
+        try:
+            if config.get_datum_line_print():
+                scale_info = self._get_scale_info()
+                if scale_info:
+                    point1 = scale_info.get('point1')
+                    point2 = scale_info.get('point2')
+                    if point1 and point2:
+                        page_x = page['x']
+                        page_y = page['y']
+                        page_doc_w = page['width']
+                        page_doc_h = page['height']
+                        p1_x = (point1[0] - page_x) * (tile_size.width() / page_doc_w)
+                        p1_y = (point1[1] - page_y) * (tile_size.height() / page_doc_h)
+                        p2_x = (point2[0] - page_x) * (tile_size.width() / page_doc_w)
+                        p2_y = (point2[1] - page_y) * (tile_size.height() / page_doc_h)
+
+                        datum_pen = QPen(QColor(config.get_datum_line_color()), max(1, config.get_datum_line_width_px()))
+                        style = str(config.get_datum_line_style()).lower()
+                        if style == 'solid':
+                            datum_pen.setStyle(Qt.SolidLine)
+                        elif style == 'dash':
+                            datum_pen.setStyle(Qt.DashLine)
+                        elif style == 'dot':
+                            datum_pen.setStyle(Qt.DotLine)
+                        elif style == 'dashdot':
+                            datum_pen.setStyle(Qt.DashDotLine)
+                        elif style == 'dashdotdot':
+                            datum_pen.setStyle(Qt.DashDotDotLine)
+                        elif style == 'dot-dash-dot':
+                            datum_pen.setStyle(Qt.CustomDashLine)
+                            datum_pen.setDashPattern([8, 3, 2, 3, 2, 3])
+                        painter.setPen(datum_pen)
+                        painter.drawLine(int(p1_x), int(p1_y), int(p2_x), int(p2_y))
+        except Exception:
+            pass
+
         # Restore painter state
         painter.restore()
 
@@ -1274,6 +1311,12 @@ class MainWindow(QMainWindow):
             'scale_line_print': c.get_scale_line_print(),
             'scale_text_display': c.get_scale_text_display(),
             'scale_text_print': c.get_scale_text_print(),
+            # Datum line
+            'datum_line_display': c.get_datum_line_display(),
+            'datum_line_print': c.get_datum_line_print(),
+            'datum_line_color': c.get_datum_line_color(),
+            'datum_line_style': c.get_datum_line_style(),
+            'datum_line_width_px': c.get_datum_line_width_px(),
             # Metadata page
             'include_metadata_page': c.get_include_metadata_page(),
             'metadata_page_position': c.get_metadata_page_position(),
@@ -1319,6 +1362,13 @@ class MainWindow(QMainWindow):
             c.set_scale_line_print(snap.get('scale_line_print', c.get_scale_line_print()))
             c.set_scale_text_display(snap.get('scale_text_display', c.get_scale_text_display()))
             c.set_scale_text_print(snap.get('scale_text_print', c.get_scale_text_print()))
+
+            # Datum line
+            c.set_datum_line_display(snap.get('datum_line_display', c.get_datum_line_display()))
+            c.set_datum_line_print(snap.get('datum_line_print', c.get_datum_line_print()))
+            c.set_datum_line_color(snap.get('datum_line_color', c.get_datum_line_color()))
+            c.set_datum_line_style(snap.get('datum_line_style', c.get_datum_line_style()))
+            c.set_datum_line_width_px(snap.get('datum_line_width_px', c.get_datum_line_width_px()))
 
             c.set_include_metadata_page(snap.get('include_metadata_page', c.get_include_metadata_page()))
             c.set_metadata_page_position(snap.get('metadata_page_position', c.get_metadata_page_position()))

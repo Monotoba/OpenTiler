@@ -129,6 +129,19 @@ class Config:
         if not self.settings.contains("scale_line_print"):
             self.settings.setValue("scale_line_print", False)
 
+        # Datum line (independent of scale text/line)
+        if not self.settings.contains("datum_line_display"):
+            self.settings.setValue("datum_line_display", True)
+        if not self.settings.contains("datum_line_print"):
+            self.settings.setValue("datum_line_print", False)
+        if not self.settings.contains("datum_line_color"):
+            self.settings.setValue("datum_line_color", "#FF0000")
+        if not self.settings.contains("datum_line_style"):
+            # Options: solid, dash, dot, dashdot, dashdotdot, dot-dash-dot
+            self.settings.setValue("datum_line_style", "dash")
+        if not self.settings.contains("datum_line_width_px"):
+            self.settings.setValue("datum_line_width_px", 2)
+
         if not self.settings.contains("scale_text_display"):
             self.settings.setValue("scale_text_display", True)
 
@@ -468,6 +481,39 @@ class Config:
     def set_scale_text_print(self, print_enabled):
         """Set whether to print scale text."""
         self.set("scale_text_print", bool(print_enabled))
+
+    # Datum line settings
+    def get_datum_line_display(self):
+        value = self.get("datum_line_display", True)
+        return str(value).lower() == 'true' if isinstance(value, str) else bool(value)
+
+    def set_datum_line_display(self, display):
+        self.set("datum_line_display", bool(display))
+
+    def get_datum_line_print(self):
+        value = self.get("datum_line_print", False)
+        return str(value).lower() == 'true' if isinstance(value, str) else bool(value)
+
+    def set_datum_line_print(self, print_enabled):
+        self.set("datum_line_print", bool(print_enabled))
+
+    def get_datum_line_color(self):
+        return self.get("datum_line_color", "#FF0000")
+
+    def set_datum_line_color(self, color):
+        self.set("datum_line_color", color)
+
+    def get_datum_line_style(self):
+        return self.get("datum_line_style", "dash")
+
+    def set_datum_line_style(self, style):
+        self.set("datum_line_style", style)
+
+    def get_datum_line_width_px(self):
+        return int(self.get("datum_line_width_px", 2))
+
+    def set_datum_line_width_px(self, width):
+        self.set("datum_line_width_px", int(width))
 
     # Recent files settings
     def get_recent_files(self):

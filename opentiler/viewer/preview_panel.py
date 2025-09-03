@@ -566,8 +566,30 @@ class PreviewPanel(QWidget):
         pen.setDashPattern([8, 3, 2, 3, 2, 3])
         painter.setPen(pen)
 
-        # Draw scale line (clipped to page boundaries)
-        painter.drawLine(int(p1_x), int(p1_y), int(p2_x), int(p2_y))
+        # Draw both scale line and/or datum line according to settings
+        # Scale line style
+        if config.get_scale_line_display():
+            painter.drawLine(int(p1_x), int(p1_y), int(p2_x), int(p2_y))
+
+        # Datum line style
+        if config.get_datum_line_display():
+            datum_pen = QPen(QColor(config.get_datum_line_color()), 2)
+            style = str(config.get_datum_line_style()).lower()
+            if style == 'solid':
+                datum_pen.setStyle(Qt.SolidLine)
+            elif style == 'dash':
+                datum_pen.setStyle(Qt.DashLine)
+            elif style == 'dot':
+                datum_pen.setStyle(Qt.DotLine)
+            elif style == 'dashdot':
+                datum_pen.setStyle(Qt.DashDotLine)
+            elif style == 'dashdotdot':
+                datum_pen.setStyle(Qt.DashDotDotLine)
+            elif style == 'dot-dash-dot':
+                datum_pen.setStyle(Qt.CustomDashLine)
+                datum_pen.setDashPattern([8, 3, 2, 3, 2, 3])
+            painter.setPen(datum_pen)
+            painter.drawLine(int(p1_x), int(p1_y), int(p2_x), int(p2_y))
 
         # Draw scale points
         pen.setStyle(Qt.SolidLine)

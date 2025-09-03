@@ -245,15 +245,35 @@ class PageViewerDialog(QDialog):
         p2_x = p2_page_x * scale_x
         p2_y = p2_page_y * scale_y
 
-        # Set up pen for scale line
-        pen = QPen(QColor(255, 0, 0), 3)  # Red color, 3px width for page viewer
-        # Dot–dash–dot pattern
-        pen.setStyle(Qt.CustomDashLine)
-        pen.setDashPattern([10, 4, 2, 4, 2, 4])
-        painter.setPen(pen)
+        from ..settings.config import config
 
         # Draw scale line
-        painter.drawLine(int(p1_x), int(p1_y), int(p2_x), int(p2_y))
+        if config.get_scale_line_display():
+            pen = QPen(QColor(255, 0, 0), 3)  # Red color, 3px width for page viewer
+            pen.setStyle(Qt.CustomDashLine)
+            pen.setDashPattern([10, 4, 2, 4, 2, 4])
+            painter.setPen(pen)
+            painter.drawLine(int(p1_x), int(p1_y), int(p2_x), int(p2_y))
+
+        # Draw datum line
+        if config.get_datum_line_display():
+            datum_pen = QPen(QColor(config.get_datum_line_color()), max(1, config.get_datum_line_width_px()+1))
+            style = str(config.get_datum_line_style()).lower()
+            if style == 'solid':
+                datum_pen.setStyle(Qt.SolidLine)
+            elif style == 'dash':
+                datum_pen.setStyle(Qt.DashLine)
+            elif style == 'dot':
+                datum_pen.setStyle(Qt.DotLine)
+            elif style == 'dashdot':
+                datum_pen.setStyle(Qt.DashDotLine)
+            elif style == 'dashdotdot':
+                datum_pen.setStyle(Qt.DashDotDotLine)
+            elif style == 'dot-dash-dot':
+                datum_pen.setStyle(Qt.CustomDashLine)
+                datum_pen.setDashPattern([10, 4, 2, 4, 2, 4])
+            painter.setPen(datum_pen)
+            painter.drawLine(int(p1_x), int(p1_y), int(p2_x), int(p2_y))
 
         # Draw scale points
         pen.setStyle(Qt.SolidLine)
