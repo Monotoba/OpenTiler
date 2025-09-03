@@ -106,7 +106,7 @@ class ClickableLabel(QLabel):
         """Handle mouse press events."""
         if event.button() == Qt.LeftButton and self.parent_viewer and self.parent_viewer.point_selection_mode:
             mods = event.modifiers()
-            # If two points exist, try to start dragging nearest endpoint first (no modifier required)
+            # If two points exist, start dragging the nearest endpoint (no modifier required)
             if len(self.parent_viewer.selected_points) >= 2:
                 # Compute display-space endpoints
                 p1 = self.parent_viewer.selected_points[0]
@@ -127,16 +127,13 @@ class ClickableLabel(QLabel):
                     dx = a.x() - b.x(); dy = a.y() - b.y()
                     return (dx*dx + dy*dy) <= r*r
 
-                if within(click_disp, p1_disp, self.hit_radius):
-                    self.dragging = True
-                    self.dragging_index = 0
-                    self.setCursor(QCursor(Qt.ClosedHandCursor))
-                    event.accept(); return
-                if within(click_disp, p2_disp, self.hit_radius):
-                    self.dragging = True
-                    self.dragging_index = 1
-                    self.setCursor(QCursor(Qt.ClosedHandCursor))
-                    event.accept(); return
+                # Choose nearest endpoint unconditionally to improve grab reliability
+                d1 = (click_disp.x() - p1_disp.x())**2 + (click_disp.y() - p1_disp.y())**2
+                d2 = (click_disp.x() - p2_disp.x())**2 + (click_disp.y() - p2_disp.y())**2
+                self.dragging = True
+                self.dragging_index = 0 if d1 <= d2 else 1
+                self.setCursor(QCursor(Qt.ClosedHandCursor))
+                event.accept(); return
             # Otherwise treat as point selection click only if we still need points
             if len(self.parent_viewer.selected_points) < 2:
                 self.clicked.emit(event.pos())
@@ -952,4 +949,13 @@ class DocumentViewer(QWidget):
                 self.unsetCursor()
             event.accept(); return
         super().mouseReleaseEvent(event)
+
+    def enterEvent(self, event):
+        # Ensure cursor reflects selection mode even if outer viewport set a different cursor
+        if self.parent_viewer:
+            if self.parent_viewer.point_selection_mode:
+                self.setCursor(QCursor(Qt.CrossCursor))
+            else:
+                self.setCursor(QCursor(Qt.OpenHandCursor))
+        super().enterEvent(event)
         return super().eventFilter(obj, event)
