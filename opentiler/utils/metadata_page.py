@@ -50,34 +50,50 @@ class MetadataPageGenerator:
         return pixmap
 
     def _draw_header(self, painter: QPainter, info: dict):
-        """Draw the page header."""
-        # Title
-        title_font = QFont("Arial", 24, QFont.Bold)
+        """Draw the page header with project title and right-justified brand."""
+        page_w = self.page_size.width()
+
+        # Right-justified brand label
+        brand_text = "OpenTiler"
+        brand_font = QFont("Arial", 16, QFont.Bold)
+        painter.setFont(brand_font)
+        painter.setPen(QColor(0, 0, 0))
+        fm = painter.fontMetrics()
+        brand_w = fm.horizontalAdvance(brand_text)
+        brand_h = fm.height()
+        brand_x = page_w - self.margin - brand_w
+        brand_y = self.margin + brand_h
+        painter.drawText(brand_x, brand_y, brand_text)
+
+        # Project name as page title (left/top)
+        title_text = info.get('project_name') or info.get('document_name') or 'Untitled Project'
+        title_font = QFont("Arial", 28, QFont.Bold)
         painter.setFont(title_font)
         painter.setPen(QColor(0, 0, 0))
+        tfm = painter.fontMetrics()
+        title_h = tfm.height()
+        title_x = self.margin
+        title_y = self.margin + title_h
+        painter.drawText(title_x, title_y, title_text)
 
-        title_rect = painter.fontMetrics().boundingRect("OpenTiler - Tile Export Metadata")
-        x = (self.page_size.width() - title_rect.width()) // 2
-        y = self.margin + title_rect.height()
-
-        painter.drawText(x, y, "OpenTiler - Tile Export Metadata")
-
-        # Subtitle
+        # Subtitle centered: generation timestamp
         subtitle_font = QFont("Arial", 14)
         painter.setFont(subtitle_font)
         painter.setPen(QColor(100, 100, 100))
-
         subtitle = f"Generated on {datetime.now().strftime('%Y-%m-%d at %H:%M:%S')}"
-        subtitle_rect = painter.fontMetrics().boundingRect(subtitle)
-        x = (self.page_size.width() - subtitle_rect.width()) // 2
-        y += 40
+        sfm = painter.fontMetrics()
+        sub_w = sfm.horizontalAdvance(subtitle)
+        sub_h = sfm.height()
+        sub_x = (page_w - sub_w) // 2
+        # Place below the larger of brand/title baselines
+        baseline_y = max(brand_y, title_y)
+        sub_y = baseline_y + 20 + sub_h
+        painter.drawText(sub_x, sub_y, subtitle)
 
-        painter.drawText(x, y, subtitle)
-
-        # Draw separator line
+        # Separator line below header block
         painter.setPen(QPen(QColor(200, 200, 200), 2))
-        y += 30
-        painter.drawLine(self.margin, y, self.page_size.width() - self.margin, y)
+        sep_y = sub_y + 20
+        painter.drawLine(self.margin, sep_y, page_w - self.margin, sep_y)
 
     def _draw_document_info(self, painter: QPainter, info: dict):
         """Draw document information section."""
