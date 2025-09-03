@@ -703,29 +703,27 @@ class MainWindow(QMainWindow):
 
             print(f"DEBUG: Metadata info - tiles: {tiles_x}x{tiles_y}, total: {len(page_grid)}")
 
-            # Generate metadata page at a reasonable size (A4 at 300 DPI)
-            # This ensures the metadata page has enough detail to scale up properly
-            metadata_size = QSize(2480, 3508)  # A4 at 300 DPI
-            metadata_pixmap = metadata_generator.generate_metadata_page(document_info, metadata_size)
+            # Generate metadata page at a reasonable size; we will scale to fit
+            metadata_pixmap = metadata_generator.generate_metadata_page(document_info)
 
             # Draw metadata page to print
             if metadata_pixmap and not metadata_pixmap.isNull():
                 print(f"DEBUG: Generated metadata page {metadata_pixmap.width()}x{metadata_pixmap.height()}")
                 print(f"DEBUG: Print page size: {page_rect.width()}x{page_rect.height()}")
 
-                # Scale metadata page to fill the entire print page
-                # Use IgnoreAspectRatio to fill the page completely
+                # Scale metadata page to fit printable rect, preserve aspect ratio, and center
                 scaled_metadata = metadata_pixmap.scaled(
                     page_rect.size(),
-                    Qt.IgnoreAspectRatio,  # Fill entire page
+                    Qt.KeepAspectRatio,
                     Qt.SmoothTransformation
                 )
 
                 print(f"DEBUG: Scaled metadata page to {scaled_metadata.width()}x{scaled_metadata.height()}")
 
-                # Draw at full page size (no centering needed)
-                painter.drawPixmap(0, 0, scaled_metadata)
-                print("DEBUG: Metadata page printed successfully at full page size")
+                draw_x = page_rect.x() + (page_rect.width() - scaled_metadata.width()) // 2
+                draw_y = page_rect.y() + (page_rect.height() - scaled_metadata.height()) // 2
+                painter.drawPixmap(int(draw_x), int(draw_y), scaled_metadata)
+                print("DEBUG: Metadata page printed centered within printable area")
             else:
                 print("ERROR: Failed to generate metadata page pixmap")
 
