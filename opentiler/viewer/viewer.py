@@ -1004,4 +1004,3 @@ class DocumentViewer(QWidget):
             except Exception:
                 pass
         super().leaveEvent(event)
-        return super().eventFilter(obj, event)
