@@ -89,6 +89,7 @@ class MetadataPageGenerator:
 
         # Document details
         details = [
+            ("Project Name:", info.get('project_name', '') or 'Untitled Project'),
             ("Document Name:", info.get('document_name', 'Unknown')),
             ("Original File:", info.get('original_file', 'Unknown')),
             ("File Size:", info.get('file_size', 'Unknown')),

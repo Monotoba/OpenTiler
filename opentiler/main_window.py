@@ -1181,13 +1181,19 @@ class MainWindow(QMainWindow):
         document_info = {}
 
         # Get current document file path
-        current_file = getattr(self.document_viewer, 'current_file_path', '')
+        current_file = getattr(self.document_viewer, 'current_document', '')
         if current_file:
             document_info['document_name'] = os.path.splitext(os.path.basename(current_file))[0]
             document_info['original_file'] = current_file
         else:
             document_info['document_name'] = 'Untitled Document'
             document_info['original_file'] = ''
+
+        # Project name (if any)
+        if getattr(self, 'current_project_path', None):
+            document_info['project_name'] = os.path.splitext(os.path.basename(self.current_project_path))[0]
+        else:
+            document_info['project_name'] = ''
 
         # Get scale information
         scale_factor = getattr(self.document_viewer, 'scale_factor', 1.0)
