@@ -467,28 +467,29 @@ class DocumentViewer(QWidget):
         pen = QPen(QColor(255, 0, 0), 3)  # Red color, 3px width
         painter.setPen(pen)
 
-        # Draw each selected point with visible handles
-        handle_radius = 8  # pixels in display space
-        for i, (x, y) in enumerate(self.selected_points):
-            # Convert original coordinates to current display coordinates
-            display_x = x * self.zoom_factor
-            display_y = y * self.zoom_factor
+        # Draw endpoint handles only while the scaling tool is open
+        if self.point_selection_mode:
+            handle_radius = 8  # pixels in display space
+            for i, (x, y) in enumerate(self.selected_points):
+                # Convert original coordinates to current display coordinates
+                display_x = x * self.zoom_factor
+                display_y = y * self.zoom_factor
 
-            # Handle style: filled circle with outline; highlight if hovered
-            if self.hover_endpoint == i:
-                fill = QColor(255, 255, 0, 220)  # yellow highlight
-                outline = QPen(QColor(0, 0, 0), 2)
-            else:
-                fill = QColor(0, 150, 255, 220)  # cyan
-                outline = QPen(QColor(0, 0, 0), 2)
-            painter.setPen(outline)
-            painter.setBrush(fill)
-            painter.drawEllipse(int(display_x - handle_radius), int(display_y - handle_radius), handle_radius * 2, handle_radius * 2)
-            painter.setBrush(Qt.NoBrush)
+                # Handle style: filled circle with outline; highlight if hovered
+                if self.hover_endpoint == i:
+                    fill = QColor(255, 255, 0, 220)  # yellow highlight
+                    outline = QPen(QColor(0, 0, 0), 2)
+                else:
+                    fill = QColor(0, 150, 255, 220)  # cyan
+                    outline = QPen(QColor(0, 0, 0), 2)
+                painter.setPen(outline)
+                painter.setBrush(fill)
+                painter.drawEllipse(int(display_x - handle_radius), int(display_y - handle_radius), handle_radius * 2, handle_radius * 2)
+                painter.setBrush(Qt.NoBrush)
 
-            # Draw point number label slightly offset
-            painter.setPen(QPen(QColor(0, 0, 0), 1))
-            painter.drawText(int(display_x + handle_radius + 4), int(display_y - handle_radius - 2), f"P{i + 1}")
+                # Draw point number label slightly offset
+                painter.setPen(QPen(QColor(0, 0, 0), 1))
+                painter.drawText(int(display_x + handle_radius + 4), int(display_y - handle_radius - 2), f"P{i + 1}")
 
         # Draw line between points if we have two
         if len(self.selected_points) == 2:
@@ -846,6 +847,8 @@ class DocumentViewer(QWidget):
         else:
             self.scroll_area.viewport().setCursor(QCursor(Qt.OpenHandCursor))
             self.image_label.setCursor(QCursor(Qt.OpenHandCursor))
+            # Clear hover state so handles disappear
+            self.hover_endpoint = None
 
     def set_measurement_text(self, text):
         """Set the measurement text to display above the scaling line."""
