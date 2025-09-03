@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QScrollArea,
     QFrame, QSizePolicy
 )
-from PySide6.QtCore import Qt, QRect, QPoint
+from PySide6.QtCore import Qt, QRect, QPoint, QSize
 from PySide6.QtGui import QPixmap, QPainter, QPen, QColor, QFont
 
 from ..dialogs.page_viewer_dialog import ClickablePageThumbnail
