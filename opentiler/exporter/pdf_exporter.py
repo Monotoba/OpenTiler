@@ -111,7 +111,21 @@ class PDFExporter(BaseExporter):
 
             # Add metadata page at the beginning if configured
             if include_metadata and metadata_position == "first":
+                # NOTE: Metadata page must always be Portrait regardless of tile orientation
+                pdf_writer.setPageLayout(QPageLayout(
+                    page_size_obj,
+                    QPageLayout.Portrait,
+                    QMarginsF(0, 0, 0, 0),
+                    QPageLayout.Millimeter
+                ))
                 self._add_metadata_page(painter, pdf_writer, source_pixmap, page_grid, **kwargs)
+                # Restore tile orientation for subsequent pages
+                pdf_writer.setPageLayout(QPageLayout(
+                    page_size_obj,
+                    orientation,
+                    QMarginsF(0, 0, 0, 0),
+                    QPageLayout.Millimeter
+                ))
                 page_count += 1
 
             # Export each tile page
@@ -134,6 +148,13 @@ class PDFExporter(BaseExporter):
             # Add metadata page at the end if configured
             if include_metadata and metadata_position == "last":
                 pdf_writer.newPage()
+                # NOTE: Metadata page must always be Portrait regardless of tile orientation
+                pdf_writer.setPageLayout(QPageLayout(
+                    page_size_obj,
+                    QPageLayout.Portrait,
+                    QMarginsF(0, 0, 0, 0),
+                    QPageLayout.Millimeter
+                ))
                 self._add_metadata_page(painter, pdf_writer, source_pixmap, page_grid, **kwargs)
 
             painter.end()
