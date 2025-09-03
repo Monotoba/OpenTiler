@@ -890,6 +890,28 @@ class DocumentViewer(QWidget):
 
     def mouseMoveEvent(self, event):
         """Handle mouse move for endpoint dragging."""
+        if self.parent_viewer and self.parent_viewer.point_selection_mode:
+            # If not already dragging, allow capture when moving with left button held near an endpoint
+            if (not self.dragging) and (event.buttons() & Qt.LeftButton) and len(self.parent_viewer.selected_points) >= 2:
+                # Attempt to initiate dragging if cursor is near an endpoint (forgiving radius)
+                p1 = self.parent_viewer.selected_points[0]
+                p2 = self.parent_viewer.selected_points[1]
+                z = max(0.0001, self.parent_viewer.zoom_factor)
+                p1_disp = QPoint(int(p1[0] * z), int(p1[1] * z))
+                p2_disp = QPoint(int(p2[0] * z), int(p2[1] * z))
+                label_size = self.size()
+                pixmap_size = self.pixmap().size() if self.pixmap() else QSize(1, 1)
+                x_offset = (label_size.width() - pixmap_size.width()) // 2
+                y_offset = (label_size.height() - pixmap_size.height()) // 2
+                cur_disp = event.pos() - QPoint(x_offset, y_offset)
+                d1 = (cur_disp.x() - p1_disp.x())**2 + (cur_disp.y() - p1_disp.y())**2
+                d2 = (cur_disp.x() - p2_disp.x())**2 + (cur_disp.y() - p2_disp.y())**2
+                r2 = (self.hit_radius * 2) ** 2
+                if d1 <= r2 or d2 <= r2:
+                    self.dragging = True
+                    self.dragging_index = 0 if d1 <= d2 else 1
+                    self.setCursor(QCursor(Qt.ClosedHandCursor))
+
         if self.dragging and self.parent_viewer and self.parent_viewer.point_selection_mode and self.dragging_index is not None:
             # Map cursor pos to image coordinates
             label_size = self.size()
