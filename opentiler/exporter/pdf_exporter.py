@@ -88,7 +88,7 @@ class PDFExporter(BaseExporter):
             pdf_writer.setPageLayout(QPageLayout(
                 page_size_obj,
                 orientation,
-                QMarginsF(10, 10, 10, 10),  # 10mm margins on all sides
+                QMarginsF(0, 0, 0, 0),  # Use 0mm margins; gutters are handled in content
                 QPageLayout.Millimeter
             ))
 

@@ -510,7 +510,7 @@ class MainWindow(QMainWindow):
             printer.setPageLayout(QPageLayout(
                 page_size,
                 orientation,
-                QMarginsF(10, 10, 10, 10),
+                QMarginsF(0, 0, 0, 0),
                 QPageLayout.Millimeter
             ))
 
@@ -540,7 +540,7 @@ class MainWindow(QMainWindow):
                 printer.setPageLayout(QPageLayout(
                     page_size,
                     orientation,
-                    QMarginsF(10, 10, 10, 10),
+                    QMarginsF(0, 0, 0, 0),
                     QPageLayout.Millimeter
                 ))
                 self._print_tiles_to_printer(printer)
