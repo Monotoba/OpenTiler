@@ -500,11 +500,13 @@ class MainWindow(QMainWindow):
             printer = QPrinter(QPrinter.HighResolution)
 
             # Set default page size and orientation using modern API
-            page_size = QPageSize(QPageSize.A4)
+            cfg_page_name = self.config.get_default_page_size()
+            page_size_id = self._qpagesize_from_name(cfg_page_name)
+            page_size = QPageSize(page_size_id)
             orientation = self._determine_print_orientation()
 
+            # Apply initial layout before showing dialog
             printer.setPageSize(page_size)
-            # Use millimeter units so margins match configured gutter scale
             printer.setPageLayout(QPageLayout(
                 page_size,
                 orientation,
@@ -527,6 +529,20 @@ class MainWindow(QMainWindow):
             print("DEBUG: Showing print dialog")
             if print_dialog.exec() == QPrintDialog.Accepted:
                 print("DEBUG: Print dialog accepted, starting print")
+                # Re-apply orientation and page size to enforce app-selected layout,
+                # in case the dialog or printer driver reset it.
+                orientation = self._determine_print_orientation()
+                printer.setPageSize(page_size)
+                try:
+                    printer.setPageOrientation(orientation)
+                except Exception:
+                    pass
+                printer.setPageLayout(QPageLayout(
+                    page_size,
+                    orientation,
+                    QMarginsF(10, 10, 10, 10),
+                    QPageLayout.Millimeter
+                ))
                 self._print_tiles_to_printer(printer)
             else:
                 print("DEBUG: Print dialog cancelled")
@@ -638,6 +654,20 @@ class MainWindow(QMainWindow):
             if painter and painter.isActive():
                 painter.end()
             QMessageBox.critical(self, "Print Error", f"Failed to print tiles: {str(e)}")
+
+    def _qpagesize_from_name(self, name: str):
+        """Map config page size string to QPageSize.SizeId."""
+        mapping = {
+            'A0': QPageSize.A0,
+            'A1': QPageSize.A1,
+            'A2': QPageSize.A2,
+            'A3': QPageSize.A3,
+            'A4': QPageSize.A4,
+            'Letter': QPageSize.Letter,
+            'Legal': QPageSize.Legal,
+            'Tabloid': QPageSize.Tabloid,
+        }
+        return mapping.get((name or 'A4').strip(), QPageSize.A4)
 
     def _print_metadata_page(self, painter, printer, source_pixmap, page_grid, page_rect):
         """Print a metadata summary page."""
