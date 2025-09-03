@@ -281,10 +281,8 @@ class PreviewPanel(QWidget):
             from ..settings.config import config as app_config
             page_size_name = app_config.get_default_page_size()
             page_w_mm, page_h_mm = get_page_size_mm(page_size_name)
-            orientation = app_config.get_page_orientation()
-            if orientation == 'landscape' and page_h_mm > page_w_mm:
-                page_w_mm, page_h_mm = page_h_mm, page_w_mm
-            elif orientation == 'portrait' and page_w_mm > page_h_mm:
+            # Always preview metadata page in Portrait to match print behavior
+            if page_w_mm > page_h_mm:
                 page_w_mm, page_h_mm = page_h_mm, page_w_mm
             # Use 300 DPI equivalent: 11.811 px/mm
             px_per_mm = 11.811
