@@ -608,14 +608,13 @@ class MainWindow(QMainWindow):
                 page_rect = printable_rect()
                 self._print_metadata_page(painter, printer, source_pixmap, page_grid, page_rect)
                 page_count += 1
-                # Start new page for tiles and restore tile orientation
-                printer.newPage()
+                # Restore tile orientation for subsequent pages (will take effect on next newPage)
                 tile_orientation = self._determine_print_orientation()
                 try:
                     printer.setPageLayout(QPageLayout(page_size, tile_orientation, QMarginsF(0, 0, 0, 0), QPageLayout.Millimeter))
                 except Exception:
                     pass
-                page_rect = printable_rect()
+                # Do NOT call printer.newPage() here; the loop will start a new page
 
             # Print each tile - align with exporter/preview logic
             for i, page in enumerate(page_grid):
