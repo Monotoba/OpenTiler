@@ -1529,6 +1529,8 @@ class MainWindow(QMainWindow):
                 # If no embedded original, attempt to use referenced path or relink
                 if not extracted_path:
                     extracted_path = self._maybe_relink_original(state)
+                # Set current project path before applying state so metadata sees it
+                self.current_project_path = path
                 self._apply_project_state(state, extracted_path)
             else:
                 with open(path, 'r', encoding='utf-8') as f:
@@ -1554,8 +1556,9 @@ class MainWindow(QMainWindow):
                         extracted_path = None
                 if not extracted_path:
                     extracted_path = self._maybe_relink_original(state)
+                # Set current project path before applying state so metadata sees it
+                self.current_project_path = path
                 self._apply_project_state(state, extracted_path)
-            self.current_project_path = path
             self._clear_project_dirty()
             self.status_bar.showMessage(f"Project opened: {path}")
         except Exception as e:
