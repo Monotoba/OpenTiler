@@ -87,32 +87,22 @@ class MainWindow(QMainWindow):
         self.create_toolbars()
         self.create_status_bar()
 
+        # Optionally open last project on startup
+        try:
+            if self.config.get_open_last_project_on_startup():
+                recent = self.config.get_recent_projects()
+                if recent:
+                    last = recent[0]
+                    if os.path.exists(last):
+                        self._open_project_path(last)
+        except Exception:
+            pass
+
     def create_menus(self):
-        """Create application menus."""
+        """Create application menus in order: File, Project, Tools, Settings, Help."""
         menubar = self.menuBar()
 
-        # Project menu
-        project_menu = menubar.addMenu("&Project")
-
-        proj_open_action = QAction("&Open Project...", self)
-        proj_open_action.triggered.connect(self.open_project)
-        project_menu.addAction(proj_open_action)
-
-        proj_save_action = QAction("&Save Project", self)
-        proj_save_action.triggered.connect(self.save_project)
-        project_menu.addAction(proj_save_action)
-
-        proj_save_as_action = QAction("Save Project &As...", self)
-        proj_save_as_action.triggered.connect(self.save_project_as)
-        project_menu.addAction(proj_save_as_action)
-
-        project_menu.addSeparator()
-
-        proj_close_action = QAction("&Close Project", self)
-        proj_close_action.triggered.connect(self.close_project)
-        project_menu.addAction(proj_close_action)
-
-        # File menu
+        # File menu (first)
         file_menu = menubar.addMenu("&File")
 
         open_action = QAction("&Open...", self)
@@ -150,7 +140,34 @@ class MainWindow(QMainWindow):
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
 
-        # Tools menu
+        # Project menu (second)
+        project_menu = menubar.addMenu("&Project")
+
+        proj_open_action = QAction("&Open Project...", self)
+        proj_open_action.triggered.connect(self.open_project)
+        project_menu.addAction(proj_open_action)
+
+        # Recent Projects submenu
+        self.recent_projects_menu = project_menu.addMenu("Open &Recent Projects")
+        self.update_recent_projects_menu()
+
+        project_menu.addSeparator()
+
+        proj_save_action = QAction("&Save Project", self)
+        proj_save_action.triggered.connect(self.save_project)
+        project_menu.addAction(proj_save_action)
+
+        proj_save_as_action = QAction("Save Project &As...", self)
+        proj_save_as_action.triggered.connect(self.save_project_as)
+        project_menu.addAction(proj_save_as_action)
+
+        project_menu.addSeparator()
+
+        proj_close_action = QAction("&Close Project", self)
+        proj_close_action.triggered.connect(self.close_project)
+        project_menu.addAction(proj_close_action)
+
+        # Tools menu (third)
         tools_menu = menubar.addMenu("&Tools")
 
         scale_tool_action = QAction("&Scaling Tool", self)
@@ -168,20 +185,20 @@ class MainWindow(QMainWindow):
         scale_calculator_action.triggered.connect(self.show_scale_calculator)
         tools_menu.addAction(scale_calculator_action)
 
-        # Help menu
-        help_menu = menubar.addMenu("&Help")
-
-        about_action = QAction("&About", self)
-        about_action.triggered.connect(self.show_about)
-        help_menu.addAction(about_action)
-
-        # Settings menu
+        # Settings menu (fourth)
         settings_menu = menubar.addMenu("&Settings")
 
         preferences_action = QAction("&Preferences...", self)
         preferences_action.setShortcut(QKeySequence("Ctrl+,"))
         preferences_action.triggered.connect(self.show_settings)
         settings_menu.addAction(preferences_action)
+
+        # Help menu (last)
+        help_menu = menubar.addMenu("&Help")
+
+        about_action = QAction("&About", self)
+        about_action.triggered.connect(self.show_about)
+        help_menu.addAction(about_action)
 
 
     def create_toolbars(self):
@@ -1481,6 +1498,8 @@ class MainWindow(QMainWindow):
             self._save_project_to_path(self.current_project_path)
             self._clear_project_dirty()
             self.status_bar.showMessage(f"Project saved: {self.current_project_path}")
+            self.config.add_recent_project(self.current_project_path)
+            self.update_recent_projects_menu()
             return True
         except Exception as e:
             QMessageBox.critical(self, "Save Project", f"Failed to save project: {str(e)}")
@@ -1506,6 +1525,8 @@ class MainWindow(QMainWindow):
             self.config.set_last_output_dir(os.path.dirname(path))
             self._clear_project_dirty()
             self.status_bar.showMessage(f"Project saved: {path}")
+            self.config.add_recent_project(path)
+            self.update_recent_projects_menu()
             return True
         except Exception as e:
             QMessageBox.critical(self, "Save Project", f"Failed to save project: {str(e)}")
@@ -1555,6 +1576,10 @@ class MainWindow(QMainWindow):
         )
         if not path:
             return
+        self._open_project_path(path)
+
+    def _open_project_path(self, path: str):
+        """Open a project from a given path (no file dialog)."""
         try:
             if path.endswith('.otprjz') or path.endswith('.otprj'):
                 with zipfile.ZipFile(path, 'r') as zf:
@@ -1606,6 +1631,9 @@ class MainWindow(QMainWindow):
                 self._apply_project_state(state, extracted_path)
             self._clear_project_dirty()
             self.status_bar.showMessage(f"Project opened: {path}")
+            # Add to recent projects
+            self.config.add_recent_project(path)
+            self.update_recent_projects_menu()
         except Exception as e:
             QMessageBox.critical(self, "Open Project", f"Failed to open project: {str(e)}")
 
@@ -1691,6 +1719,33 @@ class MainWindow(QMainWindow):
             clear_action = QAction("&Clear Recent Files", self)
             clear_action.triggered.connect(self.clear_recent_files)
             self.recent_menu.addAction(clear_action)
+
+    def update_recent_projects_menu(self):
+        """Update the recent projects submenu under Project menu."""
+        if not hasattr(self, 'recent_projects_menu') or self.recent_projects_menu is None:
+            return
+        self.recent_projects_menu.clear()
+
+        recent_projects = self.config.get_recent_projects()
+        if not recent_projects:
+            no_proj_action = QAction("No recent projects", self)
+            no_proj_action.setEnabled(False)
+            self.recent_projects_menu.addAction(no_proj_action)
+        else:
+            for i, path in enumerate(recent_projects):
+                name = os.path.basename(path)
+                action_text = f"&{i+1} {name}"
+                act = QAction(action_text, self)
+                act.setToolTip(path)
+                act.setData(path)
+                act.triggered.connect(lambda checked, p=path: self._open_project_path(p))
+                self.recent_projects_menu.addAction(act)
+            self.recent_projects_menu.addSeparator()
+            clear_action = QAction("&Clear Recent Projects", self)
+            clear_action.triggered.connect(self.config.clear_recent_projects)
+            # Also refresh menu after clearing
+            clear_action.triggered.connect(self.update_recent_projects_menu)
+            self.recent_projects_menu.addAction(clear_action)
 
     def clear_recent_files(self):
         """Clear all recent files."""

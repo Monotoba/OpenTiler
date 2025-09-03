@@ -162,6 +162,13 @@ class Config:
         if not self.settings.contains("metadata_page_position"):
             self.settings.setValue("metadata_page_position", "first")  # first, last
 
+        # Recent projects settings
+        if not self.settings.contains("recent_projects"):
+            self.settings.setValue("recent_projects", "[]")  # JSON list of paths
+        if not self.settings.contains("max_recent_projects"):
+            self.settings.setValue("max_recent_projects", 10)
+        if not self.settings.contains("open_last_project_on_startup"):
+            self.settings.setValue("open_last_project_on_startup", False)
         # Project storage settings
         if not self.settings.contains("project_original_storage"):
             # reference | sidecar | embedded
@@ -593,6 +600,49 @@ class Config:
         if mode not in ("reference", "sidecar", "embedded"):
             mode = "reference"
         self.set("project_original_storage", mode)
+
+    # Recent projects settings
+    def get_recent_projects(self):
+        projects_json = self.get("recent_projects", "[]")
+        try:
+            projects = json.loads(projects_json)
+            return projects if isinstance(projects, list) else []
+        except (json.JSONDecodeError, TypeError):
+            return []
+
+    def add_recent_project(self, path):
+        projects = self.get_recent_projects()
+        if path in projects:
+            projects.remove(path)
+        projects.insert(0, path)
+        max_count = self.get_max_recent_projects()
+        projects = projects[:max_count]
+        self.set("recent_projects", json.dumps(projects))
+        self.sync()
+
+    def remove_recent_project(self, path):
+        projects = self.get_recent_projects()
+        if path in projects:
+            projects.remove(path)
+            self.set("recent_projects", json.dumps(projects))
+            self.sync()
+
+    def clear_recent_projects(self):
+        self.set("recent_projects", "[]")
+        self.sync()
+
+    def get_max_recent_projects(self):
+        return int(self.get("max_recent_projects", 10))
+
+    def set_max_recent_projects(self, count):
+        self.set("max_recent_projects", int(count))
+
+    def get_open_last_project_on_startup(self):
+        value = self.get("open_last_project_on_startup", False)
+        return str(value).lower() == 'true' if isinstance(value, str) else bool(value)
+
+    def set_open_last_project_on_startup(self, enabled):
+        self.set("open_last_project_on_startup", bool(enabled))
 
 
 # Global configuration instance

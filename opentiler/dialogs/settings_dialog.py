@@ -90,6 +90,18 @@ class SettingsDialog(QDialog):
         self.max_recent_spin.setToolTip("How many recent files to list in the menu.")
         layout.addRow("Max Recent Files:", self.max_recent_spin)
 
+        # Max recent projects
+        self.max_recent_projects_spin = QSpinBox()
+        self.max_recent_projects_spin.setRange(1, 50)
+        self.max_recent_projects_spin.setSuffix(" projects")
+        self.max_recent_projects_spin.setToolTip("How many recent projects to list in the Project menu.")
+        layout.addRow("Max Recent Projects:", self.max_recent_projects_spin)
+
+        # Open last project on startup
+        self.open_last_project_check = QCheckBox("Open last project on start up.")
+        self.open_last_project_check.setToolTip("Load the most recently opened project automatically when the app starts.")
+        layout.addRow(self.open_last_project_check)
+
         # Default input directory
         input_dir_layout = QHBoxLayout()
         self.input_dir_edit = QLineEdit()
@@ -447,6 +459,8 @@ class SettingsDialog(QDialog):
 
         self.page_size_combo.setCurrentText(config.get_default_page_size())
         self.max_recent_spin.setValue(config.get_max_recent_files())
+        self.max_recent_projects_spin.setValue(config.get_max_recent_projects())
+        self.open_last_project_check.setChecked(config.get_open_last_project_on_startup())
 
         # Tiling settings
         self.gutter_size_spin.setValue(config.get_gutter_size_mm())
@@ -528,6 +542,8 @@ class SettingsDialog(QDialog):
         config.set_default_dpi(self.dpi_combo.currentData())
         config.set_default_page_size(self.page_size_combo.currentText())
         config.set_max_recent_files(self.max_recent_spin.value())
+        config.set_max_recent_projects(self.max_recent_projects_spin.value())
+        config.set_open_last_project_on_startup(self.open_last_project_check.isChecked())
 
         # Tiling settings
         config.set_gutter_size_mm(self.gutter_size_spin.value())
