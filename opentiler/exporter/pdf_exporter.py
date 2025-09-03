@@ -315,6 +315,8 @@ class PDFExporter(BaseExporter):
             # Add source pixmap and page grid for plan view
             doc_info['source_pixmap'] = source_pixmap
             doc_info['page_grid'] = page_grid
+            # Include project name if provided; else fall back to document name
+            doc_info['project_name'] = kwargs.get('project_name', document_name)
 
             # Generate metadata page sized to the printable rect
             page_layout = pdf_writer.pageLayout()

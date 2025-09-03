@@ -12,8 +12,9 @@ class MetadataPageGenerator:
     """Generates metadata summary pages for tile exports."""
 
     def __init__(self):
-        self.page_size = QSize(2480, 4200)  # Extended A4 at 300 DPI for plan view
-        self.margin = 100  # Margin in pixels
+        self.page_size = QSize(2480, 4200)  # Default portrait
+        self.margin = 100  # Base margin (scaled per page)
+        self._scale = 1.0
 
     def generate_metadata_page(self, document_info: dict, page_size: QSize = None) -> QPixmap:
         """
@@ -28,6 +29,10 @@ class MetadataPageGenerator:
         """
         if page_size:
             self.page_size = page_size
+
+        # Scale relative to A4 @300DPI (3508 px height)
+        self._scale = max(0.5, min(3.0, self.page_size.height() / 3508.0))
+        self.margin = int(100 * self._scale)
 
         # Create pixmap
         pixmap = QPixmap(self.page_size)
@@ -55,7 +60,9 @@ class MetadataPageGenerator:
 
         # Right-justified brand label
         brand_text = "OpenTiler"
-        brand_font = QFont("Arial", 16, QFont.Bold)
+        brand_font = QFont("Arial")
+        brand_font.setBold(True)
+        brand_font.setPixelSize(max(14, int(28 * self._scale)))
         painter.setFont(brand_font)
         painter.setPen(QColor(0, 0, 0))
         fm = painter.fontMetrics()
@@ -67,7 +74,9 @@ class MetadataPageGenerator:
 
         # Project name as page title (left/top)
         title_text = info.get('project_name') or info.get('document_name') or 'Untitled Project'
-        title_font = QFont("Arial", 28, QFont.Bold)
+        title_font = QFont("Arial")
+        title_font.setBold(True)
+        title_font.setPixelSize(max(24, int(64 * self._scale)))
         painter.setFont(title_font)
         painter.setPen(QColor(0, 0, 0))
         tfm = painter.fontMetrics()
@@ -77,7 +86,8 @@ class MetadataPageGenerator:
         painter.drawText(title_x, title_y, title_text)
 
         # Subtitle centered: generation timestamp
-        subtitle_font = QFont("Arial", 14)
+        subtitle_font = QFont("Arial")
+        subtitle_font.setPixelSize(max(12, int(26 * self._scale)))
         painter.setFont(subtitle_font)
         painter.setPen(QColor(100, 100, 100))
         subtitle = f"Generated on {datetime.now().strftime('%Y-%m-%d at %H:%M:%S')}"
@@ -87,21 +97,18 @@ class MetadataPageGenerator:
         sub_x = (page_w - sub_w) // 2
         # Place below the larger of brand/title baselines
         baseline_y = max(brand_y, title_y)
-        sub_y = baseline_y + 20 + sub_h
+        sub_y = baseline_y + max(12, int(16 * self._scale)) + sub_h
         painter.drawText(sub_x, sub_y, subtitle)
 
         # Separator line below header block
         painter.setPen(QPen(QColor(200, 200, 200), 2))
-        sep_y = sub_y + 20
+        sep_y = sub_y + max(12, int(16 * self._scale))
         painter.drawLine(self.margin, sep_y, page_w - self.margin, sep_y)
 
-    def _draw_document_info(self, painter: QPainter, info: dict):
-        """Draw document information section."""
-        y = self.margin + 150
-
-        # Section header
+    def _draw_document_info(self, painter: QPainter, info: dict, y: int) -> int:
+        """Draw document information section, return new y."""
         self._draw_section_header(painter, "Document Information", y)
-        y += 50
+        y += max(28, int(36 * self._scale))
 
         # Document details
         details = [
@@ -114,14 +121,12 @@ class MetadataPageGenerator:
         ]
 
         y = self._draw_details_list(painter, details, y)
+        return y
 
-    def _draw_scale_info(self, painter: QPainter, info: dict):
-        """Draw scaling information section."""
-        y = self.margin + 350
-
-        # Section header
+    def _draw_scale_info(self, painter: QPainter, info: dict, y: int) -> int:
+        """Draw scaling information section, return new y."""
         self._draw_section_header(painter, "Scale Information", y)
-        y += 50
+        y += max(28, int(36 * self._scale))
 
         # Scale details
         scale_factor = info.get('scale_factor', 1.0)
@@ -135,14 +140,12 @@ class MetadataPageGenerator:
         ]
 
         y = self._draw_details_list(painter, details, y)
+        return y
 
-    def _draw_tiling_info(self, painter: QPainter, info: dict):
-        """Draw tiling information section."""
-        y = self.margin + 550
-
-        # Section header
+    def _draw_tiling_info(self, painter: QPainter, info: dict, y: int) -> int:
+        """Draw tiling information section, return new y."""
         self._draw_section_header(painter, "Tiling Information", y)
-        y += 50
+        y += max(28, int(36 * self._scale))
 
         # Tiling details
         details = [
@@ -155,14 +158,12 @@ class MetadataPageGenerator:
         ]
 
         y = self._draw_details_list(painter, details, y)
+        return y
 
-    def _draw_export_info(self, painter: QPainter, info: dict):
-        """Draw export information section."""
-        y = self.margin + 750
-
-        # Section header
+    def _draw_export_info(self, painter: QPainter, info: dict, y: int) -> int:
+        """Draw export information section, return new y."""
         self._draw_section_header(painter, "Export Information", y)
-        y += 50
+        y += max(28, int(36 * self._scale))
 
         # Export details
         details = [
@@ -174,6 +175,7 @@ class MetadataPageGenerator:
         ]
 
         y = self._draw_details_list(painter, details, y)
+        return y
 
     def _draw_plan_view(self, painter: QPainter, info: dict):
         """Draw a scaled-down plan view with page layout overlay."""
@@ -338,8 +340,8 @@ class MetadataPageGenerator:
                     # Draw page number
                     painter.setPen(QPen(QColor(255, 255, 255), 2))
                     font = painter.font()
-                    font.setPointSize(max(8, int(min(page_width, page_height) / 20)))  # Scale font with page size
                     font.setBold(True)
+                    font.setPixelSize(max(12, int(32 * self._scale)))
                     painter.setFont(font)
 
                     # Calculate text position (center of page)
@@ -349,7 +351,7 @@ class MetadataPageGenerator:
                     text_y = page_y + (page_height + text_rect.height()) / 2
 
                     # Draw text background for visibility
-                    bg_rect = text_rect.adjusted(-3, -1, 3, 1)
+                    bg_rect = text_rect.adjusted(-int(6 * self._scale), -int(4 * self._scale), int(6 * self._scale), int(4 * self._scale))
                     bg_rect.moveCenter(QPoint(int(text_x + text_rect.width()/2), int(text_y - text_rect.height()/2)))
                     painter.fillRect(bg_rect, QColor(0, 0, 0, 150))
 
@@ -368,7 +370,8 @@ class MetadataPageGenerator:
 
     def _draw_plan_view_legend(self, painter: QPainter, y: int):
         """Draw legend for the plan view."""
-        legend_font = QFont("Arial", 9)
+        legend_font = QFont("Arial")
+        legend_font.setPixelSize(max(10, int(18 * self._scale)))
         painter.setFont(legend_font)
 
         x = self.margin
@@ -396,7 +399,8 @@ class MetadataPageGenerator:
         y = self.page_size.height() - self.margin - 80
 
         # Instructions
-        instruction_font = QFont("Arial", 12)
+        instruction_font = QFont("Arial")
+        instruction_font.setPixelSize(max(12, int(20 * self._scale)))
         painter.setFont(instruction_font)
         painter.setPen(QColor(100, 100, 100))
 
@@ -410,9 +414,10 @@ class MetadataPageGenerator:
             "6. Use the page numbers (P1, P2, etc.) to ensure correct positioning"
         ]
 
+        line_step = max(14, int(26 * self._scale))
         for instruction in instructions:
             painter.drawText(self.margin, y, instruction)
-            y += 20
+            y += line_step
 
         # Copyright
         y += 20
@@ -420,7 +425,9 @@ class MetadataPageGenerator:
 
     def _draw_section_header(self, painter: QPainter, title: str, y: int):
         """Draw a section header."""
-        header_font = QFont("Arial", 16, QFont.Bold)
+        header_font = QFont("Arial")
+        header_font.setBold(True)
+        header_font.setPixelSize(max(16, int(28 * self._scale)))
         painter.setFont(header_font)
         painter.setPen(QColor(0, 0, 0))
         painter.drawText(self.margin, y, title)
@@ -432,10 +439,12 @@ class MetadataPageGenerator:
 
     def _draw_details_list(self, painter: QPainter, details: list, start_y: int) -> int:
         """Draw a list of detail items."""
-        detail_font = QFont("Arial", 11)
+        detail_font = QFont("Arial")
+        detail_font.setPixelSize(max(12, int(20 * self._scale)))
         painter.setFont(detail_font)
 
         y = start_y
+        line_step = max(16, int(28 * self._scale))
         for label, value in details:
             # Draw label
             painter.setPen(QColor(80, 80, 80))
@@ -446,7 +455,7 @@ class MetadataPageGenerator:
             label_width = painter.fontMetrics().boundingRect(label).width()
             painter.drawText(self.margin + label_width + 20, y, str(value))
 
-            y += 25
+            y += line_step
 
         return y + 20
 

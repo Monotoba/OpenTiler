@@ -497,7 +497,7 @@ class MainWindow(QMainWindow):
 
     def print_tiles(self):
         """Print the current document tiles directly to printer."""
-            get_logger('printing').debug("print_tiles() called")
+        get_logger('printing').debug("print_tiles() called")
 
         # Prevent multiple simultaneous print operations
         if hasattr(self, '_printing_in_progress') and self._printing_in_progress:
