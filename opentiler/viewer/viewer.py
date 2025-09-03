@@ -96,7 +96,7 @@ class ClickableLabel(QLabel):
         self.parent_viewer = None
         self.dragging = False
         self.dragging_index = None  # 0 or 1
-        self.hit_radius = 10  # pixels in display space
+        self.hit_radius = 16  # pixels in display space
 
     def set_parent_viewer(self, viewer):
         """Set reference to parent viewer for panning."""
@@ -106,8 +106,8 @@ class ClickableLabel(QLabel):
         """Handle mouse press events."""
         if event.button() == Qt.LeftButton and self.parent_viewer and self.parent_viewer.point_selection_mode:
             mods = event.modifiers()
-            # If ALT or CTRL held and two points exist, try to start dragging nearest endpoint
-            if (mods & (Qt.AltModifier | Qt.ControlModifier)) and len(self.parent_viewer.selected_points) >= 2:
+            # If two points exist, try to start dragging nearest endpoint first (no modifier required)
+            if len(self.parent_viewer.selected_points) >= 2:
                 # Compute display-space endpoints
                 p1 = self.parent_viewer.selected_points[0]
                 p2 = self.parent_viewer.selected_points[1]
@@ -130,10 +130,12 @@ class ClickableLabel(QLabel):
                 if within(click_disp, p1_disp, self.hit_radius):
                     self.dragging = True
                     self.dragging_index = 0
+                    self.setCursor(QCursor(Qt.ClosedHandCursor))
                     event.accept(); return
                 if within(click_disp, p2_disp, self.hit_radius):
                     self.dragging = True
                     self.dragging_index = 1
+                    self.setCursor(QCursor(Qt.ClosedHandCursor))
                     event.accept(); return
             # Otherwise treat as point selection click
             self.clicked.emit(event.pos())
@@ -905,6 +907,11 @@ class DocumentViewer(QWidget):
         if event.button() == Qt.LeftButton and self.dragging:
             self.dragging = False
             self.dragging_index = None
+            # Restore cursor
+            if self.parent_viewer and self.parent_viewer.point_selection_mode:
+                self.setCursor(QCursor(Qt.CrossCursor))
+            else:
+                self.unsetCursor()
             event.accept(); return
         super().mouseReleaseEvent(event)
         return super().eventFilter(obj, event)
