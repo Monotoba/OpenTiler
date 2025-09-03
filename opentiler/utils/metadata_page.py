@@ -180,9 +180,10 @@ class MetadataPageGenerator:
         try:
             # Place the plan view in the lower half of the page
             # Reserve space near the bottom for the footer and a small legend
-            lower_half_y = self.page_size.height() // 2
-            footer_reserved = 160  # pixels reserved for footer and spacing
-            y = lower_half_y
+            # Position plan view higher on the page (around 38% from top)
+            start_fraction = 0.38
+            y = int(self.page_size.height() * start_fraction)
+            footer_reserved = 140  # pixels reserved for footer and spacing
 
             # Section header
             self._draw_section_header(painter, "Page Assembly Map", y)

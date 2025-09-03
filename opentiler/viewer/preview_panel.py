@@ -276,8 +276,21 @@ class PreviewPanel(QWidget):
             doc_info['source_pixmap'] = source_pixmap
             doc_info['page_grid'] = page_grid
 
-            # Generate metadata page (A4 size for preview)
-            metadata_pixmap = metadata_generator.generate_metadata_page(doc_info)
+            # Generate metadata page sized to selected page size and orientation
+            from ..utils.helpers import get_page_size_mm
+            from ..settings.config import config as app_config
+            page_size_name = app_config.get_default_page_size()
+            page_w_mm, page_h_mm = get_page_size_mm(page_size_name)
+            orientation = app_config.get_page_orientation()
+            if orientation == 'landscape' and page_h_mm > page_w_mm:
+                page_w_mm, page_h_mm = page_h_mm, page_w_mm
+            elif orientation == 'portrait' and page_w_mm > page_h_mm:
+                page_w_mm, page_h_mm = page_h_mm, page_w_mm
+            # Use 300 DPI equivalent: 11.811 px/mm
+            px_per_mm = 11.811
+            meta_w_px = int(page_w_mm * px_per_mm)
+            meta_h_px = int(page_h_mm * px_per_mm)
+            metadata_pixmap = metadata_generator.generate_metadata_page(doc_info, QSize(meta_w_px, meta_h_px))
 
             # Create thumbnail widget
             thumbnail_widget = QFrame()
