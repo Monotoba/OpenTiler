@@ -62,9 +62,10 @@ class MainWindow(QMainWindow):
         # Create document viewer
         self.document_viewer = DocumentViewer()
         main_splitter.addWidget(self.document_viewer)
-        # Mark project dirty when user selects points
+        # Mark project dirty when user selects or drags points
         try:
             self.document_viewer.point_selected.connect(lambda *_: self._mark_project_dirty())
+            self.document_viewer.points_updated.connect(lambda *_: self._mark_project_dirty())
         except Exception:
             pass
 
@@ -994,6 +995,11 @@ class MainWindow(QMainWindow):
             self.scaling_dialog.scale_applied.connect(self.on_scale_applied)
             # Connect point selection from viewer to dialog
             self.document_viewer.point_selected.connect(self.scaling_dialog.on_point_selected)
+            # Connect point dragging updates
+            try:
+                self.document_viewer.points_updated.connect(self.scaling_dialog.on_point_moved)
+            except Exception:
+                pass
 
         # Enable point selection mode in the document viewer
         self.document_viewer.set_point_selection_mode(True)

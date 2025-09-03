@@ -3,15 +3,15 @@
   "document_path": "/home/randy/projects/python-3/OpenTiler/projects/.opentiler_cache/Miss_Bikini-RCM-10-69_407_oz6546.pdf",
   "document_name": "Miss_Bikini-RCM-10-69_407_oz6546.pdf",
   "viewer": {
-    "scale_factor": 0.15354940849237192,
+    "scale_factor": 0.15277096324190526,
     "selected_points": [
       [
-        250.24414062499994,
-        524.9023437499999
+        251.46484374999994,
+        520.0195312499999
       ],
       [
-        3558.349609374999,
-        567.6269531249999
+        3576.6601562499995,
+        502.9296874999999
       ]
     ],
     "measurement_text": "508.0 mm",
@@ -51,6 +51,11 @@
     "scale_line_print": false,
     "scale_text_display": false,
     "scale_text_print": false,
+    "datum_line_display": true,
+    "datum_line_print": false,
+    "datum_line_color": "#FF0000",
+    "datum_line_style": "dash",
+    "datum_line_width_px": 2,
     "include_metadata_page": true,
     "metadata_page_position": "first"
   }

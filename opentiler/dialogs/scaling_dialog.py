@@ -268,6 +268,16 @@ class ScalingDialog(QDialog):
             self.set_point1(x, y)
             self.point_count = 1
 
+    def on_point_moved(self, x, y, index):
+        """Update point coordinates when an endpoint is dragged."""
+        if index == 0:
+            self.point1 = (x, y)
+            self.point1_label.setText(f"({x:.1f}, {y:.1f})")
+        elif index == 1:
+            self.point2 = (x, y)
+            self.point2_label.setText(f"({x:.1f}, {y:.1f})")
+        self.update_distance()
+
     def clear_points(self):
         """Clear the selected points."""
         self.point1 = None
