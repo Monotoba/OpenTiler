@@ -137,8 +137,24 @@ class ClickableLabel(QLabel):
                     self.dragging_index = 1
                     self.setCursor(QCursor(Qt.ClosedHandCursor))
                     event.accept(); return
-            # Otherwise treat as point selection click
-            self.clicked.emit(event.pos())
+            # Otherwise treat as point selection click only if we still need points
+            if len(self.parent_viewer.selected_points) < 2:
+                self.clicked.emit(event.pos())
+            else:
+                # Optional: pick nearest endpoint to start dragging immediately
+                # without requiring precise hit
+                # Compute distance to both and pick if within 2x hit radius
+                try:
+                    d1 = (click_disp.x() - p1_disp.x())**2 + (click_disp.y() - p1_disp.y())**2
+                    d2 = (click_disp.x() - p2_disp.x())**2 + (click_disp.y() - p2_disp.y())**2
+                    r2 = (self.hit_radius * 2) ** 2
+                    if d1 <= r2 or d2 <= r2:
+                        self.dragging = True
+                        self.dragging_index = 0 if d1 <= d2 else 1
+                        self.setCursor(QCursor(Qt.ClosedHandCursor))
+                        event.accept(); return
+                except Exception:
+                    pass
         super().mousePressEvent(event)
 
 
