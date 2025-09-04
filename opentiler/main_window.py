@@ -656,6 +656,25 @@ class MainWindow(QMainWindow):
                 # Bottom (inset by 1px)
                 painter.fillRect(QRect(ix, iy + ih - 2, iw - 1, 1), QColor(0, 100, 255))
 
+            # Additional reference box: 10 mm (1 cm) inside the inner gutter rectangle
+            inset_x = int(round(10.0 * px_per_mm_x))
+            inset_y = int(round(10.0 * px_per_mm_y))
+            ref_x = ix + inset_x
+            ref_y = iy + inset_y
+            ref_w = max(0, iw - 2 * inset_x)
+            ref_h = max(0, ih - 2 * inset_y)
+            if ref_w > 2 and ref_h > 2:
+                # Draw 1px black borders (filled bars) fully inside
+                painter.setOpacity(1.0)
+                # Left
+                painter.fillRect(QRect(ref_x, ref_y, 1, ref_h - 1), Qt.black)
+                # Top
+                painter.fillRect(QRect(ref_x, ref_y, ref_w - 1, 1), Qt.black)
+                # Right (inset)
+                painter.fillRect(QRect(ref_x + ref_w - 2, ref_y, 1, ref_h - 1), Qt.black)
+                # Bottom (inset)
+                painter.fillRect(QRect(ref_x, ref_y + ref_h - 2, ref_w - 1, 1), Qt.black)
+
             # Center crosshair in printable area
             cx = pr_px.width() // 2
             cy = pr_px.height() // 2
