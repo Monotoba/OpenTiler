@@ -579,7 +579,13 @@ class MainWindow(QMainWindow):
                     QMarginsF(0, 0, 0, 0),
                     QPageLayout.Millimeter
                 ))
-                self._print_tiles_to_printer(printer)
+                # TEMP: Debug printable vs gutter mapping — print diagnostic page only
+                try:
+                    self._print_debug_layout_page(printer)
+                finally:
+                    pass
+                # To restore normal printing, replace the call above with:
+                # self._print_tiles_to_printer(printer)
             else:
                 get_logger('printing').info("Print dialog cancelled")
                 self._printing_in_progress = False
@@ -591,6 +597,82 @@ class MainWindow(QMainWindow):
         finally:
             self._printing_in_progress = False
             get_logger('printing').debug("print_tiles() completed")
+
+    def _print_debug_layout_page(self, printer):
+        """TEMP: Print a single diagnostic page outlining printable area and gutter mapping.
+
+        Draws:
+        - Printable area (green outline)
+        - Inner gutter-mapped area (blue outline/fill)
+        - Labels with dimensions in mm and px, and derived px/mm per axis
+        """
+        painter = QPainter()
+        if not painter.begin(printer):
+            QMessageBox.critical(self, "Print Error", "Failed to start printing (debug page).")
+            return
+
+        try:
+            layout = printer.pageLayout()
+            pr_px = layout.paintRectPixels(printer.resolution())
+            pr_mm = layout.paintRect(QPageLayout.Millimeter)
+            full_mm = layout.fullRect(QPageLayout.Millimeter)
+
+            # Derive px/mm per axis from printable area
+            px_per_mm_x = pr_px.width() / pr_mm.width() if pr_mm.width() > 0 else 0
+            px_per_mm_y = pr_px.height() / pr_mm.height() if pr_mm.height() > 0 else 0
+
+            # Compute inner (gutter) rect in device pixels using configured gutter (mm)
+            gutter_mm = self.config.get_gutter_size_mm()
+            g_px_x = int(round(gutter_mm * px_per_mm_x))
+            g_px_y = int(round(gutter_mm * px_per_mm_y))
+            dest_inner = QRect(
+                pr_px.x() + g_px_x,
+                pr_px.y() + g_px_y,
+                max(0, pr_px.width() - 2 * g_px_x),
+                max(0, pr_px.height() - 2 * g_px_y),
+            )
+
+            # Clear background (within printable area only)
+            painter.fillRect(pr_px, Qt.white)
+
+            # Draw printable area outline
+            painter.setPen(QPen(QColor(0, 160, 0), 2))
+            painter.setOpacity(1.0)
+            painter.drawRect(pr_px)
+
+            # Draw inner gutter rectangle (blue) with slight transparency
+            painter.setPen(QPen(QColor(0, 100, 255), 2))
+            painter.setOpacity(0.25)
+            painter.fillRect(dest_inner, QColor(0, 100, 255, 40))
+            painter.setOpacity(1.0)
+            painter.drawRect(dest_inner)
+
+            # Center crosshair in printable area
+            cx = pr_px.x() + pr_px.width() // 2
+            cy = pr_px.y() + pr_px.height() // 2
+            painter.setPen(QPen(QColor(120, 120, 120), 1, Qt.DashLine))
+            painter.drawLine(pr_px.x(), cy, pr_px.x() + pr_px.width(), cy)
+            painter.drawLine(cx, pr_px.y(), cx, pr_px.y() + pr_px.height())
+
+            # Labels
+            painter.setPen(QPen(QColor(0, 0, 0), 1))
+            font = painter.font(); font.setPointSize(10); painter.setFont(font)
+            label_lines = [
+                f"Full page (mm): {full_mm.width():.2f} x {full_mm.height():.2f}",
+                f"Printable (mm): {pr_mm.width():.2f} x {pr_mm.height():.2f}",
+                f"Printable (px): {pr_px.width()} x {pr_px.height()} @ {printer.resolution()} DPI",
+                f"px/mm: {px_per_mm_x:.3f} (x), {px_per_mm_y:.3f} (y)",
+                f"Gutter: {gutter_mm:.2f} mm -> {g_px_x} px (x), {g_px_y} px (y)",
+                f"Inner rect (px): x={dest_inner.x()}, y={dest_inner.y()}, w={dest_inner.width()}, h={dest_inner.height()}",
+            ]
+            tx = pr_px.x() + 10
+            ty = pr_px.y() + 20
+            for line in label_lines:
+                painter.drawText(tx, ty, line)
+                ty += 16
+
+        finally:
+            painter.end()
 
     def _print_tiles_to_printer(self, printer):
         """Print tiles to the specified printer."""
