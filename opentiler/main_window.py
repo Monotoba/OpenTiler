@@ -623,20 +623,22 @@ class MainWindow(QMainWindow):
                 max(0, pr_px.height() - 2 * g_px_y),
             )
 
-            # Clear background (within printable area only)
+            # Clear background within printable area
             painter.fillRect(QRect(0, 0, pr_px.width(), pr_px.height()), Qt.white)
+            painter.setRenderHint(QPainter.Antialiasing, False)
 
             # Draw printable area outline
-            painter.setPen(QPen(QColor(0, 160, 0), 2))
+            painter.setPen(QPen(QColor(0, 160, 0), 0))  # cosmetic 1px pen
             painter.setOpacity(1.0)
-            painter.drawRect(QRect(0, 0, pr_px.width(), pr_px.height()))
+            painter.drawRect(QRectF(0.5, 0.5, pr_px.width() - 1, pr_px.height() - 1))
 
             # Draw inner gutter rectangle (blue) with slight transparency
-            painter.setPen(QPen(QColor(0, 100, 255), 2))
+            painter.setPen(QPen(QColor(0, 100, 255), 0))  # cosmetic 1px pen
             painter.setOpacity(0.25)
             painter.fillRect(dest_inner, QColor(0, 100, 255, 40))
             painter.setOpacity(1.0)
-            painter.drawRect(dest_inner)
+            painter.drawRect(QRectF(dest_inner.x() + 0.5, dest_inner.y() + 0.5,
+                                     max(0, dest_inner.width() - 1), max(0, dest_inner.height() - 1)))
 
             # Center crosshair in printable area
             cx = pr_px.width() // 2
@@ -648,6 +650,7 @@ class MainWindow(QMainWindow):
             # Labels
             painter.setPen(QPen(QColor(0, 0, 0), 1))
             font = painter.font(); font.setPointSize(10); painter.setFont(font)
+            fm = painter.fontMetrics()
             label_lines = [
                 f"Full page (mm): {full_mm.width():.2f} x {full_mm.height():.2f}",
                 f"Printable (mm): {pr_mm.width():.2f} x {pr_mm.height():.2f}",
@@ -657,10 +660,10 @@ class MainWindow(QMainWindow):
                 f"Inner rect (px): x={dest_inner.x()}, y={dest_inner.y()}, w={dest_inner.width()}, h={dest_inner.height()}",
             ]
             tx = 10
-            ty = 20
+            ty = fm.ascent() + 6
             for line in label_lines:
                 painter.drawText(tx, ty, line)
-                ty += painter.fontMetrics().height() + 2
+                ty += fm.height() + 2
 
         finally:
             painter.end()
@@ -762,8 +765,9 @@ class MainWindow(QMainWindow):
                     # Draw simple gutter rectangle overlay for visual guidance
                     if self.config.get_gutter_lines_print():
                         painter.save()
-                        painter.setPen(QPen(Qt.blue, 1))
-                        painter.drawRect(dest_inner)
+                        painter.setPen(QPen(Qt.blue, 0))
+                        painter.drawRect(QRectF(dest_inner.x() + 0.5, dest_inner.y() + 0.5,
+                                                max(0, dest_inner.width() - 1), max(0, dest_inner.height() - 1)))
                         painter.restore()
 
                     # Add page information
