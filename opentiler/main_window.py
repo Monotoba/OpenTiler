@@ -617,6 +617,10 @@ class MainWindow(QMainWindow):
             pr_mm = layout.paintRect(QPageLayout.Millimeter)
             full_mm = layout.fullRect(QPageLayout.Millimeter)
 
+            # Map logical coords to printable area pixels
+            painter.setViewport(pr_px)
+            painter.setWindow(0, 0, pr_px.width(), pr_px.height())
+
             # Derive px/mm per axis from printable area
             px_per_mm_x = pr_px.width() / pr_mm.width() if pr_mm.width() > 0 else 0
             px_per_mm_y = pr_px.height() / pr_mm.height() if pr_mm.height() > 0 else 0
@@ -626,19 +630,19 @@ class MainWindow(QMainWindow):
             g_px_x = int(round(gutter_mm * px_per_mm_x))
             g_px_y = int(round(gutter_mm * px_per_mm_y))
             dest_inner = QRect(
-                pr_px.x() + g_px_x,
-                pr_px.y() + g_px_y,
+                g_px_x,
+                g_px_y,
                 max(0, pr_px.width() - 2 * g_px_x),
                 max(0, pr_px.height() - 2 * g_px_y),
             )
 
             # Clear background (within printable area only)
-            painter.fillRect(pr_px, Qt.white)
+            painter.fillRect(QRect(0, 0, pr_px.width(), pr_px.height()), Qt.white)
 
             # Draw printable area outline
             painter.setPen(QPen(QColor(0, 160, 0), 2))
             painter.setOpacity(1.0)
-            painter.drawRect(pr_px)
+            painter.drawRect(QRect(0, 0, pr_px.width(), pr_px.height()))
 
             # Draw inner gutter rectangle (blue) with slight transparency
             painter.setPen(QPen(QColor(0, 100, 255), 2))
@@ -648,11 +652,11 @@ class MainWindow(QMainWindow):
             painter.drawRect(dest_inner)
 
             # Center crosshair in printable area
-            cx = pr_px.x() + pr_px.width() // 2
-            cy = pr_px.y() + pr_px.height() // 2
+            cx = pr_px.width() // 2
+            cy = pr_px.height() // 2
             painter.setPen(QPen(QColor(120, 120, 120), 1, Qt.DashLine))
-            painter.drawLine(pr_px.x(), cy, pr_px.x() + pr_px.width(), cy)
-            painter.drawLine(cx, pr_px.y(), cx, pr_px.y() + pr_px.height())
+            painter.drawLine(0, cy, pr_px.width(), cy)
+            painter.drawLine(cx, 0, cx, pr_px.height())
 
             # Labels
             painter.setPen(QPen(QColor(0, 0, 0), 1))
@@ -665,11 +669,11 @@ class MainWindow(QMainWindow):
                 f"Gutter: {gutter_mm:.2f} mm -> {g_px_x} px (x), {g_px_y} px (y)",
                 f"Inner rect (px): x={dest_inner.x()}, y={dest_inner.y()}, w={dest_inner.width()}, h={dest_inner.height()}",
             ]
-            tx = pr_px.x() + 10
-            ty = pr_px.y() + 20
+            tx = 10
+            ty = 20
             for line in label_lines:
                 painter.drawText(tx, ty, line)
-                ty += 16
+                ty += painter.fontMetrics().height() + 2
 
         finally:
             painter.end()
@@ -695,15 +699,19 @@ class MainWindow(QMainWindow):
 
             print("DEBUG: Painter started successfully")
 
-            # Helper to (re)compute printable rect
-            def printable_rect():
+            # Helper to (re)compute printable rect and apply viewport/window mapping
+            def apply_printable_mapping():
                 pl = printer.pageLayout()
-                return pl.paintRectPixels(printer.resolution())
+                pr_px = pl.paintRectPixels(printer.resolution())
+                # Map logical coords 0..w,h to device pixels within printable area
+                painter.setViewport(pr_px)
+                painter.setWindow(0, 0, pr_px.width(), pr_px.height())
+                return pr_px
 
             # Capture page size to reuse when switching orientation
             page_layout = printer.pageLayout()
             page_size = page_layout.pageSize()
-            page_rect = printable_rect()
+            page_rect = apply_printable_mapping()
             print(f"DEBUG: Initial print page rect: {page_rect.width()}x{page_rect.height()}")
 
             # Check if metadata page should be included
@@ -719,7 +727,7 @@ class MainWindow(QMainWindow):
             if include_metadata and metadata_position == "first":
                 print("DEBUG: Printing metadata page first (portrait)")
                 # Orientation for first page already set by caller
-                page_rect = printable_rect()
+                page_rect = apply_printable_mapping()
                 self._print_metadata_page(painter, printer, source_pixmap, page_grid, page_rect)
                 page_count += 1
                 # Prepare tile orientation to apply on next newPage in loop
@@ -741,7 +749,7 @@ class MainWindow(QMainWindow):
                         printer.setPageLayout(QPageLayout(page_size, tile_orientation, QMarginsF(0, 0, 0, 0), QPageLayout.Millimeter))
                     except Exception:
                         pass
-                    page_rect = printable_rect()
+                    page_rect = apply_printable_mapping()
 
                 # Create a full tile pixmap including gutters and clip to printable area
                 tile_pixmap = self._create_tile_pixmap(source_pixmap, page)
@@ -770,8 +778,8 @@ class MainWindow(QMainWindow):
                                       max(0, tile_pixmap.height() - 2 * g_tile))
 
                     # Destination inner rect on paper (leave mm gutters on page)
-                    dest_inner = QRect(page_rect.x() + g_px_x,
-                                       page_rect.y() + g_px_y,
+                    dest_inner = QRect(g_px_x,
+                                       g_px_y,
                                        max(0, page_rect.width() - 2 * g_px_x),
                                        max(0, page_rect.height() - 2 * g_px_y))
 
@@ -801,7 +809,7 @@ class MainWindow(QMainWindow):
                     printer.setPageLayout(QPageLayout(page_size, QPageLayout.Portrait, QMarginsF(0, 0, 0, 0), QPageLayout.Millimeter))
                 except Exception:
                     pass
-                page_rect = printable_rect()
+                page_rect = apply_printable_mapping()
                 self._print_metadata_page(painter, printer, source_pixmap, page_grid, page_rect)
                 page_count += 1
 
@@ -885,8 +893,8 @@ class MainWindow(QMainWindow):
                 print(f"DEBUG: Generated metadata page {metadata_pixmap.width()}x{metadata_pixmap.height()}")
                 print(f"DEBUG: Print page size: {page_rect.width()}x{page_rect.height()}")
 
-                # Draw metadata at the printable rect origin (already sized)
-                painter.drawPixmap(page_rect.x(), page_rect.y(), metadata_pixmap)
+                # Draw metadata at the printable-area origin (already sized)
+                painter.drawPixmap(0, 0, metadata_pixmap)
                 print("DEBUG: Metadata page printed at printable area size")
             else:
                 print("ERROR: Failed to generate metadata page pixmap")
