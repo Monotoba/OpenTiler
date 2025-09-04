@@ -240,9 +240,51 @@ class PreviewPanel(QWidget):
 
         painter.end()
 
-        # Add crop marks, page info, and scale line/text based on settings
-        page_pixmap = self._add_page_decorations(page_pixmap, page_number, gutter, page, scale_info, scale_factor)
-        
+        # Compute calibrated inner rect for display-only (matches printed coverage)
+        inner = layout['printable_rect']
+        try:
+            from ..settings.config import config as app_config
+            ori = 'landscape' if float(width) >= float(height) else 'portrait'
+            h_mm, v_mm = app_config.get_print_calibration(ori)
+            calib_x_px = max(0, int(round(float(h_mm) / float(scale_factor) if scale_factor and scale_factor > 0 else 0)))
+            calib_y_px = max(0, int(round(float(v_mm) / float(scale_factor) if scale_factor and scale_factor > 0 else 0)))
+        except Exception:
+            calib_x_px = 0
+            calib_y_px = 0
+
+        cal_inner_rect = QRect(
+            inner.x(),
+            inner.y(),
+            max(1, inner.width() - calib_x_px),
+            max(1, inner.height() - calib_y_px),
+        )
+
+        # Crop a display-only pixmap to the calibrated inner area so tiles butt at marks in preview
+        display_pixmap = page_pixmap.copy(cal_inner_rect)
+
+        # Draw registration marks at corners of the display pixmap to match print
+        try:
+            from ..settings.config import config as app_config
+            if app_config.get_reg_marks_print():
+                px_per_mm = (1.0 / float(scale_factor)) if scale_factor and scale_factor > 0 else 2.0
+                diameter_mm = app_config.get_reg_mark_diameter_mm()
+                cross_mm = app_config.get_reg_mark_crosshair_mm()
+                radius_px = max(1, int(round((diameter_mm * px_per_mm) / 2.0)))
+                cross_len_px = max(1, int(round(cross_mm * px_per_mm)))
+
+                dp = QPixmap(display_pixmap)
+                dp_p = QPainter(dp)
+                dp_p.setPen(QPen(QColor(0, 0, 0), 1))
+                w2 = dp.width(); h2 = dp.height()
+                for cx, cy in [(0, 0), (w2 - 1, 0), (0, h2 - 1), (w2 - 1, h2 - 1)]:
+                    dp_p.drawEllipse(cx - radius_px, cy - radius_px, radius_px * 2, radius_px * 2)
+                    dp_p.drawLine(cx - cross_len_px, cy, cx + cross_len_px, cy)
+                    dp_p.drawLine(cx, cy - cross_len_px, cx, cy + cross_len_px)
+                dp_p.end()
+                display_pixmap = dp
+        except Exception:
+            pass
+
         # Create thumbnail widget
         thumbnail_widget = QFrame()
         thumbnail_widget.setFrameStyle(QFrame.Box)
@@ -261,7 +303,7 @@ class PreviewPanel(QWidget):
         # Scale thumbnail to fit preview area while maintaining aspect ratio
         max_width = 150
         max_height = 200
-        scaled_thumbnail = page_pixmap.scaled(
+        scaled_thumbnail = display_pixmap.scaled(
             max_width, max_height,
             Qt.KeepAspectRatio,
             Qt.SmoothTransformation
@@ -269,7 +311,7 @@ class PreviewPanel(QWidget):
 
         # Create clickable thumbnail that opens in floating viewer
         thumbnail_label = ClickablePageThumbnail(
-            page_pixmap,  # Full-size page for viewer
+            page_pixmap,  # Full-size page for viewer (retain full for detail view)
             page_number,
             page,  # Page info dict
             self,
