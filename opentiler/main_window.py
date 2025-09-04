@@ -563,22 +563,9 @@ class MainWindow(QMainWindow):
             get_logger('printing').debug("Showing print dialog")
             if print_dialog.exec() == QPrintDialog.Accepted:
                 get_logger('printing').debug("Print dialog accepted; starting print")
-                # Decide first page orientation: metadata-first => Portrait; else tile orientation
+                # Do not override user-selected page size/orientation after dialog
                 include_metadata = self.config.get_include_metadata_page()
                 metadata_position = self.config.get_metadata_page_position()
-                first_orientation = (QPageLayout.Portrait if (include_metadata and metadata_position == "first")
-                                     else self._determine_print_orientation())
-                printer.setPageSize(page_size)
-                try:
-                    printer.setPageOrientation(first_orientation)
-                except Exception:
-                    pass
-                printer.setPageLayout(QPageLayout(
-                    page_size,
-                    first_orientation,
-                    QMarginsF(0, 0, 0, 0),
-                    QPageLayout.Millimeter
-                ))
                 # TEMP: Debug printable vs gutter mapping — print diagnostic page only
                 try:
                     self._print_debug_layout_page(printer)
@@ -726,16 +713,9 @@ class MainWindow(QMainWindow):
             # Add metadata page at the beginning (portrait) if configured
             if include_metadata and metadata_position == "first":
                 print("DEBUG: Printing metadata page first (portrait)")
-                # Orientation for first page already set by caller
                 page_rect = apply_printable_mapping()
                 self._print_metadata_page(painter, printer, source_pixmap, page_grid, page_rect)
                 page_count += 1
-                # Prepare tile orientation to apply on next newPage in loop
-                tile_orientation = self._determine_print_orientation()
-                try:
-                    printer.setPageLayout(QPageLayout(page_size, tile_orientation, QMarginsF(0, 0, 0, 0), QPageLayout.Millimeter))
-                except Exception:
-                    pass
 
             # Print each tile - align with exporter/preview logic
             for i, page in enumerate(page_grid):
@@ -743,12 +723,6 @@ class MainWindow(QMainWindow):
 
                 if page_count > 0 or i > 0:
                     printer.newPage()  # Start new page for each tile (or after metadata page)
-                    # Ensure tile orientation remains applied
-                    tile_orientation = self._determine_print_orientation()
-                    try:
-                        printer.setPageLayout(QPageLayout(page_size, tile_orientation, QMarginsF(0, 0, 0, 0), QPageLayout.Millimeter))
-                    except Exception:
-                        pass
                     page_rect = apply_printable_mapping()
 
                 # Create a full tile pixmap including gutters and clip to printable area
@@ -805,10 +779,6 @@ class MainWindow(QMainWindow):
             if include_metadata and metadata_position == "last":
                 print("DEBUG: Printing metadata page last (portrait)")
                 printer.newPage()
-                try:
-                    printer.setPageLayout(QPageLayout(page_size, QPageLayout.Portrait, QMarginsF(0, 0, 0, 0), QPageLayout.Millimeter))
-                except Exception:
-                    pass
                 page_rect = apply_printable_mapping()
                 self._print_metadata_page(painter, printer, source_pixmap, page_grid, page_rect)
                 page_count += 1
