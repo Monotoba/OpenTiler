@@ -1478,8 +1478,9 @@ class MainWindow(QMainWindow):
             painter.drawLine(0, cy, w, cy)
             painter.drawLine(cx, 0, cx, h)
 
-            # Right-edge ladder: ticks every 1 mm, labels only every 5 mm (larger, bold), ample padding
-            ladder_mm = 15
+            # Right-edge ladder: ticks every 1 mm
+            # Labels: 25, 20, 15, 10, 5, 0 (stair-stepped vertically with leader lines)
+            ladder_mm = 25
             base_x = w - 2  # inset from right by 1px
             painter.setPen(QPen(Qt.black, 0))
             tick_long = int(round(6.0 * px_per_mm_y))
@@ -1488,19 +1489,28 @@ class MainWindow(QMainWindow):
             painter.setFont(ladder_font)
             ladder_fm = painter.fontMetrics()
             label_pad = 4
+            # Draw ticks
             for mm in range(0, ladder_mm + 1):
                 x = base_x - int(round(mm * px_per_mm_x))
                 tick = tick_long if mm % 5 == 0 else tick_short
                 painter.drawLine(x, cy - tick, x, cy + tick)
-                if mm % 5 == 0:
-                    label = f"{mm}"
-                    lw = ladder_fm.horizontalAdvance(label)
-                    lh = ladder_fm.height()
-                    bx = max(0, x - lw - (label_pad + 2))
-                    by = max(0, cy - tick - lh - (label_pad // 2))
-                    painter.fillRect(QRect(bx, by, lw + label_pad + 2, lh + label_pad // 2), Qt.white)
-                    painter.setPen(Qt.black)
-                    painter.drawText(bx + label_pad // 2, cy - tick - 4, label)
+            # Stair-step labels with leader lines for 25,20,15,10,5,0
+            stair_vals = [25, 20, 15, 10, 5, 0]
+            for idx, mm in enumerate(stair_vals):
+                x = base_x - int(round(mm * px_per_mm_x))
+                label = f"{mm}"
+                lw = ladder_fm.horizontalAdvance(label)
+                lh = ladder_fm.height()
+                # Step up each subsequent label to avoid overlap
+                step_dy = idx * (lh + 6)
+                by = max(0, cy - tick_long - lh - 8 - step_dy)
+                bx = max(0, x - lw - (label_pad + 2) - int(round(2.0 * px_per_mm_x)))
+                # Background box
+                painter.fillRect(QRect(bx, by, lw + label_pad + 2, lh + label_pad // 2), Qt.white)
+                painter.setPen(Qt.black)
+                painter.drawText(bx + label_pad // 2, by + ladder_fm.ascent(), label)
+                # Leader line from tick top to label box right edge
+                painter.drawLine(x, cy - tick_long, bx + lw + label_pad + 2, by + ladder_fm.ascent())
             # Mapping note for right ladder (smaller font)
             painter.setFont(sub_font); sfm = painter.fontMetrics()
             right_note = f"Right ladder → {section_name} → Horizontal (right)"
@@ -1513,19 +1523,25 @@ class MainWindow(QMainWindow):
             painter.drawText(max(0, base_x - int(round(40 * px_per_mm_x)) - rnw), max(sfm.height() + 2, cy - 40), right_note)
 
             # Bottom-edge vertical ladder (ticks every 1 mm from bottom, at mid-width)
+            # Bottom ladder ticks
             for mm in range(0, ladder_mm + 1):
                 y = h - 2 - int(round(mm * px_per_mm_y))
                 tick = tick_long if mm % 5 == 0 else tick_short
                 painter.drawLine(cx - tick, y, cx + tick, y)
-                if mm % 5 == 0:
-                    label = f"{mm}"
-                    lw = ladder_fm.horizontalAdvance(label)
-                    lh = ladder_fm.height()
-                    bx = min(w - lw - (label_pad + 2), cx + tick + 6)
-                    by = max(0, y - lh - (label_pad // 2))
-                    painter.fillRect(QRect(bx, by, lw + label_pad + 2, lh + label_pad // 2), Qt.white)
-                    painter.setPen(Qt.black)
-                    painter.drawText(bx + label_pad // 2, y - 4, label)
+            # Stair-step labels for 25,20,15,10,5,0 (start near right, step leftward)
+            for idx, mm in enumerate(stair_vals):
+                y = h - 2 - int(round(mm * px_per_mm_y))
+                label = f"{mm}"
+                lw = ladder_fm.horizontalAdvance(label)
+                lh = ladder_fm.height()
+                step_dx = idx * int(round(8.0 * px_per_mm_x))
+                bx = min(w - lw - (label_pad + 2), cx + tick_long + 6 + step_dx)
+                by = max(0, y - lh - (label_pad // 2))
+                painter.fillRect(QRect(bx, by, lw + label_pad + 2, lh + label_pad // 2), Qt.white)
+                painter.setPen(Qt.black)
+                painter.drawText(bx + label_pad // 2, y - 4, label)
+                # Leader line from tick end to label box left edge
+                painter.drawLine(cx + tick_long, y, bx, y)
             # Mapping note for bottom ladder
             bottom_note = f"Bottom ladder → {section_name} → Vertical (bottom)"
             painter.drawText(min(w - sfm.horizontalAdvance(bottom_note) - 4, cx + max(40, 3 * tick_long)), max(h - int(round(20 * px_per_mm_y)), cy + max(40, 3 * tick_long)), bottom_note)
