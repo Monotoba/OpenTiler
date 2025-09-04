@@ -820,7 +820,7 @@ class MainWindow(QMainWindow):
             if include_metadata and metadata_position == "last":
                 print("DEBUG: Printing metadata page last (portrait)")
                 printer.newPage()
-            page_rect = printable_rect()
+                page_rect = printable_rect()
                 self._print_metadata_page(painter, printer, source_pixmap, page_grid, page_rect)
                 page_count += 1
 
