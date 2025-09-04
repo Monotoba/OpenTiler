@@ -259,18 +259,48 @@ class PreviewPanel(QWidget):
             doc_info['source_pixmap'] = source_pixmap
             doc_info['page_grid'] = page_grid
 
-            # Generate metadata page sized to selected page size and orientation
-            from ..utils.helpers import get_page_size_mm
+            # Generate metadata page sized to selected page size AND orientation
+            # Use printer's printable area (paintRect) to mirror print behavior.
+            from PySide6.QtPrintSupport import QPrinter
+            from PySide6.QtGui import QPageSize, QPageLayout
             from ..settings.config import config as app_config
             page_size_name = app_config.get_default_page_size()
-            page_w_mm, page_h_mm = get_page_size_mm(page_size_name)
-            # Always preview metadata page in Portrait to match print behavior
-            if page_w_mm > page_h_mm:
-                page_w_mm, page_h_mm = page_h_mm, page_w_mm
-            # Use 300 DPI equivalent: 11.811 px/mm
+            orientation_pref = app_config.get_page_orientation()
+
+            # Decide orientation: honor explicit setting; for 'auto', infer from grid/tile shape
+            if orientation_pref == 'landscape':
+                orientation = QPageLayout.Landscape
+            elif orientation_pref == 'portrait':
+                orientation = QPageLayout.Portrait
+            else:
+                # Auto: prefer orientation of first tile if available; else doc aspect
+                if page_grid and len(page_grid) > 0:
+                    first = page_grid[0]
+                    orientation = QPageLayout.Landscape if float(first.get('width', 0)) >= float(first.get('height', 0)) else QPageLayout.Portrait
+                else:
+                    orientation = QPageLayout.Landscape if source_pixmap.width() >= source_pixmap.height() else QPageLayout.Portrait
+
+            # Compute printable mm via a temp printer configured to the selected page
+            try:
+                qps_id = QPageSize.A4 if page_size_name is None else QPageSize(QPageSize.A4).id()
+            except Exception:
+                qps_id = QPageSize.A4
+            # Map by name using MainWindow's helper mapping convention (duplicated minimal)
+            name_to_id = {
+                'A0': QPageSize.A0, 'A1': QPageSize.A1, 'A2': QPageSize.A2, 'A3': QPageSize.A3,
+                'A4': QPageSize.A4, 'Letter': QPageSize.Letter, 'Legal': QPageSize.Legal, 'Tabloid': QPageSize.Tabloid,
+            }
+            qps_id = name_to_id.get((page_size_name or 'A4').strip(), QPageSize.A4)
+
+            tmp_printer = QPrinter(QPrinter.HighResolution)
+            tmp_printer.setPageSize(QPageSize(qps_id))
+            tmp_printer.setPageLayout(QPageLayout(QPageSize(qps_id), orientation, QMarginsF(0, 0, 0, 0), QPageLayout.Millimeter))
+            pr_mm = tmp_printer.pageLayout().paintRect(QPageLayout.Millimeter)
+
+            # Use 300 DPI equivalent: 11.811 px/mm for preview rendering
             px_per_mm = 11.811
-            meta_w_px = int(page_w_mm * px_per_mm)
-            meta_h_px = int(page_h_mm * px_per_mm)
+            meta_w_px = max(1, int(round(pr_mm.width() * px_per_mm)))
+            meta_h_px = max(1, int(round(pr_mm.height() * px_per_mm)))
             metadata_pixmap = metadata_generator.generate_metadata_page(doc_info, QSize(meta_w_px, meta_h_px))
 
             # Create thumbnail widget
