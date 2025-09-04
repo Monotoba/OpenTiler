@@ -24,6 +24,7 @@ from .dialogs.scaling_dialog import ScalingDialog
 from .dialogs.unit_converter import UnitConverterDialog
 from .dialogs.scale_calculator import ScaleCalculatorDialog
 from .dialogs.settings_dialog import SettingsDialog
+from .dialogs.printer_calibration import PrinterCalibrationDialog
 from .dialogs.export_dialog import ExportDialog
 from .dialogs.save_as_dialog import SaveAsDialog
 from .settings.config import Config
@@ -201,6 +202,10 @@ class MainWindow(QMainWindow):
         scale_calculator_action.setShortcut(QKeySequence("Ctrl+C"))
         scale_calculator_action.triggered.connect(self.show_scale_calculator)
         tools_menu.addAction(scale_calculator_action)
+
+        calib_action = QAction("&Printer Calibration...", self)
+        calib_action.triggered.connect(self.show_printer_calibration)
+        tools_menu.addAction(calib_action)
 
         # Settings menu (fourth)
         settings_menu = menubar.addMenu("&Settings")
@@ -600,17 +605,26 @@ class MainWindow(QMainWindow):
 
         try:
             layout = printer.pageLayout()
-            pr_px = layout.paintRectPixels(printer.resolution())
-            pr_mm = layout.paintRect(QPageLayout.Millimeter)
+            pr_px_reported = layout.paintRectPixels(printer.resolution())
+            pr_mm_reported = layout.paintRect(QPageLayout.Millimeter)
             full_mm = layout.fullRect(QPageLayout.Millimeter)
 
-            # Map logical coords to printable area pixels
-            painter.setViewport(pr_px)
-            painter.setWindow(0, 0, pr_px.width(), pr_px.height())
+            # Derive px/mm from reported printable
+            px_per_mm_x = pr_px_reported.width() / pr_mm_reported.width() if pr_mm_reported.width() > 0 else 0
+            px_per_mm_y = pr_px_reported.height() / pr_mm_reported.height() if pr_mm_reported.height() > 0 else 0
 
-            # Derive px/mm per axis from printable area
-            px_per_mm_x = pr_px.width() / pr_mm.width() if pr_mm.width() > 0 else 0
-            px_per_mm_y = pr_px.height() / pr_mm.height() if pr_mm.height() > 0 else 0
+            # Apply calibration to define effective printable
+            ori = layout.orientation()
+            ori_name = "landscape" if ori == QPageLayout.Landscape else "portrait"
+            h_mm, v_mm = self.config.get_print_calibration(ori_name)
+            eff_w = max(1, pr_px_reported.width() - int(round(h_mm * px_per_mm_x)))
+            eff_h = max(1, pr_px_reported.height() - int(round(v_mm * px_per_mm_y)))
+            pr_px = QRect(0, 0, eff_w, eff_h)
+            pr_mm = QRectF(0.0, 0.0, max(0.0, pr_mm_reported.width() - h_mm), max(0.0, pr_mm_reported.height() - v_mm))
+
+            # Map logical coords to effective printable pixels
+            painter.setViewport(QRect(pr_px_reported.x(), pr_px_reported.y(), pr_px.width(), pr_px.height()))
+            painter.setWindow(0, 0, pr_px.width(), pr_px.height())
 
             # Compute inner (gutter) rect in device pixels using configured gutter (mm)
             gutter_mm = self.config.get_gutter_size_mm()
@@ -728,10 +742,22 @@ class MainWindow(QMainWindow):
             def apply_printable_mapping():
                 pl = printer.pageLayout()
                 pr_px = pl.paintRectPixels(printer.resolution())
+                pr_mm = pl.paintRect(QPageLayout.Millimeter)
+                ori = pl.orientation()
+                ori_name = "landscape" if ori == QPageLayout.Landscape else "portrait"
+                # Calibration in mm (right/bottom shrink)
+                h_mm, v_mm = self.config.get_print_calibration(ori_name)
+                # Derive px/mm from reported printable mm
+                px_per_mm_x = pr_px.width() / pr_mm.width() if pr_mm.width() > 0 else 0
+                px_per_mm_y = pr_px.height() / pr_mm.height() if pr_mm.height() > 0 else 0
+                # Effective viewport reduced by calibration
+                eff_w = max(1, pr_px.width() - int(round(h_mm * px_per_mm_x)))
+                eff_h = max(1, pr_px.height() - int(round(v_mm * px_per_mm_y)))
+                eff_rect = QRect(0, 0, eff_w, eff_h)
                 # Map logical coords 0..w,h to device pixels within printable area
-                painter.setViewport(pr_px)
-                painter.setWindow(0, 0, pr_px.width(), pr_px.height())
-                return pr_px
+                painter.setViewport(QRect(pr_px.x(), pr_px.y(), eff_rect.width(), eff_rect.height()))
+                painter.setWindow(eff_rect)
+                return eff_rect
 
             # Capture page size to reuse when switching orientation
             page_layout = printer.pageLayout()
@@ -1384,6 +1410,10 @@ class MainWindow(QMainWindow):
             self.settings_dialog.settings_changed.connect(self.on_settings_changed)
 
         self.settings_dialog.show()
+
+    def show_printer_calibration(self):
+        dlg = PrinterCalibrationDialog(self, self.config)
+        dlg.exec()
 
     def on_settings_changed(self):
         """Handle when settings are changed - refresh display and regenerate tiles if needed."""

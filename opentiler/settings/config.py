@@ -187,6 +187,16 @@ class Config:
             # reference | sidecar | embedded
             self.settings.setValue("project_original_storage", "embedded")
 
+        # Printer calibration (mm): horizontal reduces width (right), vertical reduces height (bottom)
+        if not self.settings.contains("print_calibration_portrait_h_mm"):
+            self.settings.setValue("print_calibration_portrait_h_mm", 0.0)
+        if not self.settings.contains("print_calibration_portrait_v_mm"):
+            self.settings.setValue("print_calibration_portrait_v_mm", 0.0)
+        if not self.settings.contains("print_calibration_landscape_h_mm"):
+            self.settings.setValue("print_calibration_landscape_h_mm", 0.0)
+        if not self.settings.contains("print_calibration_landscape_v_mm"):
+            self.settings.setValue("print_calibration_landscape_v_mm", 0.0)
+
     def get(self, key, default=None):
         """Get a configuration value."""
         return self.settings.value(key, default)
@@ -194,6 +204,28 @@ class Config:
     def set(self, key, value):
         """Set a configuration value."""
         self.settings.setValue(key, value)
+
+    # Printer calibration helpers
+    def get_print_calibration(self, orientation: str) -> tuple[float, float]:
+        """Return (horizontal_mm, vertical_mm) for 'portrait' or 'landscape'."""
+        ori = (orientation or "portrait").lower()
+        if ori == "landscape":
+            h = float(self.get("print_calibration_landscape_h_mm", 0.0))
+            v = float(self.get("print_calibration_landscape_v_mm", 0.0))
+        else:
+            h = float(self.get("print_calibration_portrait_h_mm", 0.0))
+            v = float(self.get("print_calibration_portrait_v_mm", 0.0))
+        return h, v
+
+    def set_print_calibration(self, orientation: str, horizontal_mm: float, vertical_mm: float) -> None:
+        """Set per-orientation calibration offsets in millimeters."""
+        ori = (orientation or "portrait").lower()
+        if ori == "landscape":
+            self.set("print_calibration_landscape_h_mm", float(horizontal_mm))
+            self.set("print_calibration_landscape_v_mm", float(vertical_mm))
+        else:
+            self.set("print_calibration_portrait_h_mm", float(horizontal_mm))
+            self.set("print_calibration_portrait_v_mm", float(vertical_mm))
 
     def get_default_units(self):
         """Get default units (mm or inches)."""
