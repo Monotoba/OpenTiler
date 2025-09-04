@@ -845,19 +845,23 @@ class MainWindow(QMainWindow):
 
                 if tile_pixmap and not tile_pixmap.isNull():
                     print(f"DEBUG: Drawing tile to paint rect: {page_rect.width()}x{page_rect.height()}")
-                    # Map the tile's drawable (inside gutters) to an inner rect on paper defined in mm
-                    # Legacy DPI-based conversion for gutter px
+
+                    # Resolve printer-axis px/mm from the reported printable rect
+                    # so gutters and calibration map correctly in device space.
+                    pl = printer.pageLayout()
+                    pr_mm_rect = pl.paintRect(QPageLayout.Millimeter)
+                    # Fallback to device DPI if needed
+                    ppmm_fallback = (printer.resolution() / 25.4) if printer.resolution() > 0 else 11.811
+                    px_per_mm_x = page_rect.width() / pr_mm_rect.width() if pr_mm_rect.width() > 0 else ppmm_fallback
+                    px_per_mm_y = page_rect.height() / pr_mm_rect.height() if pr_mm_rect.height() > 0 else ppmm_fallback
+
+                    # Gutters in device px (axis-specific)
                     gutter_mm = self.config.get_gutter_size_mm()
-                    ppmm = printer.resolution() / 25.4
-                    g_px = int(round(gutter_mm * ppmm))
+                    g_px_x = int(round(gutter_mm * px_per_mm_x))
+                    g_px_y = int(round(gutter_mm * px_per_mm_y))
 
-                    # Apply printer calibration (per orientation): reduce usable width (right) and height (bottom)
+                    # Apply printer calibration: reserve a margin on right/bottom only
                     try:
-                        pl = printer.pageLayout()
-                        pr_mm_rect = pl.paintRect(QPageLayout.Millimeter)
-                        px_per_mm_x = page_rect.width() / pr_mm_rect.width() if pr_mm_rect.width() > 0 else ppmm
-                        px_per_mm_y = page_rect.height() / pr_mm_rect.height() if pr_mm_rect.height() > 0 else ppmm
-
                         ori_name = 'landscape' if pl.orientation() == QPageLayout.Landscape else 'portrait'
                         h_mm, v_mm = self.config.get_print_calibration(ori_name)
                         calib_px_x = max(0, int(round(h_mm * px_per_mm_x)))
@@ -868,21 +872,32 @@ class MainWindow(QMainWindow):
 
                     # Source (inner) rect from tile pixmap
                     g_tile = int(page.get('gutter', 0) or 0)
-                    src_inner = QRect(g_tile, g_tile,
-                                      max(0, tile_pixmap.width() - 2 * g_tile),
-                                      max(0, tile_pixmap.height() - 2 * g_tile))
+                    src_inner = QRect(
+                        g_tile,
+                        g_tile,
+                        max(0, tile_pixmap.width() - 2 * g_tile),
+                        max(0, tile_pixmap.height() - 2 * g_tile),
+                    )
 
-                    # Destination inner rect on paper (leave mm gutters on page)
-                    dest_inner = QRect(page_rect.x() + g_px,
-                                       page_rect.y() + g_px,
-                                       max(0, page_rect.width() - 2 * g_px),
-                                       max(0, page_rect.height() - 2 * g_px))
+                    # Desired destination size in device px for exact physical scaling:
+                    # dest_px = src_px * (mm/px_document) * (px/mm_printer)
+                    doc_mm_per_px = getattr(self.document_viewer, 'scale_factor', 1.0)
+                    desired_w_px = int(round(src_inner.width() * doc_mm_per_px * px_per_mm_x))
+                    desired_h_px = int(round(src_inner.height() * doc_mm_per_px * px_per_mm_y))
 
-                    # Maintain exact scale: draw to the full inner rect,
-                    # but CLIP a calibration margin from the right/bottom so nothing prints there.
-                    clip_w = max(0, dest_inner.width() - calib_px_x)
-                    clip_h = max(0, dest_inner.height() - calib_px_y)
-                    clip_rect = QRect(dest_inner.x(), dest_inner.y(), clip_w, clip_h)
+                    # Available inner area after gutters and calibration on the page
+                    avail_x = page_rect.x() + g_px_x
+                    avail_y = page_rect.y() + g_px_y
+                    avail_w = max(0, page_rect.width() - 2 * g_px_x - calib_px_x)
+                    avail_h = max(0, page_rect.height() - 2 * g_px_y - calib_px_y)
+
+                    # Destination rect anchored at left/top of printable area
+                    dest_w = min(desired_w_px, avail_w)
+                    dest_h = min(desired_h_px, avail_h)
+                    dest_inner = QRect(avail_x, avail_y, dest_w, dest_h)
+
+                    # Clip to available area to avoid drawing into calibrated margins
+                    clip_rect = QRect(avail_x, avail_y, avail_w, avail_h)
 
                     painter.save()
                     painter.setClipRect(clip_rect)
