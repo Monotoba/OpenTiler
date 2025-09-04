@@ -15,5 +15,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'opentiler'))
 
 from opentiler.main_app import main
 
+# TODO: Complete adding measurement tool.
+
 if __name__ == "__main__":
     main()
