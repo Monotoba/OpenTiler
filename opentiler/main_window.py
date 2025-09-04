@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
     QMenuBar, QMenu, QToolBar, QStatusBar, QSplitter,
     QFileDialog, QMessageBox
 )
-from PySide6.QtCore import Qt, QSize, QRect, QRectF
+from PySide6.QtCore import Qt, QSize, QRect, QRectF, QPoint
 from PySide6.QtGui import QIcon, QKeySequence, QAction, QPainter, QPixmap, QPageSize, QPageLayout, QPen, QColor
 from PySide6.QtWidgets import QApplication
 from PySide6.QtPrintSupport import QPrinter, QPrintDialog, QPrintPreviewDialog
@@ -790,22 +790,46 @@ class MainWindow(QMainWindow):
 
             print(f"DEBUG: Include metadata page: {include_metadata}, Position: {metadata_position}")
 
-            page_count = 0
-
-            # Add metadata page at the beginning (portrait) if configured
+            # Build ordered page list (metadata + tiles) then honor printer's page range
+            ordered_pages: list[object] = []
             if include_metadata and metadata_position == "first":
-                print("DEBUG: Printing metadata page first (portrait)")
+                ordered_pages.append("metadata")
+            ordered_pages.extend(list(range(len(page_grid))))
+            if include_metadata and metadata_position == "last":
+                ordered_pages.append("metadata")
+
+            total_pages_overall = len(ordered_pages)
+            prange = printer.printRange()
+            from_page = 1
+            to_page = total_pages_overall
+            if prange == QPrinter.PageRange:
+                fp = int(printer.fromPage() or 1)
+                tp = int(printer.toPage() or total_pages_overall)
+                if 1 <= fp <= total_pages_overall and 1 <= tp <= total_pages_overall and tp >= fp:
+                    from_page, to_page = fp, tp
+            print(f"DEBUG: Requested print range: {from_page}-{to_page} (range enum={prange})")
+
+            printed_count = 0
+            overall_index = 0
+            first_printed = True
+            for entry in ordered_pages:
+                overall_index += 1
+                if overall_index < from_page or overall_index > to_page:
+                    continue
+                if not first_printed:
+                    printer.newPage()
                 page_rect = printable_rect()
-                self._print_metadata_page(painter, printer, source_pixmap, page_grid, page_rect)
-                page_count += 1
 
-            # Print each tile - align with exporter/preview logic
-            for i, page in enumerate(page_grid):
-                print(f"DEBUG: Printing tile {i+1}/{len(page_grid)}")
+                if entry == "metadata":
+                    print("DEBUG: Printing metadata page (within range)")
+                    self._print_metadata_page(painter, printer, source_pixmap, page_grid, page_rect)
+                    printed_count += 1
+                    first_printed = False
+                    continue
 
-                if page_count > 0 or i > 0:
-                    printer.newPage()  # Start new page for each tile (or after metadata page)
-                    page_rect = printable_rect()
+                i = int(entry)
+                page = page_grid[i]
+                print(f"DEBUG: Printing tile {i+1}/{len(page_grid)} (overall {overall_index})")
 
                 # Create a full tile pixmap including gutters and clip to printable area
                 tile_pixmap = self._create_tile_pixmap(source_pixmap, page)
@@ -868,7 +892,7 @@ class MainWindow(QMainWindow):
                             painter.fillRect(QRect(ix, iy, iw - 1, 1), Qt.blue)  # Top
                             painter.fillRect(QRect(ix + iw - 2, iy, 1, ih - 1), Qt.blue)  # Right inset
                             painter.fillRect(QRect(ix, iy + ih - 2, iw - 1, 1), Qt.blue)  # Bottom inset
-                painter.restore()
+                        painter.restore()
 
                     # Re-draw scale bar in printer space to guarantee physical length,
                     # inside the calibrated clip area (prevents truncation or scaling).
@@ -904,40 +928,25 @@ class MainWindow(QMainWindow):
                     except Exception:
                         pass
 
-                    # Add page information
-                    total_pages = len(page_grid) + (1 if include_metadata else 0)
-                    current_page = i + 1 + (1 if include_metadata and metadata_position == "first" else 0)
-                    self._add_print_page_info(painter, page_rect, current_page, total_pages)
+                    # Add page information using overall numbering
+                    self._add_print_page_info(painter, page_rect, overall_index, total_pages_overall)
+                    printed_count += 1
+                    first_printed = False
                 else:
                     print(f"ERROR: Failed to create tile pixmap for tile {i+1}")
 
-                page_count += 1
-
-            # Add metadata page at the end (portrait) if configured
-            if include_metadata and metadata_position == "last":
-                print("DEBUG: Printing metadata page last (portrait)")
-                printer.newPage()
-                page_rect = printable_rect()
-                self._print_metadata_page(painter, printer, source_pixmap, page_grid, page_rect)
-                page_count += 1
+            if printed_count == 0:
+                print("DEBUG: No pages fell within requested range; nothing printed.")
 
             painter.end()
             print("DEBUG: Printing completed successfully")
 
             # Show success message
-            total_printed = len(page_grid) + (1 if include_metadata else 0)
-            if include_metadata:
-                QMessageBox.information(
-                    self,
-                    "Print Complete",
-                    f"Successfully printed {total_printed} pages ({len(page_grid)} tiles + 1 metadata page)."
-                )
-            else:
-                QMessageBox.information(
-                    self,
-                    "Print Complete",
-                    f"Successfully printed {len(page_grid)} tiles."
-                )
+            QMessageBox.information(
+                self,
+                "Print Complete",
+                f"Successfully printed {printed_count} page(s)."
+            )
 
         except Exception as e:
             get_logger('printing').error(f"Print failed: {str(e)}")
