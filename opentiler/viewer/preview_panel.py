@@ -181,32 +181,62 @@ class PreviewPanel(QWidget):
         # Draw the document content onto the page, clipped to printable area
         painter = QPainter(page_pixmap)
 
-        # Clip to printable area reduced by printer calibration so preview matches printed coverage
+        # Clip to printable area only (no trimming of content)
         inner = layout['printable_rect']
-        try:
-            from ..settings.config import config as app_config
-            # Infer orientation from page shape
-            ori = 'landscape' if float(width) >= float(height) else 'portrait'
-            h_mm, v_mm = app_config.get_print_calibration(ori)
-            # Convert calibration (mm) to document pixels via scale_factor (mm/px)
-            calib_x_px = max(0, int(round(float(h_mm) / float(scale_factor) if scale_factor and scale_factor > 0 else 0)))
-            calib_y_px = max(0, int(round(float(v_mm) / float(scale_factor) if scale_factor and scale_factor > 0 else 0)))
-        except Exception:
-            calib_x_px = 0
-            calib_y_px = 0
-
-        clip_rect = QRect(
-            inner.x(),
-            inner.y(),
-            max(0, inner.width() - calib_x_px),
-            max(0, inner.height() - calib_y_px),
-        )
-
-        painter.setClipRect(clip_rect)
+        painter.setClipRect(inner)
         if layout['source_rect'].width() > 0 and layout['source_rect'].height() > 0:
             source_crop = source_pixmap.copy(layout['source_rect'])
             dx, dy = layout['dest_pos']
             painter.drawPixmap(int(dx), int(dy), source_crop)
+
+        # Overlay non-printed bands (right/bottom) per printer calibration to signal printed coverage
+        try:
+            from ..settings.config import config as app_config
+            ori = 'landscape' if float(width) >= float(height) else 'portrait'
+            h_mm, v_mm = app_config.get_print_calibration(ori)
+            calib_x_px = max(0, int(round(float(h_mm) / float(scale_factor) if scale_factor and scale_factor > 0 else 0)))
+            calib_y_px = max(0, int(round(float(v_mm) / float(scale_factor) if scale_factor and scale_factor > 0 else 0)))
+
+            painter.save()
+            painter.setOpacity(0.35)
+            painter.setClipping(False)  # ensure overlay draws over content for visibility
+            # Right band
+            if calib_x_px > 0:
+                rb_x = inner.x() + max(0, inner.width() - calib_x_px)
+                rb_w = min(calib_x_px, inner.width())
+                painter.fillRect(QRect(rb_x, inner.y(), rb_w, inner.height()), QColor(255, 255, 255))
+            # Bottom band
+            if calib_y_px > 0:
+                bb_y = inner.y() + max(0, inner.height() - calib_y_px)
+                bb_h = min(calib_y_px, inner.height())
+                painter.fillRect(QRect(inner.x(), bb_y, inner.width(), bb_h), QColor(255, 255, 255))
+            painter.restore()
+
+            # Draw registration marks at calibrated inner corners to match print visuals
+            if app_config.get_reg_marks_print():
+                px_per_mm = (1.0 / float(scale_factor)) if scale_factor and scale_factor > 0 else 2.0
+                diameter_mm = app_config.get_reg_mark_diameter_mm()
+                cross_mm = app_config.get_reg_mark_crosshair_mm()
+                radius_px = max(1, int(round((diameter_mm * px_per_mm) / 2.0)))
+                cross_len_px = max(1, int(round(cross_mm * px_per_mm)))
+
+                # Calibrated inner rect used for centers
+                cal_inner_w = max(0, inner.width() - calib_x_px)
+                cal_inner_h = max(0, inner.height() - calib_y_px)
+                left = inner.x()
+                top = inner.y()
+                right = inner.x() + cal_inner_w - 1
+                bottom = inner.y() + cal_inner_h - 1
+
+                painter.save()
+                painter.setPen(QPen(QColor(0, 0, 0), 1))
+                for cx, cy in [(left, top), (right, top), (left, bottom), (right, bottom)]:
+                    painter.drawEllipse(cx - radius_px, cy - radius_px, radius_px * 2, radius_px * 2)
+                    painter.drawLine(cx - cross_len_px, cy, cx + cross_len_px, cy)
+                    painter.drawLine(cx, cy - cross_len_px, cx, cy + cross_len_px)
+                painter.restore()
+        except Exception:
+            pass
 
         painter.end()
 
