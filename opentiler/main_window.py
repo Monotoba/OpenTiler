@@ -1420,6 +1420,7 @@ class MainWindow(QMainWindow):
         # so the preview matches actual printed coverage. This does NOT affect the print path.
         page_size = self.config.get_default_page_size()
         orientation_pref = self.config.get_page_orientation()
+        preview_used_printer_metrics = False
         try:
             # Decide preview orientation: honor explicit setting; for 'auto', use doc aspect
             if orientation_pref == 'landscape':
@@ -1439,6 +1440,7 @@ class MainWindow(QMainWindow):
             # Convert printable mm to document pixels via scale (mm/px)
             page_width_pixels = float(pr_mm.width()) / float(scale_factor)
             page_height_pixels = float(pr_mm.height()) / float(scale_factor)
+            preview_used_printer_metrics = True
         except Exception:
             # Fallback to generic page size if printer metrics unavailable
             page_width_pixels, page_height_pixels = compute_page_size_pixels(
@@ -1487,7 +1489,14 @@ class MainWindow(QMainWindow):
         document_info = self._get_document_info()
 
         # Update preview panel and document viewer
-        self.preview_panel.update_preview(pixmap, page_grid, scale_factor, scale_info, document_info)
+        self.preview_panel.update_preview(
+            pixmap,
+            page_grid,
+            scale_factor,
+            scale_info,
+            document_info,
+            printer_area=preview_used_printer_metrics,
+        )
         self.document_viewer.set_page_grid(page_grid, gutter_pixels)
 
         # Update status

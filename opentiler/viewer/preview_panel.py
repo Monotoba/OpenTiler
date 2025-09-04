@@ -82,10 +82,20 @@ class PreviewPanel(QWidget):
         self.composite_hint_label.setVisible(False)
         layout.addWidget(self.composite_hint_label, 0)
 
+        # Printer-area preview hint (hidden by default)
+        self.printer_area_hint_label = QLabel(
+            "Preview uses printer's printable area (mirrors print)."
+        )
+        self.printer_area_hint_label.setStyleSheet(
+            "color: #555; font-style: italic; padding: 2px;"
+        )
+        self.printer_area_hint_label.setVisible(False)
+        layout.addWidget(self.printer_area_hint_label, 0)
+
         # Remove the addStretch() call - we want the scroll area to take all space
         self.setLayout(layout)
 
-    def update_preview(self, pixmap, page_grid=None, scale_factor=1.0, scale_info=None, document_info=None):
+    def update_preview(self, pixmap, page_grid=None, scale_factor=1.0, scale_info=None, document_info=None, printer_area: bool = False):
         """Update the preview with individual page thumbnails."""
         # Clear existing thumbnails
         self._clear_thumbnails()
@@ -94,9 +104,12 @@ class PreviewPanel(QWidget):
             self.no_pages_label.show()
             self.info_label.setText("Pages: 0")
             self.scale_label.setText("Scale: Not set")
+            self.printer_area_hint_label.setVisible(bool(printer_area))
             return
 
         self.no_pages_label.hide()
+        # Toggle printer-area preview hint
+        self.printer_area_hint_label.setVisible(bool(printer_area))
 
         # Check if metadata page should be included and its position
         include_metadata = config.get_include_metadata_page()
