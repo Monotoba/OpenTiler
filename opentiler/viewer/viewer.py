@@ -895,6 +895,7 @@ class DocumentViewer(QWidget):
                 else:
                     self.zoom_out()
                 return True
+        return False
 
     def mouseMoveEvent(self, event):
         """Handle mouse move for endpoint dragging."""
@@ -987,7 +988,7 @@ class DocumentViewer(QWidget):
 
     def enterEvent(self, event):
         # Ensure cursor reflects selection mode even if outer viewport set a different cursor
-        if self.parent_viewer:
+        if getattr(self, 'parent_viewer', None):
             if self.parent_viewer.point_selection_mode:
                 self.setCursor(QCursor(Qt.CrossCursor))
             else:
@@ -996,7 +997,7 @@ class DocumentViewer(QWidget):
 
     def leaveEvent(self, event):
         # Clear hover highlight on leave
-        if self.parent_viewer and self.parent_viewer.hover_endpoint is not None:
+        if getattr(self, 'parent_viewer', None) and self.parent_viewer.hover_endpoint is not None:
             self.parent_viewer.hover_endpoint = None
             try:
                 self.parent_viewer._update_display()
