@@ -1415,6 +1415,134 @@ class MainWindow(QMainWindow):
         dlg = PrinterCalibrationDialog(self, self.config)
         dlg.exec()
 
+    def print_ladder_test(self, orientation: str):
+        """Print a single-page ladder test for the given orientation (portrait|landscape)."""
+        printer = QPrinter(QPrinter.HighResolution)
+        # Preselect orientation; user can override in dialog
+        try:
+            if (orientation or "portrait").lower() == "landscape":
+                printer.setPageOrientation(QPageLayout.Landscape)
+            else:
+                printer.setPageOrientation(QPageLayout.Portrait)
+        except Exception:
+            pass
+
+        dlg = QPrintDialog(printer, self)
+        dlg.setWindowTitle("Print Ladder Test")
+        if dlg.exec() != QPrintDialog.Accepted:
+            return
+
+        painter = QPainter()
+        if not painter.begin(printer):
+            QMessageBox.critical(self, "Print Error", "Failed to start printing.")
+            return
+
+        try:
+            pl = printer.pageLayout()
+            pr_px = pl.paintRectPixels(printer.resolution())  # reported printable in pixels
+            pr_mm = pl.paintRect(QPageLayout.Millimeter)      # reported printable in millimeters
+
+            # Map logical coords to reported printable area (no calibration)
+            painter.setViewport(pr_px)
+            painter.setWindow(0, 0, pr_px.width(), pr_px.height())
+
+            # px/mm per axis from reported printable
+            px_per_mm_x = pr_px.width() / pr_mm.width() if pr_mm.width() > 0 else 0
+            px_per_mm_y = pr_px.height() / pr_mm.height() if pr_mm.height() > 0 else 0
+
+            w, h = pr_px.width(), pr_px.height()
+            painter.fillRect(QRect(0, 0, w, h), Qt.white)
+            painter.setPen(Qt.black)
+
+            # Title block
+            title_font = painter.font(); title_font.setBold(True); title_font.setPointSize(24)
+            painter.setFont(title_font)
+            tfm = painter.fontMetrics()
+            title = "OpenTiler Calibration Test Page"
+            tw = tfm.horizontalAdvance(title)
+            top_margin_px = int(round(10.0 * px_per_mm_y))  # 10 mm top margin
+            painter.drawText(max(0, (w - tw) // 2), top_margin_px + tfm.ascent(), title)
+
+            # Orientation subtitle + brief instructions near top
+            painter.setPen(Qt.black)
+            sub_font = painter.font(); sub_font.setBold(False); sub_font.setPointSize(12)
+            painter.setFont(sub_font)
+            sfm = painter.fontMetrics()
+            ori_title = 'Landscape' if pl.orientation() == QPageLayout.Landscape else 'Portrait'
+            subtitle = f"Orientation: {ori_title}"
+            painter.drawText(int(round(10.0 * px_per_mm_x)), top_margin_px + tfm.height() + sfm.ascent() + 4, subtitle)
+
+            # Draw center crosshair for reference
+            cx, cy = w // 2, h // 2
+            painter.setPen(QPen(Qt.black, 0))
+            painter.drawLine(0, cy, w, cy)
+            painter.drawLine(cx, 0, cx, h)
+
+            # Right-edge horizontal ladder (ticks every 1 mm from right, at mid-height)
+            ladder_mm = 15
+            base_x = w - 2  # inset from right by 1px
+            painter.setPen(QPen(Qt.black, 0))
+            for mm in range(0, ladder_mm + 1):
+                x = base_x - int(round(mm * px_per_mm_x))
+                tick = 24 if mm % 5 == 0 else 12
+                painter.drawLine(x, cy - tick, x, cy + tick)
+                if mm % 5 == 0:
+                    label = f"{mm}"
+                    lw = sfm.horizontalAdvance(label)
+                    painter.drawText(max(0, x - lw - 6), cy - tick - 4, label)
+            # Mapping note for right ladder
+            section_name = f"{ori_title} Calibration"
+            right_note = f"Right ladder → {section_name} → Horizontal (right)"
+            rnw = sfm.horizontalAdvance(right_note)
+            painter.drawText(max(0, base_x - int(round(40 * px_per_mm_x)) - rnw), max(sfm.height() + 2, cy - 40), right_note)
+
+            # Bottom-edge vertical ladder (ticks every 1 mm from bottom, at mid-width)
+            for mm in range(0, ladder_mm + 1):
+                y = h - 2 - int(round(mm * px_per_mm_y))
+                tick = 24 if mm % 5 == 0 else 12
+                painter.drawLine(cx - tick, y, cx + tick, y)
+                if mm % 5 == 0:
+                    painter.drawText(min(w - sfm.horizontalAdvance(str(mm)) - 4, cx + tick + 6), min(h - 2, y + sfm.ascent() + 2), f"{mm}")
+            # Mapping note for bottom ladder
+            bottom_note = f"Bottom ladder → {section_name} → Vertical (bottom)"
+            painter.drawText(min(w - sfm.horizontalAdvance(bottom_note) - 4, cx + 40), max(h - int(round(20 * px_per_mm_y)), cy + 40), bottom_note)
+
+            # Reference boxes to verify clipping and consistent inset
+            painter.setPen(QPen(Qt.black, 0))
+            # Outer effective box (reported printable) inset bars
+            if w > 2 and h > 2:
+                painter.fillRect(QRect(0, 0, 1, h - 1), Qt.black)
+                painter.fillRect(QRect(0, 0, w - 1, 1), Qt.black)
+                painter.fillRect(QRect(w - 2, 0, 1, h - 1), Qt.black)
+                painter.fillRect(QRect(0, h - 2, w - 1, 1), Qt.black)
+
+            # 10 mm inner box
+            inset_x = int(round(10.0 * px_per_mm_x)); inset_y = int(round(10.0 * px_per_mm_y))
+            ix = inset_x; iy = inset_y; iw = max(0, w - 2 * inset_x); ih = max(0, h - 2 * inset_y)
+            if iw > 2 and ih > 2:
+                painter.fillRect(QRect(ix, iy, 1, ih - 1), Qt.black)
+                painter.fillRect(QRect(ix, iy, iw - 1, 1), Qt.black)
+                painter.fillRect(QRect(ix + iw - 2, iy, 1, ih - 1), Qt.black)
+                painter.fillRect(QRect(ix, iy + ih - 2, iw - 1, 1), Qt.black)
+
+            # Instruction block (top-left)
+            painter.setPen(Qt.black)
+            body_font = painter.font(); body_font.setPointSize(11); painter.setFont(body_font)
+            fm = painter.fontMetrics()
+            tx = int(round(10.0 * px_per_mm_x)); ty = top_margin_px + tfm.height() + sfm.height() + fm.ascent() + 10
+            notes = [
+                "Instructions:",
+                f"1. Enter RIGHT ladder value into: {section_name} → Horizontal (right)",
+                f"2. Enter BOTTOM ladder value into: {section_name} → Vertical (bottom)",
+                "3. Open Tools → Printer Calibration. You can add a small extra if desired.",
+                "4. Repeat once for the other orientation.",
+            ]
+            for i, line in enumerate(notes):
+                painter.drawText(tx, ty, line)
+                ty += fm.height() + 2
+        finally:
+            painter.end()
+
     def on_settings_changed(self):
         """Handle when settings are changed - refresh display and regenerate tiles if needed."""
         # Refresh the document viewer display to apply new settings
