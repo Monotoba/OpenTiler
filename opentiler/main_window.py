@@ -691,6 +691,28 @@ class MainWindow(QMainWindow):
             painter.drawLine(0, cy, pr_px.width(), cy)
             painter.drawLine(cx, 0, cx, pr_px.height())
 
+            # Add a 10 cm scale bar along the bottom of the EFFECTIVE printable area
+            try:
+                from .utils.overlays import draw_scale_bar
+                from .settings.config import config
+                mm_per_px = 1.0 / px_per_mm_x if px_per_mm_x > 0 else (1.0 / (printer.resolution() / 25.4))
+                draw_scale_bar(
+                    painter,
+                    pr_px.width(),
+                    pr_px.height(),
+                    0,              # treat whole area as printable (no gutter)
+                    mm_per_px,
+                    'mm',           # force metric for 10 cm
+                    'Page-S',       # bottom placement
+                    0.0,            # inches
+                    10.0,           # 10 cm
+                    int(config.get_scale_bar_opacity()),
+                    float(config.get_scale_bar_thickness_mm()),
+                    float(config.get_scale_bar_padding_mm()),
+                )
+            except Exception:
+                pass
+
             # Labels
             painter.setPen(QPen(QColor(0, 0, 0), 1))
             font = painter.font(); font.setPointSize(10); painter.setFont(font)
@@ -1561,6 +1583,30 @@ class MainWindow(QMainWindow):
                 painter.fillRect(QRect(ix, iy, iw - 1, 1), Qt.black)
                 painter.fillRect(QRect(ix + iw - 2, iy, 1, ih - 1), Qt.black)
                 painter.fillRect(QRect(ix, iy + ih - 2, iw - 1, 1), Qt.black)
+
+            # Add a 10 cm scale bar at the bottom of the printable area (Page-S),
+            # matching the style/logic used on tile pages.
+            try:
+                from .utils.overlays import draw_scale_bar
+                from .settings.config import config
+                # mm/px derived from printer mapping; use X axis for consistent horizontal bar
+                mm_per_px = 1.0 / px_per_mm_x if px_per_mm_x > 0 else (1.0 / (printer.resolution() / 25.4))
+                draw_scale_bar(
+                    painter,
+                    w,  # treat printable area as the whole tile surface for placement
+                    h,
+                    0,  # no gutters on the debug page
+                    mm_per_px,
+                    'mm',            # force metric scale (10 cm)
+                    'Page-S',        # bottom of printable area
+                    0.0,             # length_in (unused for metric)
+                    10.0,            # 10 cm scale
+                    int(config.get_scale_bar_opacity()),
+                    float(config.get_scale_bar_thickness_mm()),
+                    float(config.get_scale_bar_padding_mm()),
+                )
+            except Exception:
+                pass
 
             # Right-edge ladder: ticks every 1 mm
             # Labels: 30, 25, 20, 15, 10, 5, 0 (stair-stepped vertically with leader lines)
