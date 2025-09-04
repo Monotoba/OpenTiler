@@ -868,7 +868,41 @@ class MainWindow(QMainWindow):
                             painter.fillRect(QRect(ix, iy, iw - 1, 1), Qt.blue)  # Top
                             painter.fillRect(QRect(ix + iw - 2, iy, 1, ih - 1), Qt.blue)  # Right inset
                             painter.fillRect(QRect(ix, iy + ih - 2, iw - 1, 1), Qt.blue)  # Bottom inset
+                painter.restore()
+
+                    # Re-draw scale bar in printer space to guarantee physical length,
+                    # inside the calibrated clip area (prevents truncation or scaling).
+                    try:
+                        from .utils.overlays import draw_scale_bar
+                        units = self.config.get_default_units()
+                        location = self.config.get_scale_bar_location()
+                        opacity = self.config.get_scale_bar_opacity()
+                        length_in = self.config.get_scale_bar_length_in()
+                        length_cm = self.config.get_scale_bar_length_cm()
+                        thickness_mm = self.config.get_scale_bar_thickness_mm()
+                        padding_mm = self.config.get_scale_bar_padding_mm()
+                        # Use printer px/mm mapping for exact physical sizing (horizontal axis)
+                        mm_per_px_printer = 1.0 / (px_per_mm_x if px_per_mm_x > 0 else (printer.resolution() / 25.4))
+                        # Temporarily translate to clip origin so overlay aligns to calibrated area
+                        painter.save()
+                        painter.translate(clip_rect.x(), clip_rect.y())
+                        draw_scale_bar(
+                            painter,
+                            clip_rect.width(),
+                            clip_rect.height(),
+                            0,  # no gutters here
+                            mm_per_px_printer,
+                            units,
+                            location,
+                            length_in,
+                            length_cm,
+                            opacity,
+                            thickness_mm,
+                            padding_mm,
+                        )
                         painter.restore()
+                    except Exception:
+                        pass
 
                     # Add page information
                     total_pages = len(page_grid) + (1 if include_metadata else 0)
