@@ -97,10 +97,10 @@ class PrinterCalibrationDialog(QDialog):
         layout.addLayout(btns)
 
         def on_print():
-            # Save temp values and invoke main window print debug page
+            # Save temp values and print a single debug page (not all tiles)
             self._apply_to_config()
             try:
-                self.parent().print_tiles()
+                self.parent().print_debug_page()
             except Exception:
                 pass
 

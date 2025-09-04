@@ -712,6 +712,23 @@ class MainWindow(QMainWindow):
         finally:
             painter.end()
 
+    def print_debug_page(self):
+        """Show a print dialog and print a single debug layout page only."""
+        printer = QPrinter(QPrinter.HighResolution)
+        # Use current orientation preference
+        try:
+            ori = self._determine_print_orientation()
+            pl = QPageLayout(self._qpagesize_from_name(self.config.get_default_page_size()), ori, QMarginsF(0, 0, 0, 0), QPageLayout.Millimeter)
+            printer.setPageLayout(pl)
+        except Exception:
+            pass
+
+        dlg = QPrintDialog(printer, self)
+        dlg.setWindowTitle("Print Debug Page")
+        if dlg.exec() != QPrintDialog.Accepted:
+            return
+        self._print_debug_layout_page(printer)
+
     def _print_tiles_to_printer(self, printer):
         """Print tiles to the specified printer."""
         print("DEBUG: _print_tiles_to_printer() called")
@@ -779,6 +796,21 @@ class MainWindow(QMainWindow):
                     ppmm = printer.resolution() / 25.4
                     g_px = int(round(gutter_mm * ppmm))
 
+                    # Apply printer calibration (per orientation): reduce usable width (right) and height (bottom)
+                    try:
+                        pl = printer.pageLayout()
+                        pr_mm_rect = pl.paintRect(QPageLayout.Millimeter)
+                        px_per_mm_x = page_rect.width() / pr_mm_rect.width() if pr_mm_rect.width() > 0 else ppmm
+                        px_per_mm_y = page_rect.height() / pr_mm_rect.height() if pr_mm_rect.height() > 0 else ppmm
+
+                        ori_name = 'landscape' if pl.orientation() == QPageLayout.Landscape else 'portrait'
+                        h_mm, v_mm = self.config.get_print_calibration(ori_name)
+                        calib_px_x = max(0, int(round(h_mm * px_per_mm_x)))
+                        calib_px_y = max(0, int(round(v_mm * px_per_mm_y)))
+                    except Exception:
+                        calib_px_x = 0
+                        calib_px_y = 0
+
                     # Source (inner) rect from tile pixmap
                     g_tile = int(page.get('gutter', 0) or 0)
                     src_inner = QRect(g_tile, g_tile,
@@ -791,7 +823,16 @@ class MainWindow(QMainWindow):
                                        max(0, page_rect.width() - 2 * g_px),
                                        max(0, page_rect.height() - 2 * g_px))
 
+                    # Maintain exact scale: draw to the full inner rect,
+                    # but CLIP a calibration margin from the right/bottom so nothing prints there.
+                    clip_w = max(0, dest_inner.width() - calib_px_x)
+                    clip_h = max(0, dest_inner.height() - calib_px_y)
+                    clip_rect = QRect(dest_inner.x(), dest_inner.y(), clip_w, clip_h)
+
+                    painter.save()
+                    painter.setClipRect(clip_rect)
                     painter.drawPixmap(dest_inner, tile_pixmap, src_inner)
+                    painter.restore()
 
                     # Draw simple gutter rectangle overlay for visual guidance
                     if self.config.get_gutter_lines_print():
@@ -1234,9 +1275,16 @@ class MainWindow(QMainWindow):
             self.status_bar.showMessage(f"Warning: Scale would generate {estimated_tiles:.0f} tiles (limit: {max_tiles})")
             return
 
-        # Calculate tile grid with gutter support
+        # Calculate tile grid with gutter support and calibration-aware stepping
         gutter_mm = self.config.get_gutter_size_mm()
         gutter_pixels = gutter_mm / scale_factor
+
+        # Apply per-orientation calibration to step size so content isn't lost to non-printable right/bottom
+        # Determine effective orientation actually used for the grid from resolved pixel dimensions
+        ori_for_grid = 'landscape' if page_width_pixels > page_height_pixels else 'portrait'
+        h_mm, v_mm = self.config.get_print_calibration(ori_for_grid)
+        calib_step_x_px = max(0.0, float(h_mm) / float(scale_factor) if scale_factor > 0 else 0.0)
+        calib_step_y_px = max(0.0, float(v_mm) / float(scale_factor) if scale_factor > 0 else 0.0)
 
         # Generate page grid (pages can overlap where gutters meet)
         page_grid = compute_page_grid_with_gutters(
@@ -1245,6 +1293,8 @@ class MainWindow(QMainWindow):
             page_width_px=page_width_pixels,
             page_height_px=page_height_pixels,
             gutter_px=gutter_pixels,
+            calib_reduce_step_x_px=calib_step_x_px,
+            calib_reduce_step_y_px=calib_step_y_px,
         )
 
         # Get scale info for preview
@@ -1269,6 +1319,8 @@ class MainWindow(QMainWindow):
             page_width_px=page_width,
             page_height_px=page_height,
             gutter_px=gutter_size,
+            calib_reduce_step_x_px=0.0,
+            calib_reduce_step_y_px=0.0,
         )
 
     def _determine_print_orientation(self):
@@ -1386,7 +1438,13 @@ class MainWindow(QMainWindow):
         dlg.exec()
 
     def print_ladder_test(self, orientation: str):
-        """Print a single-page ladder test for the given orientation (portrait|landscape)."""
+        """Print a single-page ladder test for the given orientation (portrait|landscape).
+
+        Refactor highlights:
+        - Adds concise instructions directly beneath the page title.
+        - Adds a clear vertical ladder with stair-step labels to improve readability.
+        - Cleans up mapping notes and avoids overlapping labels via stepped layout.
+        """
         printer = QPrinter(QPrinter.HighResolution)
         # Preselect orientation; user can override in dialog
         try:
@@ -1440,7 +1498,45 @@ class MainWindow(QMainWindow):
             sfm = painter.fontMetrics()
             ori_title = 'Landscape' if pl.orientation() == QPageLayout.Landscape else 'Portrait'
             subtitle = f"Orientation: {ori_title}"
-            painter.drawText(int(round(10.0 * px_per_mm_x)), top_margin_px + tfm.height() + sfm.ascent() + 4, subtitle)
+            # Draw subtitle aligned left within printable area
+            sub_y = top_margin_px + tfm.height() + sfm.ascent() + 4
+            painter.drawText(int(round(10.0 * px_per_mm_x)), sub_y, subtitle)
+
+            # Instructions block directly under title (centered, multi-line)
+            section_name = f"{ori_title} Calibration"
+            painter.setFont(sub_font)
+            instr_lines = [
+                "Instructions:",
+                "1) Print at 100% (no printer scaling / no ‘Fit to page’).",
+                "2) On this page, find the largest visible tick on each ladder.",
+                "3) Open Tools → Printer Calibration.",
+                f"4) In {section_name}: enter RIGHT ladder value into Horizontal (right).",
+                f"5) In {section_name}: enter BOTTOM ladder value into Vertical (bottom).",
+                "6) Click Save to store calibration values.",
+                "7) Reprint the ladder and fine‑tune if needed.",
+            ]
+            if w > 0:
+                # Compute panel extents and center it
+                line_h = sfm.height()
+                max_line_w = max(sfm.horizontalAdvance(s) for s in instr_lines)
+                pad_x = 12
+                pad_y = 8
+                panel_w = max_line_w + pad_x
+                panel_h = len(instr_lines) * line_h + pad_y
+                # Left-justify: align panel with left printable margin (10 mm)
+                panel_x = int(round(10.0 * px_per_mm_x))
+                # Place panel fully below subtitle: leave at least one full line + 3 mm gap
+                panel_y = sub_y + line_h + int(round(3.0 * px_per_mm_y))
+                # Background for clarity
+                painter.fillRect(QRect(panel_x, panel_y - sfm.ascent(), panel_w, panel_h), Qt.white)
+                painter.setPen(Qt.black)
+                painter.drawRect(QRect(panel_x, panel_y - sfm.ascent(), panel_w, panel_h))
+                # Draw lines centered in the panel
+                draw_y = panel_y
+                for s in instr_lines:
+                    # Left-justified text inside the panel with small left padding
+                    painter.drawText(panel_x + (pad_x // 3), draw_y, s)
+                    draw_y += line_h
 
             # Draw center crosshair for reference
             cx, cy = w // 2, h // 2
@@ -1482,7 +1578,7 @@ class MainWindow(QMainWindow):
                 x = base_x - int(round(mm * px_per_mm_x))
                 tick = tick_long if mm % 5 == 0 else tick_short
                 painter.drawLine(x, cy - tick, x, cy + tick)
-            # Stair-step labels with leader lines for 25,20,15,10,5,0
+            # Stair-step labels with leader lines for 30,25,20,15,10,5,0
             stair_vals = [30, 25, 20, 15, 10, 5, 0]
             for idx, mm in enumerate(stair_vals):
                 x = base_x - int(round(mm * px_per_mm_x))
@@ -1490,8 +1586,8 @@ class MainWindow(QMainWindow):
                 lw = ladder_fm.horizontalAdvance(label)
                 lh = ladder_fm.height()
                 # Step up each subsequent label to avoid overlap
-                step_dy = idx * (lh + 6)
-                by = max(0, cy - tick_long - lh - 8 - step_dy)
+                step_dy = idx * (lh + max(6, int(round(2.0 * px_per_mm_y))))
+                by = max(0, cy - tick_long - lh - max(8, int(round(3.0 * px_per_mm_y))) - step_dy)
                 bx = max(0, x - lw - (label_pad + 2) - int(round(2.0 * px_per_mm_x)))
                 # Background box
                 painter.fillRect(QRect(bx, by, lw + label_pad + 2, lh + label_pad // 2), Qt.white)
@@ -1504,11 +1600,6 @@ class MainWindow(QMainWindow):
             right_note = f"Right ladder → {section_name} → Horizontal (right)"
             rnw = sfm.horizontalAdvance(right_note)
             painter.drawText(max(0, base_x - int(round(40 * px_per_mm_x)) - rnw), max(sfm.height() + 2, cy - max(40, 3 * tick_long)), right_note)
-            # Mapping note for right ladder
-            section_name = f"{ori_title} Calibration"
-            right_note = f"Right ladder → {section_name} → Horizontal (right)"
-            rnw = sfm.horizontalAdvance(right_note)
-            painter.drawText(max(0, base_x - int(round(40 * px_per_mm_x)) - rnw), max(sfm.height() + 2, cy - 40), right_note)
 
             # Bottom-edge vertical ladder (ticks every 1 mm from bottom, at mid-width)
             # Bottom ladder ticks (0..30 mm from bottom), baseline slightly inset to avoid clipping
@@ -1531,42 +1622,20 @@ class MainWindow(QMainWindow):
                 painter.drawText(bx + label_pad // 2, y - 4, label)
                 # Leader line from tick end to label box left edge
                 painter.drawLine(cx + tick_long, y, bx, y)
-            # Mapping note for bottom ladder
+            # Mapping note for bottom ladder — position ABOVE the ladder, left-justified to the centerline
             painter.setFont(sub_font); sfm = painter.fontMetrics()
             bottom_note = f"Bottom ladder → {section_name} → Vertical (bottom)"
-            note_y = max(int(round(h - 25.0 * px_per_mm_y)), cy + max(40, 3 * tick_long))
-            painter.drawText(min(w - sfm.horizontalAdvance(bottom_note) - 4, cx + max(40, 3 * tick_long)), note_y, bottom_note)
+            top_y = h - 3 - int(round(ladder_mm * px_per_mm_y))
+            # Use a larger safety gap (≈8 mm) to avoid overlapping ladder ticks
+            gap_y_px = int(round(8.0 * px_per_mm_y))
+            # Place baseline so entire text sits well above the top tick (account for descent)
+            note_y = max(sfm.height() + 2, top_y - gap_y_px - sfm.descent() - 1)
+            bnw = sfm.horizontalAdvance(bottom_note)
+            # Place so that right edge sits slightly left of centerline to avoid label overlap
+            note_x = max(4, cx - bnw - int(round(2.0 * px_per_mm_x)))
+            painter.drawText(note_x, note_y, bottom_note)
 
             # (reference boxes moved earlier)
-
-            # Instruction block (top-left) with white background panel for clarity
-            painter.setPen(Qt.black)
-            body_font = painter.font(); body_font.setPointSize(11); painter.setFont(body_font)
-            fm = painter.fontMetrics()
-            tx = int(round(10.0 * px_per_mm_x))
-            ty = top_margin_px + tfm.height() + sfm.height() + 10
-            notes = [
-                "Instructions:",
-                f"1. Enter RIGHT ladder value into: {section_name} → Horizontal (right)",
-                f"2. Enter BOTTOM ladder value into: {section_name} → Vertical (bottom)",
-                "3. Open Tools → Printer Calibration. You can add a small extra if desired.",
-                "4. Repeat once for the other orientation.",
-            ]
-            # Compute panel size
-            max_w = max(fm.horizontalAdvance(line) for line in notes) + 16
-            total_h = (len(notes) * fm.height()) + 12
-            # Clamp within page
-            panel_w = min(max_w, max(50, w - tx - 10))
-            panel_h = min(total_h, max(50, h - ty - 10))
-            # Draw panel
-            painter.fillRect(QRect(tx - 8, ty - 8, panel_w, panel_h), Qt.white)
-            painter.setPen(Qt.black)
-            painter.drawRect(QRect(tx - 8, ty - 8, panel_w, panel_h))
-            # Draw text lines inside
-            line_y = ty + fm.ascent()
-            for line in notes:
-                painter.drawText(tx, line_y, line)
-                line_y += fm.height()
         finally:
             painter.end()
 

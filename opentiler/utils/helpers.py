@@ -300,6 +300,8 @@ def compute_page_grid_with_gutters(
     page_width_px: float,
     page_height_px: float,
     gutter_px: float,
+    calib_reduce_step_x_px: float = 0.0,
+    calib_reduce_step_y_px: float = 0.0,
 ) -> List[Dict[str, Any]]:
     """
     Compute the page grid for tiling, using drawable area (inside gutters) as the step.
@@ -326,8 +328,11 @@ def compute_page_grid_with_gutters(
         # Invalid configuration; no drawable area
         return []
 
-    step_x = drawable_w
-    step_y = drawable_h
+    # Calibration reduces the usable area from the right/bottom edges.
+    # To avoid losing content, we step pages by a smaller stride so the
+    # overlapped region reappears on the next page within safe (left/top) areas.
+    step_x = max(1.0, drawable_w - max(0.0, calib_reduce_step_x_px))
+    step_y = max(1.0, drawable_h - max(0.0, calib_reduce_step_y_px))
 
     y = -gutter_px
     row = 0
