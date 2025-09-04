@@ -326,7 +326,15 @@ class MainWindow(QMainWindow):
         settings_action.triggered.connect(self.show_settings)
         toolbar.addAction(settings_action)
 
-        # 10. Scale tool action (rightmost - most used)
+        # 10. Measure tool action
+        measure_action = QAction("Measure", self)
+        measure_action.setIcon(load_icon("measure.png", fallback=style.StandardPixmap.SP_DialogYesButton))
+        measure_action.setToolTip("Measure distance between two points (Ctrl+M)")
+        measure_action.setShortcut("Ctrl+M")
+        measure_action.triggered.connect(self.show_measure_tool)
+        toolbar.addAction(measure_action)
+
+        # 11. Scale tool action (rightmost - most used)
         scale_action = QAction("Scale Tool", self)
         scale_action.setIcon(load_icon("scale-tool.png", fallback=style.StandardPixmap.SP_FileDialogInfoView))
         scale_action.setToolTip("Open scaling tool to set real-world measurements (Ctrl+S)")
@@ -1658,6 +1666,20 @@ class MainWindow(QMainWindow):
         """Show the scale calculator dialog."""
         dialog = ScaleCalculatorDialog(self)
         dialog.exec()
+
+    def show_measure_tool(self):
+        """Show the measure tool dialog and enable point selection."""
+        if not self.measure_dialog:
+            self.measure_dialog = MeasureDialog(self)
+            # Hook point selection signals
+            try:
+                self.document_viewer.point_selected.connect(self.measure_dialog.on_point_selected)
+                self.document_viewer.points_updated.connect(self.measure_dialog.on_point_moved)
+            except Exception:
+                pass
+        # Enable selection and show
+        self.document_viewer.set_point_selection_mode(True)
+        self.measure_dialog.show()
 
     def show_settings(self):
         """Show the settings dialog."""
