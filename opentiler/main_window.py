@@ -1478,18 +1478,34 @@ class MainWindow(QMainWindow):
             painter.drawLine(0, cy, w, cy)
             painter.drawLine(cx, 0, cx, h)
 
-            # Right-edge horizontal ladder (ticks every 1 mm from right, at mid-height)
+            # Right-edge ladder: ticks every 1 mm, labels only every 5 mm (larger, bold), ample padding
             ladder_mm = 15
             base_x = w - 2  # inset from right by 1px
             painter.setPen(QPen(Qt.black, 0))
+            tick_long = int(round(6.0 * px_per_mm_y))
+            tick_short = int(round(3.0 * px_per_mm_y))
+            ladder_font = painter.font(); ladder_font.setBold(True); ladder_font.setPointSize(18)
+            painter.setFont(ladder_font)
+            ladder_fm = painter.fontMetrics()
+            label_pad = 4
             for mm in range(0, ladder_mm + 1):
                 x = base_x - int(round(mm * px_per_mm_x))
-                tick = 24 if mm % 5 == 0 else 12
+                tick = tick_long if mm % 5 == 0 else tick_short
                 painter.drawLine(x, cy - tick, x, cy + tick)
                 if mm % 5 == 0:
                     label = f"{mm}"
-                    lw = sfm.horizontalAdvance(label)
-                    painter.drawText(max(0, x - lw - 6), cy - tick - 4, label)
+                    lw = ladder_fm.horizontalAdvance(label)
+                    lh = ladder_fm.height()
+                    bx = max(0, x - lw - (label_pad + 2))
+                    by = max(0, cy - tick - lh - (label_pad // 2))
+                    painter.fillRect(QRect(bx, by, lw + label_pad + 2, lh + label_pad // 2), Qt.white)
+                    painter.setPen(Qt.black)
+                    painter.drawText(bx + label_pad // 2, cy - tick - 4, label)
+            # Mapping note for right ladder (smaller font)
+            painter.setFont(sub_font); sfm = painter.fontMetrics()
+            right_note = f"Right ladder → {section_name} → Horizontal (right)"
+            rnw = sfm.horizontalAdvance(right_note)
+            painter.drawText(max(0, base_x - int(round(40 * px_per_mm_x)) - rnw), max(sfm.height() + 2, cy - max(40, 3 * tick_long)), right_note)
             # Mapping note for right ladder
             section_name = f"{ori_title} Calibration"
             right_note = f"Right ladder → {section_name} → Horizontal (right)"
@@ -1499,13 +1515,20 @@ class MainWindow(QMainWindow):
             # Bottom-edge vertical ladder (ticks every 1 mm from bottom, at mid-width)
             for mm in range(0, ladder_mm + 1):
                 y = h - 2 - int(round(mm * px_per_mm_y))
-                tick = 24 if mm % 5 == 0 else 12
+                tick = tick_long if mm % 5 == 0 else tick_short
                 painter.drawLine(cx - tick, y, cx + tick, y)
                 if mm % 5 == 0:
-                    painter.drawText(min(w - sfm.horizontalAdvance(str(mm)) - 4, cx + tick + 6), min(h - 2, y + sfm.ascent() + 2), f"{mm}")
+                    label = f"{mm}"
+                    lw = ladder_fm.horizontalAdvance(label)
+                    lh = ladder_fm.height()
+                    bx = min(w - lw - (label_pad + 2), cx + tick + 6)
+                    by = max(0, y - lh - (label_pad // 2))
+                    painter.fillRect(QRect(bx, by, lw + label_pad + 2, lh + label_pad // 2), Qt.white)
+                    painter.setPen(Qt.black)
+                    painter.drawText(bx + label_pad // 2, y - 4, label)
             # Mapping note for bottom ladder
             bottom_note = f"Bottom ladder → {section_name} → Vertical (bottom)"
-            painter.drawText(min(w - sfm.horizontalAdvance(bottom_note) - 4, cx + 40), max(h - int(round(20 * px_per_mm_y)), cy + 40), bottom_note)
+            painter.drawText(min(w - sfm.horizontalAdvance(bottom_note) - 4, cx + max(40, 3 * tick_long)), max(h - int(round(20 * px_per_mm_y)), cy + max(40, 3 * tick_long)), bottom_note)
 
             # Reference boxes to verify clipping and consistent inset
             painter.setPen(QPen(Qt.black, 0))
