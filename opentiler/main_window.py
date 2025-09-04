@@ -950,7 +950,45 @@ class MainWindow(QMainWindow):
                             painter.fillRect(QRect(ix, iy, iw - 1, 1), Qt.blue)  # Top
                             painter.fillRect(QRect(ix + iw - 2, iy, 1, ih - 1), Qt.blue)  # Right inset
                             painter.fillRect(QRect(ix, iy + ih - 2, iw - 1, 1), Qt.blue)  # Bottom inset
-                        painter.restore()
+                    painter.restore()
+
+                    # Registration marks in printer space at inner corners, if enabled
+                    try:
+                        if self.config.get_reg_marks_print():
+                            from .settings.config import config
+                            diameter_mm = config.get_reg_mark_diameter_mm()
+                            cross_mm = config.get_reg_mark_crosshair_mm()
+                            radius_x = int(round((diameter_mm * px_per_mm_x) / 2.0))
+                            radius_y = int(round((diameter_mm * px_per_mm_y) / 2.0))
+                            # Use uniform radius/cross based on the smaller axis for symmetry
+                            radius_px = max(1, min(radius_x, radius_y))
+                            cross_len_px = max(1, int(round(cross_mm * min(px_per_mm_x, px_per_mm_y))))
+
+                            painter.save()
+                            # Clip to inner destination so only quarters render
+                            painter.setClipRect(dest_inner)
+                            painter.setOpacity(1.0)
+                            painter.setPen(QPen(Qt.black, 1))
+
+                            # Corner centers at the inner rect edges
+                            left = dest_inner.left()
+                            right = dest_inner.right()
+                            top = dest_inner.top()
+                            bottom = dest_inner.bottom()
+
+                            centers = [
+                                (left, top),
+                                (right, top),
+                                (left, bottom),
+                                (right, bottom),
+                            ]
+                            for cx, cy in centers:
+                                painter.drawEllipse(cx - radius_px, cy - radius_px, radius_px * 2, radius_px * 2)
+                                painter.drawLine(cx - cross_len_px, cy, cx + cross_len_px, cy)
+                                painter.drawLine(cx, cy - cross_len_px, cx, cy + cross_len_px)
+                            painter.restore()
+                    except Exception:
+                        pass
 
                     # Re-draw scale bar in printer space to guarantee physical length,
                     # inside the calibrated clip area (prevents truncation or scaling).
