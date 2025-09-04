@@ -671,12 +671,13 @@ class MainWindow(QMainWindow):
                     gutter_mm = self.config.get_gutter_size_mm()
                     # Page physical size in mm from the current layout
                     current_layout = printer.pageLayout()
-                    size_mm = current_layout.pageSize().size(QPageSize.Millimeter)
-                    page_w_mm = size_mm.width()
-                    page_h_mm = size_mm.height()
-                    # Derive px/mm based on the current printable rect
-                    px_per_mm_x = page_rect.width() / page_w_mm if page_w_mm > 0 else 0
-                    px_per_mm_y = page_rect.height() / page_h_mm if page_h_mm > 0 else 0
+                    # Use the printable area in millimeters, not the full page size
+                    pr_mm = current_layout.paintRect(QPageLayout.Millimeter)
+                    pr_w_mm = pr_mm.width()
+                    pr_h_mm = pr_mm.height()
+                    # Derive px/mm based on the current printable rect dimensions
+                    px_per_mm_x = page_rect.width() / pr_w_mm if pr_w_mm > 0 else 0
+                    px_per_mm_y = page_rect.height() / pr_h_mm if pr_h_mm > 0 else 0
                     g_px_x = int(round(gutter_mm * px_per_mm_x))
                     g_px_y = int(round(gutter_mm * px_per_mm_y))
 

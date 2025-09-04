@@ -38,7 +38,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Centralized tile slicing: `MainWindow.on_scale_applied` now uses helper `compute_page_grid_with_gutters`; legacy `_calculate_page_grid_with_gutters` now delegates (kept for compatibility).
 - Consistent tile counts: `summarize_page_grid` used in preview panel, PDF exporter, and print metadata to compute `tiles_x/tiles_y/total_tiles`.
 - Unified tile layout math: preview thumbnails and printed tiles now share `compute_tile_layout` for source/destination/printable rect calculations, ensuring matching on-screen and printed results.
- - Exporters aligned: Image and PDF exporters now use `compute_tile_layout` to render each page, eliminating duplicate logic and aligning exported output with preview/print layout.
+- Exporters aligned: Image and PDF exporters now use `compute_tile_layout` to render each page, eliminating duplicate logic and aligning exported output with preview/print layout.
+ - Printing fix: Gutter offsets for physical printers are now computed from the printable area (px/mm derived from `QPageLayout.paintRectPixels`) to avoid content clipping at the top/right due to hardware margins and driver differences.
 
 ### Notes
 - No functional changes to scale/datum overlays or printing logic, except visual removal of red page-edge lines as noted above.
