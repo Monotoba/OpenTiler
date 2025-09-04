@@ -571,13 +571,8 @@ class MainWindow(QMainWindow):
                 # Do not override user-selected page size/orientation after dialog
                 include_metadata = self.config.get_include_metadata_page()
                 metadata_position = self.config.get_metadata_page_position()
-                # TEMP: Debug printable vs gutter mapping — print diagnostic page only
-                try:
-                    self._print_debug_layout_page(printer)
-                finally:
-                    pass
-                # To restore normal printing, replace the call above with:
-                # self._print_tiles_to_printer(printer)
+                # Proceed with normal printing (tiles + metadata) using calibrated mapping
+                self._print_tiles_to_printer(printer)
             else:
                 get_logger('printing').info("Print dialog cancelled")
                 self._printing_in_progress = False
@@ -1497,8 +1492,8 @@ class MainWindow(QMainWindow):
                 painter.fillRect(QRect(ix, iy + ih - 2, iw - 1, 1), Qt.black)
 
             # Right-edge ladder: ticks every 1 mm
-            # Labels: 25, 20, 15, 10, 5, 0 (stair-stepped vertically with leader lines)
-            ladder_mm = 25
+            # Labels: 30, 25, 20, 15, 10, 5, 0 (stair-stepped vertically with leader lines)
+            ladder_mm = 30
             base_x = w - 2  # inset from right by 1px
             painter.setPen(QPen(Qt.black, 0))
             tick_long = int(round(6.0 * px_per_mm_y))
@@ -1513,7 +1508,7 @@ class MainWindow(QMainWindow):
                 tick = tick_long if mm % 5 == 0 else tick_short
                 painter.drawLine(x, cy - tick, x, cy + tick)
             # Stair-step labels with leader lines for 25,20,15,10,5,0
-            stair_vals = [25, 20, 15, 10, 5, 0]
+            stair_vals = [30, 25, 20, 15, 10, 5, 0]
             for idx, mm in enumerate(stair_vals):
                 x = base_x - int(round(mm * px_per_mm_x))
                 label = f"{mm}"
@@ -1541,15 +1536,15 @@ class MainWindow(QMainWindow):
             painter.drawText(max(0, base_x - int(round(40 * px_per_mm_x)) - rnw), max(sfm.height() + 2, cy - 40), right_note)
 
             # Bottom-edge vertical ladder (ticks every 1 mm from bottom, at mid-width)
-            # Bottom ladder ticks (0..25 mm from bottom)
+            # Bottom ladder ticks (0..30 mm from bottom), baseline slightly inset to avoid clipping
             for mm in range(0, ladder_mm + 1):
-                y = h - 2 - int(round(mm * px_per_mm_y))
+                y = h - 3 - int(round(mm * px_per_mm_y))
                 tick = tick_long if mm % 5 == 0 else tick_short
                 painter.drawLine(cx - tick, y, cx + tick, y)
-            # Stair-step labels for 25,20,15,10,5,0 (start near right, step rightward)
+            # Stair-step labels for 30,25,20,15,10,5,0 (start near right, step rightward)
             painter.setFont(ladder_font); ladder_fm = painter.fontMetrics()
             for idx, mm in enumerate(stair_vals):
-                y = h - 2 - int(round(mm * px_per_mm_y))
+                y = h - 3 - int(round(mm * px_per_mm_y))
                 label = f"{mm}"
                 lw = ladder_fm.horizontalAdvance(label)
                 lh = ladder_fm.height()
