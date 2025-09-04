@@ -608,46 +608,52 @@ class MainWindow(QMainWindow):
             px_per_mm_x = pr_px_reported.width() / pr_mm_reported.width() if pr_mm_reported.width() > 0 else 0
             px_per_mm_y = pr_px_reported.height() / pr_mm_reported.height() if pr_mm_reported.height() > 0 else 0
 
-            # Apply calibration to define effective printable
+            # Apply calibration to define effective printable RECT IN DEVICE COORDS (no viewport trickery)
             ori = layout.orientation()
             ori_name = "landscape" if ori == QPageLayout.Landscape else "portrait"
             h_mm, v_mm = self.config.get_print_calibration(ori_name)
-            eff_w = max(1, pr_px_reported.width() - int(round(h_mm * px_per_mm_x)))
-            eff_h = max(1, pr_px_reported.height() - int(round(v_mm * px_per_mm_y)))
-            pr_px = QRect(0, 0, eff_w, eff_h)
-            pr_mm = QRectF(0.0, 0.0, max(0.0, pr_mm_reported.width() - h_mm), max(0.0, pr_mm_reported.height() - v_mm))
-
-            # Map logical coords to effective printable pixels
-            painter.setViewport(QRect(pr_px_reported.x(), pr_px_reported.y(), pr_px.width(), pr_px.height()))
-            painter.setWindow(0, 0, pr_px.width(), pr_px.height())
+            calib_px_x = int(round(h_mm * px_per_mm_x))
+            calib_px_y = int(round(v_mm * px_per_mm_y))
+            eff_rect = QRect(
+                pr_px_reported.x(),
+                pr_px_reported.y(),
+                max(1, pr_px_reported.width() - calib_px_x),
+                max(1, pr_px_reported.height() - calib_px_y),
+            )
+            pr_mm = QRectF(
+                0.0,
+                0.0,
+                max(0.0, pr_mm_reported.width() - h_mm),
+                max(0.0, pr_mm_reported.height() - v_mm),
+            )
 
             # Compute inner (gutter) rect in device pixels using configured gutter (mm)
             gutter_mm = self.config.get_gutter_size_mm()
             g_px_x = int(round(gutter_mm * px_per_mm_x))
             g_px_y = int(round(gutter_mm * px_per_mm_y))
             dest_inner = QRect(
-                g_px_x,
-                g_px_y,
-                max(0, pr_px.width() - 2 * g_px_x),
-                max(0, pr_px.height() - 2 * g_px_y),
+                eff_rect.x() + g_px_x,
+                eff_rect.y() + g_px_y,
+                max(0, eff_rect.width() - 2 * g_px_x),
+                max(0, eff_rect.height() - 2 * g_px_y),
             )
 
-            # Clear background within printable area
-            painter.fillRect(QRect(0, 0, pr_px.width(), pr_px.height()), Qt.white)
+            # Clear background within effective printable area
+            painter.fillRect(eff_rect, Qt.white)
             painter.setRenderHint(QPainter.Antialiasing, False)
 
-            # Draw printable area outline using filled 1px bars inset from edges
+            # Draw effective printable area outline using filled 1px bars inset from edges
             painter.setOpacity(1.0)
-            w, h = pr_px.width(), pr_px.height()
+            w, h = eff_rect.width(), eff_rect.height()
             if w > 2 and h > 2:
                 # Left
-                painter.fillRect(QRect(0, 0, 1, h - 1), QColor(0, 160, 0))
+                painter.fillRect(QRect(eff_rect.left(), eff_rect.top(), 1, h - 1), QColor(0, 160, 0))
                 # Top
-                painter.fillRect(QRect(0, 0, w - 1, 1), QColor(0, 160, 0))
+                painter.fillRect(QRect(eff_rect.left(), eff_rect.top(), w - 1, 1), QColor(0, 160, 0))
                 # Right (inset by 1px)
-                painter.fillRect(QRect(w - 2, 0, 1, h - 1), QColor(0, 160, 0))
+                painter.fillRect(QRect(eff_rect.left() + w - 2, eff_rect.top(), 1, h - 1), QColor(0, 160, 0))
                 # Bottom (inset by 1px)
-                painter.fillRect(QRect(0, h - 2, w - 1, 1), QColor(0, 160, 0))
+                painter.fillRect(QRect(eff_rect.left(), eff_rect.top() + h - 2, w - 1, 1), QColor(0, 160, 0))
 
             # Draw inner gutter rectangle (blue) with slight transparency and inset 1px borders
             painter.setOpacity(0.25)
@@ -685,31 +691,34 @@ class MainWindow(QMainWindow):
                 painter.fillRect(QRect(ref_x, ref_y + ref_h - 2, ref_w - 1, 1), Qt.black)
 
             # Center crosshair in printable area
-            cx = pr_px.width() // 2
-            cy = pr_px.height() // 2
+            cx = eff_rect.left() + eff_rect.width() // 2
+            cy = eff_rect.top() + eff_rect.height() // 2
             painter.setPen(QPen(QColor(120, 120, 120), 1, Qt.DashLine))
-            painter.drawLine(0, cy, pr_px.width(), cy)
-            painter.drawLine(cx, 0, cx, pr_px.height())
+            painter.drawLine(eff_rect.left(), cy, eff_rect.left() + eff_rect.width(), cy)
+            painter.drawLine(cx, eff_rect.top(), cx, eff_rect.top() + eff_rect.height())
 
             # Add a 10 cm scale bar along the bottom of the EFFECTIVE printable area
             try:
                 from .utils.overlays import draw_scale_bar
                 from .settings.config import config
                 mm_per_px = 1.0 / px_per_mm_x if px_per_mm_x > 0 else (1.0 / (printer.resolution() / 25.4))
+                painter.save()
+                painter.translate(eff_rect.left(), eff_rect.top())
                 draw_scale_bar(
                     painter,
-                    pr_px.width(),
-                    pr_px.height(),
-                    0,              # treat whole area as printable (no gutter)
+                    eff_rect.width(),
+                    eff_rect.height(),
+                    0,              # no gutter
                     mm_per_px,
-                    'mm',           # force metric for 10 cm
-                    'Page-S',       # bottom placement
-                    0.0,            # inches
-                    10.0,           # 10 cm
+                    'mm',
+                    'Page-S',
+                    0.0,
+                    10.0,
                     int(config.get_scale_bar_opacity()),
                     float(config.get_scale_bar_thickness_mm()),
                     float(config.get_scale_bar_padding_mm()),
                 )
+                painter.restore()
             except Exception:
                 pass
 
