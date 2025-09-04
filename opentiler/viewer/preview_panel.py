@@ -181,8 +181,28 @@ class PreviewPanel(QWidget):
         # Draw the document content onto the page, clipped to printable area
         painter = QPainter(page_pixmap)
 
-        # Clip to printable area and draw the intersecting region
-        painter.setClipRect(layout['printable_rect'])
+        # Clip to printable area reduced by printer calibration so preview matches printed coverage
+        inner = layout['printable_rect']
+        try:
+            from ..settings.config import config as app_config
+            # Infer orientation from page shape
+            ori = 'landscape' if float(width) >= float(height) else 'portrait'
+            h_mm, v_mm = app_config.get_print_calibration(ori)
+            # Convert calibration (mm) to document pixels via scale_factor (mm/px)
+            calib_x_px = max(0, int(round(float(h_mm) / float(scale_factor) if scale_factor and scale_factor > 0 else 0)))
+            calib_y_px = max(0, int(round(float(v_mm) / float(scale_factor) if scale_factor and scale_factor > 0 else 0)))
+        except Exception:
+            calib_x_px = 0
+            calib_y_px = 0
+
+        clip_rect = QRect(
+            inner.x(),
+            inner.y(),
+            max(0, inner.width() - calib_x_px),
+            max(0, inner.height() - calib_y_px),
+        )
+
+        painter.setClipRect(clip_rect)
         if layout['source_rect'].width() > 0 and layout['source_rect'].height() > 0:
             source_crop = source_pixmap.copy(layout['source_rect'])
             dx, dy = layout['dest_pos']
