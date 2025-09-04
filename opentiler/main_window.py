@@ -627,18 +627,34 @@ class MainWindow(QMainWindow):
             painter.fillRect(QRect(0, 0, pr_px.width(), pr_px.height()), Qt.white)
             painter.setRenderHint(QPainter.Antialiasing, False)
 
-            # Draw printable area outline
-            painter.setPen(QPen(QColor(0, 160, 0), 0))  # cosmetic 1px pen
+            # Draw printable area outline using filled 1px bars inset from edges
             painter.setOpacity(1.0)
-            painter.drawRect(QRectF(0.5, 0.5, pr_px.width() - 1, pr_px.height() - 1))
+            w, h = pr_px.width(), pr_px.height()
+            if w > 2 and h > 2:
+                # Left
+                painter.fillRect(QRect(0, 0, 1, h - 1), QColor(0, 160, 0))
+                # Top
+                painter.fillRect(QRect(0, 0, w - 1, 1), QColor(0, 160, 0))
+                # Right (inset by 1px)
+                painter.fillRect(QRect(w - 2, 0, 1, h - 1), QColor(0, 160, 0))
+                # Bottom (inset by 1px)
+                painter.fillRect(QRect(0, h - 2, w - 1, 1), QColor(0, 160, 0))
 
-            # Draw inner gutter rectangle (blue) with slight transparency
-            painter.setPen(QPen(QColor(0, 100, 255), 0))  # cosmetic 1px pen
+            # Draw inner gutter rectangle (blue) with slight transparency and inset 1px borders
             painter.setOpacity(0.25)
             painter.fillRect(dest_inner, QColor(0, 100, 255, 40))
             painter.setOpacity(1.0)
-            painter.drawRect(QRectF(dest_inner.x() + 0.5, dest_inner.y() + 0.5,
-                                     max(0, dest_inner.width() - 1), max(0, dest_inner.height() - 1)))
+            iw = dest_inner.width(); ih = dest_inner.height()
+            ix = dest_inner.x(); iy = dest_inner.y()
+            if iw > 2 and ih > 2:
+                # Left
+                painter.fillRect(QRect(ix, iy, 1, ih - 1), QColor(0, 100, 255))
+                # Top
+                painter.fillRect(QRect(ix, iy, iw - 1, 1), QColor(0, 100, 255))
+                # Right (inset by 1px)
+                painter.fillRect(QRect(ix + iw - 2, iy, 1, ih - 1), QColor(0, 100, 255))
+                # Bottom (inset by 1px)
+                painter.fillRect(QRect(ix, iy + ih - 2, iw - 1, 1), QColor(0, 100, 255))
 
             # Center crosshair in printable area
             cx = pr_px.width() // 2
@@ -765,9 +781,15 @@ class MainWindow(QMainWindow):
                     # Draw simple gutter rectangle overlay for visual guidance
                     if self.config.get_gutter_lines_print():
                         painter.save()
-                        painter.setPen(QPen(Qt.blue, 0))
-                        painter.drawRect(QRectF(dest_inner.x() + 0.5, dest_inner.y() + 0.5,
-                                                max(0, dest_inner.width() - 1), max(0, dest_inner.height() - 1)))
+                        # Draw 1px filled bars for gutter rectangle inside the printable area
+                        iw = dest_inner.width(); ih = dest_inner.height()
+                        ix = dest_inner.x(); iy = dest_inner.y()
+                        painter.setOpacity(1.0)
+                        if iw > 2 and ih > 2:
+                            painter.fillRect(QRect(ix, iy, 1, ih - 1), Qt.blue)  # Left
+                            painter.fillRect(QRect(ix, iy, iw - 1, 1), Qt.blue)  # Top
+                            painter.fillRect(QRect(ix + iw - 2, iy, 1, ih - 1), Qt.blue)  # Right inset
+                            painter.fillRect(QRect(ix, iy + ih - 2, iw - 1, 1), Qt.blue)  # Bottom inset
                         painter.restore()
 
                     # Add page information
