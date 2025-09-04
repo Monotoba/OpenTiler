@@ -1478,6 +1478,24 @@ class MainWindow(QMainWindow):
             painter.drawLine(0, cy, w, cy)
             painter.drawLine(cx, 0, cx, h)
 
+            # Draw reference boxes FIRST so ladders/labels are on top
+            painter.setPen(QPen(Qt.black, 0))
+            # Outer effective box (reported printable) inset bars
+            if w > 2 and h > 2:
+                painter.fillRect(QRect(0, 0, 1, h - 1), Qt.black)
+                painter.fillRect(QRect(0, 0, w - 1, 1), Qt.black)
+                painter.fillRect(QRect(w - 2, 0, 1, h - 1), Qt.black)
+                painter.fillRect(QRect(0, h - 2, w - 1, 1), Qt.black)
+
+            # 10 mm inner box
+            inset_x = int(round(10.0 * px_per_mm_x)); inset_y = int(round(10.0 * px_per_mm_y))
+            ix = inset_x; iy = inset_y; iw = max(0, w - 2 * inset_x); ih = max(0, h - 2 * inset_y)
+            if iw > 2 and ih > 2:
+                painter.fillRect(QRect(ix, iy, 1, ih - 1), Qt.black)
+                painter.fillRect(QRect(ix, iy, iw - 1, 1), Qt.black)
+                painter.fillRect(QRect(ix + iw - 2, iy, 1, ih - 1), Qt.black)
+                painter.fillRect(QRect(ix, iy + ih - 2, iw - 1, 1), Qt.black)
+
             # Right-edge ladder: ticks every 1 mm
             # Labels: 25, 20, 15, 10, 5, 0 (stair-stepped vertically with leader lines)
             ladder_mm = 25
@@ -1523,12 +1541,13 @@ class MainWindow(QMainWindow):
             painter.drawText(max(0, base_x - int(round(40 * px_per_mm_x)) - rnw), max(sfm.height() + 2, cy - 40), right_note)
 
             # Bottom-edge vertical ladder (ticks every 1 mm from bottom, at mid-width)
-            # Bottom ladder ticks
+            # Bottom ladder ticks (0..25 mm from bottom)
             for mm in range(0, ladder_mm + 1):
                 y = h - 2 - int(round(mm * px_per_mm_y))
                 tick = tick_long if mm % 5 == 0 else tick_short
                 painter.drawLine(cx - tick, y, cx + tick, y)
-            # Stair-step labels for 25,20,15,10,5,0 (start near right, step leftward)
+            # Stair-step labels for 25,20,15,10,5,0 (start near right, step rightward)
+            painter.setFont(ladder_font); ladder_fm = painter.fontMetrics()
             for idx, mm in enumerate(stair_vals):
                 y = h - 2 - int(round(mm * px_per_mm_y))
                 label = f"{mm}"
@@ -1543,32 +1562,19 @@ class MainWindow(QMainWindow):
                 # Leader line from tick end to label box left edge
                 painter.drawLine(cx + tick_long, y, bx, y)
             # Mapping note for bottom ladder
+            painter.setFont(sub_font); sfm = painter.fontMetrics()
             bottom_note = f"Bottom ladder → {section_name} → Vertical (bottom)"
-            painter.drawText(min(w - sfm.horizontalAdvance(bottom_note) - 4, cx + max(40, 3 * tick_long)), max(h - int(round(20 * px_per_mm_y)), cy + max(40, 3 * tick_long)), bottom_note)
+            note_y = max(int(round(h - 25.0 * px_per_mm_y)), cy + max(40, 3 * tick_long))
+            painter.drawText(min(w - sfm.horizontalAdvance(bottom_note) - 4, cx + max(40, 3 * tick_long)), note_y, bottom_note)
 
-            # Reference boxes to verify clipping and consistent inset
-            painter.setPen(QPen(Qt.black, 0))
-            # Outer effective box (reported printable) inset bars
-            if w > 2 and h > 2:
-                painter.fillRect(QRect(0, 0, 1, h - 1), Qt.black)
-                painter.fillRect(QRect(0, 0, w - 1, 1), Qt.black)
-                painter.fillRect(QRect(w - 2, 0, 1, h - 1), Qt.black)
-                painter.fillRect(QRect(0, h - 2, w - 1, 1), Qt.black)
+            # (reference boxes moved earlier)
 
-            # 10 mm inner box
-            inset_x = int(round(10.0 * px_per_mm_x)); inset_y = int(round(10.0 * px_per_mm_y))
-            ix = inset_x; iy = inset_y; iw = max(0, w - 2 * inset_x); ih = max(0, h - 2 * inset_y)
-            if iw > 2 and ih > 2:
-                painter.fillRect(QRect(ix, iy, 1, ih - 1), Qt.black)
-                painter.fillRect(QRect(ix, iy, iw - 1, 1), Qt.black)
-                painter.fillRect(QRect(ix + iw - 2, iy, 1, ih - 1), Qt.black)
-                painter.fillRect(QRect(ix, iy + ih - 2, iw - 1, 1), Qt.black)
-
-            # Instruction block (top-left)
+            # Instruction block (top-left) with white background panel for clarity
             painter.setPen(Qt.black)
             body_font = painter.font(); body_font.setPointSize(11); painter.setFont(body_font)
             fm = painter.fontMetrics()
-            tx = int(round(10.0 * px_per_mm_x)); ty = top_margin_px + tfm.height() + sfm.height() + fm.ascent() + 10
+            tx = int(round(10.0 * px_per_mm_x))
+            ty = top_margin_px + tfm.height() + sfm.height() + 10
             notes = [
                 "Instructions:",
                 f"1. Enter RIGHT ladder value into: {section_name} → Horizontal (right)",
@@ -1576,9 +1582,21 @@ class MainWindow(QMainWindow):
                 "3. Open Tools → Printer Calibration. You can add a small extra if desired.",
                 "4. Repeat once for the other orientation.",
             ]
-            for i, line in enumerate(notes):
-                painter.drawText(tx, ty, line)
-                ty += fm.height() + 2
+            # Compute panel size
+            max_w = max(fm.horizontalAdvance(line) for line in notes) + 16
+            total_h = (len(notes) * fm.height()) + 12
+            # Clamp within page
+            panel_w = min(max_w, max(50, w - tx - 10))
+            panel_h = min(total_h, max(50, h - ty - 10))
+            # Draw panel
+            painter.fillRect(QRect(tx - 8, ty - 8, panel_w, panel_h), Qt.white)
+            painter.setPen(Qt.black)
+            painter.drawRect(QRect(tx - 8, ty - 8, panel_w, panel_h))
+            # Draw text lines inside
+            line_y = ty + fm.ascent()
+            for line in notes:
+                painter.drawText(tx, line_y, line)
+                line_y += fm.height()
         finally:
             painter.end()
 
