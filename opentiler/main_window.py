@@ -667,9 +667,18 @@ class MainWindow(QMainWindow):
                 if tile_pixmap and not tile_pixmap.isNull():
                     print(f"DEBUG: Drawing tile to paint rect: {page_rect.width()}x{page_rect.height()}")
                     # Map the tile's drawable (inside gutters) to an inner rect on paper defined in mm
+                    # Compute px/mm from the actual printable area to avoid driver-dependent offsets
                     gutter_mm = self.config.get_gutter_size_mm()
-                    ppmm = printer.resolution() / 25.4
-                    g_px = int(round(gutter_mm * ppmm))
+                    # Page physical size in mm from the current layout
+                    current_layout = printer.pageLayout()
+                    size_mm = current_layout.pageSize().size(QPageSize.Millimeter)
+                    page_w_mm = size_mm.width()
+                    page_h_mm = size_mm.height()
+                    # Derive px/mm based on the current printable rect
+                    px_per_mm_x = page_rect.width() / page_w_mm if page_w_mm > 0 else 0
+                    px_per_mm_y = page_rect.height() / page_h_mm if page_h_mm > 0 else 0
+                    g_px_x = int(round(gutter_mm * px_per_mm_x))
+                    g_px_y = int(round(gutter_mm * px_per_mm_y))
 
                     # Source (inner) rect from tile pixmap
                     g_tile = int(page.get('gutter', 0) or 0)
@@ -678,10 +687,10 @@ class MainWindow(QMainWindow):
                                       max(0, tile_pixmap.height() - 2 * g_tile))
 
                     # Destination inner rect on paper (leave mm gutters on page)
-                    dest_inner = QRect(page_rect.x() + g_px,
-                                       page_rect.y() + g_px,
-                                       max(0, page_rect.width() - 2 * g_px),
-                                       max(0, page_rect.height() - 2 * g_px))
+                    dest_inner = QRect(page_rect.x() + g_px_x,
+                                       page_rect.y() + g_px_y,
+                                       max(0, page_rect.width() - 2 * g_px_x),
+                                       max(0, page_rect.height() - 2 * g_px_y))
 
                     painter.drawPixmap(dest_inner, tile_pixmap, src_inner)
 
