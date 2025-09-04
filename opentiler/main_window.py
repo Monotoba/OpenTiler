@@ -772,11 +772,11 @@ class MainWindow(QMainWindow):
             # to ensure printed coverage exactly matches the stepping (no overlaps or gaps).
             try:
                 pl = printer.pageLayout()
-                full_mm = pl.fullRect(QPageLayout.Millimeter)
-                # Resolve page size in document pixels from printer page mm and document scale
+                pr_mm = pl.paintRect(QPageLayout.Millimeter)
+                # Resolve page size in document pixels from printer PRINTABLE mm and document scale
                 scale_factor = getattr(self.document_viewer, 'scale_factor', 1.0) or 1.0
-                page_width_px = float(full_mm.width()) / float(scale_factor)
-                page_height_px = float(full_mm.height()) / float(scale_factor)
+                page_width_px = float(pr_mm.width()) / float(scale_factor)
+                page_height_px = float(pr_mm.height()) / float(scale_factor)
                 gutter_mm = self.config.get_gutter_size_mm()
                 gutter_px = float(gutter_mm) / float(scale_factor)
                 # Calibration reduce steps in document px for this printer orientation
