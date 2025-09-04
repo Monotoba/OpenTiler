@@ -765,9 +765,43 @@ class MainWindow(QMainWindow):
         print("DEBUG: _print_tiles_to_printer() called")
         painter = None
         try:
-            # Get page grid and source pixmap
-            page_grid = self.document_viewer.page_grid
+            # Get source pixmap
             source_pixmap = self.document_viewer.current_pixmap
+
+            # Build a calibration-aware page grid based on the ACTUAL printer page size/orientation
+            # to ensure printed coverage exactly matches the stepping (no overlaps or gaps).
+            try:
+                pl = printer.pageLayout()
+                full_mm = pl.fullRect(QPageLayout.Millimeter)
+                # Resolve page size in document pixels from printer page mm and document scale
+                scale_factor = getattr(self.document_viewer, 'scale_factor', 1.0) or 1.0
+                page_width_px = float(full_mm.width()) / float(scale_factor)
+                page_height_px = float(full_mm.height()) / float(scale_factor)
+                gutter_mm = self.config.get_gutter_size_mm()
+                gutter_px = float(gutter_mm) / float(scale_factor)
+                # Calibration reduce steps in document px for this printer orientation
+                ori_name = 'landscape' if pl.orientation() == QPageLayout.Landscape else 'portrait'
+                h_mm, v_mm = self.config.get_print_calibration(ori_name)
+                calib_step_x_px = max(0.0, float(h_mm) / float(scale_factor))
+                calib_step_y_px = max(0.0, float(v_mm) / float(scale_factor))
+
+                # Document dimensions in pixels
+                doc_width = source_pixmap.width()
+                doc_height = source_pixmap.height()
+
+                from .utils.helpers import compute_page_grid_with_gutters
+                page_grid = compute_page_grid_with_gutters(
+                    doc_width_px=doc_width,
+                    doc_height_px=doc_height,
+                    page_width_px=page_width_px,
+                    page_height_px=page_height_px,
+                    gutter_px=gutter_px,
+                    calib_reduce_step_x_px=calib_step_x_px,
+                    calib_reduce_step_y_px=calib_step_y_px,
+                )
+            except Exception:
+                # Fallback to existing grid if recompute fails
+                page_grid = getattr(self.document_viewer, 'page_grid', [])
 
             print(f"DEBUG: Printing {len(page_grid)} tiles")
             print(f"DEBUG: Source pixmap size: {source_pixmap.width()}x{source_pixmap.height()}")
@@ -891,10 +925,10 @@ class MainWindow(QMainWindow):
                     avail_w = max(0, page_rect.width() - 2 * g_px_x - calib_px_x)
                     avail_h = max(0, page_rect.height() - 2 * g_px_y - calib_px_y)
 
-                    # Destination rect anchored at left/top of printable area
-                    dest_w = min(desired_w_px, avail_w)
-                    dest_h = min(desired_h_px, avail_h)
-                    dest_inner = QRect(avail_x, avail_y, dest_w, dest_h)
+                    # Destination rect anchored at left/top of printable area.
+                    # Keep 1:1 mapping from document px to device px; do not shrink to avail
+                    # (the calibrated right/bottom will be clipped by clip_rect).
+                    dest_inner = QRect(avail_x, avail_y, desired_w_px, desired_h_px)
 
                     # Clip to available area to avoid drawing into calibrated margins
                     clip_rect = QRect(avail_x, avail_y, avail_w, avail_h)
@@ -907,9 +941,9 @@ class MainWindow(QMainWindow):
                     # Draw simple gutter rectangle overlay for visual guidance
                     if self.config.get_gutter_lines_print():
                         painter.save()
-                        # Draw 1px filled bars for gutter rectangle inside the printable area
-                        iw = dest_inner.width(); ih = dest_inner.height()
-                        ix = dest_inner.x(); iy = dest_inner.y()
+                        # Draw 1px filled bars for gutter rectangle inside the clipped printable area
+                        iw = clip_rect.width(); ih = clip_rect.height()
+                        ix = clip_rect.x(); iy = clip_rect.y()
                         painter.setOpacity(1.0)
                         if iw > 2 and ih > 2:
                             painter.fillRect(QRect(ix, iy, 1, ih - 1), Qt.blue)  # Left
