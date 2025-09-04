@@ -1416,14 +1416,36 @@ class MainWindow(QMainWindow):
         doc_width = pixmap.width()
         doc_height = pixmap.height()
 
-        # Resolve page size in pixels using scale and orientation
+        # Resolve page size in pixels for PREVIEW using the printer's printable area (paintRect)
+        # so the preview matches actual printed coverage. This does NOT affect the print path.
         page_size = self.config.get_default_page_size()
-        orientation = self.config.get_page_orientation()
-        page_width_pixels, page_height_pixels = compute_page_size_pixels(
-            scale_factor_mm_per_px=scale_factor,
-            page_size_name=page_size,
-            orientation=orientation,
-        )
+        orientation_pref = self.config.get_page_orientation()
+        try:
+            # Decide preview orientation: honor explicit setting; for 'auto', use doc aspect
+            if orientation_pref == 'landscape':
+                preview_orientation = QPageLayout.Landscape
+            elif orientation_pref == 'portrait':
+                preview_orientation = QPageLayout.Portrait
+            else:  # 'auto'
+                preview_orientation = QPageLayout.Landscape if doc_width >= doc_height else QPageLayout.Portrait
+
+            # Configure a QPrinter to retrieve printable area for the page size/orientation
+            from PySide6.QtPrintSupport import QPrinter
+            qps_id = self._qpagesize_from_name(page_size)
+            printer = QPrinter(QPrinter.HighResolution)
+            printer.setPageSize(QPageSize(qps_id))
+            printer.setPageLayout(QPageLayout(QPageSize(qps_id), preview_orientation, QMarginsF(0, 0, 0, 0), QPageLayout.Millimeter))
+            pr_mm = printer.pageLayout().paintRect(QPageLayout.Millimeter)
+            # Convert printable mm to document pixels via scale (mm/px)
+            page_width_pixels = float(pr_mm.width()) / float(scale_factor)
+            page_height_pixels = float(pr_mm.height()) / float(scale_factor)
+        except Exception:
+            # Fallback to generic page size if printer metrics unavailable
+            page_width_pixels, page_height_pixels = compute_page_size_pixels(
+                scale_factor_mm_per_px=scale_factor,
+                page_size_name=page_size,
+                orientation=orientation_pref,
+            )
 
         # Safety check: prevent too many tiles
         if page_width_pixels < 50 or page_height_pixels < 50:
