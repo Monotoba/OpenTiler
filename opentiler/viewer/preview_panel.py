@@ -11,6 +11,7 @@ from PySide6.QtGui import QPixmap, QPainter, QPen, QColor, QFont
 
 from ..dialogs.page_viewer_dialog import ClickablePageThumbnail
 from ..utils.metadata_page import MetadataPageGenerator, create_document_info
+from ..utils.helpers import summarize_page_grid, compute_tile_layout
 from ..settings.config import config
 from ..utils.overlays import draw_scale_bar
 
@@ -153,10 +154,11 @@ class PreviewPanel(QWidget):
 
     def _create_page_thumbnail(self, source_pixmap, page, page_number, scale_info=None, scale_factor: float = 1.0):
         """Create a thumbnail widget for a single page."""
-        # Extract the page area from the source document
-        x, y = page['x'], page['y']
-        width, height = page['width'], page['height']
-        gutter = page.get('gutter', 0)
+        # Compute standardized tile layout (shared with print path)
+        layout = compute_tile_layout(page, source_pixmap.width(), source_pixmap.height())
+        width = layout['tile_width']
+        height = layout['tile_height']
+        gutter = layout['gutter']
 
         # Create a blank page pixmap with the correct page dimensions
         # This maintains the page orientation and shows empty areas
@@ -166,29 +168,12 @@ class PreviewPanel(QWidget):
         # Draw the document content onto the page, clipped to printable area
         painter = QPainter(page_pixmap)
 
-        # Set clipping region to printable area (inside gutters)
-        printable_rect = QRect(
-            int(gutter), int(gutter),
-            int(width - 2 * gutter), int(height - 2 * gutter)
-        )
-        painter.setClipRect(printable_rect)
-
-        # Calculate the area of the source that overlaps with this page
-        source_rect = source_pixmap.rect()
-        page_rect = QRect(int(x), int(y), int(width), int(height))
-
-        # Find intersection
-        intersection = source_rect.intersected(page_rect)
-
-        if not intersection.isEmpty():
-            # Copy the intersecting area from source to page
-            source_crop = source_pixmap.copy(intersection)
-
-            # Calculate where to place it on the page
-            dest_x = intersection.x() - x
-            dest_y = intersection.y() - y
-
-            painter.drawPixmap(int(dest_x), int(dest_y), source_crop)
+        # Clip to printable area and draw the intersecting region
+        painter.setClipRect(layout['printable_rect'])
+        if layout['source_rect'].width() > 0 and layout['source_rect'].height() > 0:
+            source_crop = source_pixmap.copy(layout['source_rect'])
+            dx, dy = layout['dest_pos']
+            painter.drawPixmap(int(dx), int(dy), source_crop)
 
         painter.end()
 
@@ -241,11 +226,9 @@ class PreviewPanel(QWidget):
             metadata_generator = MetadataPageGenerator()
 
             # Calculate grid dimensions
-            if page_grid:
-                tiles_x = len(set(page['x'] for page in page_grid))
-                tiles_y = len(set(page['y'] for page in page_grid))
-            else:
-                tiles_x = tiles_y = 0
+            summary = summarize_page_grid(page_grid or [])
+            tiles_x = summary['tiles_x']
+            tiles_y = summary['tiles_y']
 
             # Create document info for metadata page
             if document_info:
@@ -255,7 +238,7 @@ class PreviewPanel(QWidget):
                     'doc_height': source_pixmap.height(),
                     'tiles_x': tiles_x,
                     'tiles_y': tiles_y,
-                    'total_tiles': tiles_x * tiles_y,
+                    'total_tiles': summary['total_tiles'],
                     'scale_factor': scale_factor,
                 })
             else:

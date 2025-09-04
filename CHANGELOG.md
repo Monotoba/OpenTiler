@@ -26,6 +26,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Error Handling**: Graceful error handling with user guidance
 - **Cross-Platform**: Windows 7/10/11, macOS, Linux support
 
+## [1.0.1] - 2025-09-04
+
+### Added
+- Contributor guide: `AGENTS.md` with project structure, commands, style, testing, and PR conventions.
+- Utilities for tiling: `compute_page_grid_with_gutters`, `compute_page_size_pixels`, and `summarize_page_grid` in `opentiler/utils/helpers.py`.
+
+### Changed
+- Viewer overlay: removed red page-edge boundary drawing in the main document viewer; only gutter/crop/registration/page indicators remain.
+- Metadata page: removed red page boundaries from the tilemap and legend; shows gutter/printable area and page numbers only.
+- Centralized tile slicing: `MainWindow.on_scale_applied` now uses helper `compute_page_grid_with_gutters`; legacy `_calculate_page_grid_with_gutters` now delegates (kept for compatibility).
+- Consistent tile counts: `summarize_page_grid` used in preview panel, PDF exporter, and print metadata to compute `tiles_x/tiles_y/total_tiles`.
+- Unified tile layout math: preview thumbnails and printed tiles now share `compute_tile_layout` for source/destination/printable rect calculations, ensuring matching on-screen and printed results.
+ - Exporters aligned: Image and PDF exporters now use `compute_tile_layout` to render each page, eliminating duplicate logic and aligning exported output with preview/print layout.
+
+### Notes
+- No functional changes to scale/datum overlays or printing logic, except visual removal of red page-edge lines as noted above.
+
 ### Changed
 - **UI Layout**: Expanded preview panel from 30% to 40% width
 - **Preview Height**: Doubled minimum height from 200px to 400px

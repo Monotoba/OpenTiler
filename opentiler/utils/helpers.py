@@ -4,10 +4,11 @@ Helper utilities for OpenTiler.
 
 import math
 import os
-from typing import Tuple, List, Optional, Union
+from typing import Tuple, List, Optional, Union, Dict, Any
 
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
+from PySide6.QtCore import QRect
 
 def _find_assets_dir(start_dir: Optional[str] = None, max_depth: int = 6) -> Optional[str]:
     """
@@ -261,6 +262,103 @@ def get_page_size_mm(page_size: str) -> Tuple[float, float]:
     return page_sizes.get(page_size, (210.0, 297.0))  # Default to A4
 
 
+def compute_page_size_pixels(
+    scale_factor_mm_per_px: float,
+    page_size_name: str,
+    orientation: str = "auto",
+) -> Tuple[float, float]:
+    """
+    Resolve page width/height in pixels for a given page size and orientation.
+
+    Args:
+        scale_factor_mm_per_px: Document scale in mm per pixel (mm/px).
+        page_size_name: Named page size (e.g., 'A4', 'Letter').
+        orientation: 'portrait' | 'landscape' | 'auto'.
+
+    Returns:
+        (page_width_pixels, page_height_pixels)
+
+    Notes:
+        pixels = mm / (mm/px) when scale_factor_mm_per_px > 0.
+    """
+    width_mm, height_mm = get_page_size_mm(page_size_name)
+
+    if orientation == "landscape" and width_mm < height_mm:
+        width_mm, height_mm = height_mm, width_mm
+    elif orientation == "portrait" and height_mm < width_mm:
+        width_mm, height_mm = height_mm, width_mm
+
+    if scale_factor_mm_per_px > 0:
+        return (width_mm / scale_factor_mm_per_px, height_mm / scale_factor_mm_per_px)
+    # Fallback: return mm if scale is invalid (caller should guard)
+    return (width_mm, height_mm)
+
+
+def compute_page_grid_with_gutters(
+    doc_width_px: int,
+    doc_height_px: int,
+    page_width_px: float,
+    page_height_px: float,
+    gutter_px: float,
+) -> List[Dict[str, Any]]:
+    """
+    Compute the page grid for tiling, using drawable area (inside gutters) as the step.
+
+    Ensures seamless tiling of the document content by stepping pages by the
+    printable (drawable) area size, while each page retains full page dimensions.
+
+    Args:
+        doc_width_px: Source document width in pixels.
+        doc_height_px: Source document height in pixels.
+        page_width_px: Target page width in pixels (including gutters).
+        page_height_px: Target page height in pixels (including gutters).
+        gutter_px: Gutter size in pixels to be applied on all sides.
+
+    Returns:
+        List of dicts with keys: 'x', 'y', 'width', 'height', 'row', 'col', 'gutter'.
+    """
+    pages: List[Dict[str, Any]] = []
+
+    drawable_w = page_width_px - (2 * gutter_px)
+    drawable_h = page_height_px - (2 * gutter_px)
+
+    if drawable_w <= 0 or drawable_h <= 0:
+        # Invalid configuration; no drawable area
+        return []
+
+    step_x = drawable_w
+    step_y = drawable_h
+
+    y = -gutter_px
+    row = 0
+    while y < doc_height_px:
+        x = -gutter_px
+        col = 0
+        while x < doc_width_px:
+            pages.append(
+                {
+                    "x": x,
+                    "y": y,
+                    "width": page_width_px,
+                    "height": page_height_px,
+                    "row": row,
+                    "col": col,
+                    "gutter": gutter_px,
+                }
+            )
+            x += step_x
+            if x + gutter_px >= doc_width_px:
+                break
+            col += 1
+
+        y += step_y
+        if y + gutter_px >= doc_height_px:
+            break
+        row += 1
+
+    return pages
+
+
 def pixels_to_mm(pixels: float, dpi: int = 300) -> float:
     """
     Convert pixels to millimeters.
@@ -310,3 +408,87 @@ def validate_numeric_input(text: str, min_val: float = 0.0, max_val: float = flo
         return None
     except ValueError:
         return None
+
+
+def summarize_page_grid(page_grid: List[Dict[str, Any]]) -> Dict[str, int]:
+    """
+    Summarize a page grid into tiles_x, tiles_y, and total count.
+
+    Uses row/col indices if present for robustness; falls back to
+    counting unique X and Y positions otherwise.
+
+    Args:
+        page_grid: List of page dicts produced by tiling.
+
+    Returns:
+        {'tiles_x': int, 'tiles_y': int, 'total_tiles': int}
+    """
+    total = len(page_grid) if page_grid else 0
+    if not page_grid:
+        return {"tiles_x": 0, "tiles_y": 0, "total_tiles": 0}
+
+    has_indices = any(("row" in p and "col" in p) for p in page_grid)
+    if has_indices:
+        max_row = max(int(p.get("row", 0)) for p in page_grid)
+        max_col = max(int(p.get("col", 0)) for p in page_grid)
+        return {"tiles_x": max_col + 1, "tiles_y": max_row + 1, "total_tiles": total}
+
+    # Fallback: unique positions (may be floats)
+    xs = {p.get("x", 0) for p in page_grid}
+    ys = {p.get("y", 0) for p in page_grid}
+    return {"tiles_x": len(xs), "tiles_y": len(ys), "total_tiles": total}
+
+
+def compute_tile_layout(page: Dict[str, Any], source_width: int, source_height: int) -> Dict[str, Any]:
+    """
+    Compute drawing rectangles and positions to render a single tile/page from the source.
+
+    This consolidates the math used by preview thumbnails and print rendering so that
+    both paths produce identical tile content and alignment.
+
+    Args:
+        page: A page dict with keys: 'x', 'y', 'width', 'height', 'gutter'.
+        source_width: Width of the source document pixmap (px).
+        source_height: Height of the source document pixmap (px).
+
+    Returns:
+        {
+          'tile_width': int,
+          'tile_height': int,
+          'gutter': int,
+          'printable_rect': QRect,   # inner rect on tile (inside gutters)
+          'source_rect': QRect,      # area to copy from source
+          'dest_pos': (int, int),    # destination top-left on the tile
+        }
+    """
+    tile_w = int(page.get("width", 0) or 0)
+    tile_h = int(page.get("height", 0) or 0)
+    gutter = int(page.get("gutter", 0) or 0)
+
+    # Printable area on the tile (inside gutters)
+    inner_w = max(0, tile_w - 2 * gutter)
+    inner_h = max(0, tile_h - 2 * gutter)
+    printable_rect = QRect(gutter, gutter, inner_w, inner_h)
+
+    # Intersect page area with source to decide what to copy
+    page_x = int(page.get("x", 0) or 0)
+    page_y = int(page.get("y", 0) or 0)
+
+    src_x = max(0, page_x)
+    src_y = max(0, page_y)
+    src_w = min(max(0, source_width - src_x), tile_w)
+    src_h = min(max(0, source_height - src_y), tile_h)
+    source_rect = QRect(src_x, src_y, src_w, src_h)
+
+    # Destination position on tile (accounts for negative page offsets)
+    dest_x = max(0, -page_x)
+    dest_y = max(0, -page_y)
+
+    return {
+        "tile_width": tile_w,
+        "tile_height": tile_h,
+        "gutter": gutter,
+        "printable_rect": printable_rect,
+        "source_rect": source_rect,
+        "dest_pos": (dest_x, dest_y),
+    }

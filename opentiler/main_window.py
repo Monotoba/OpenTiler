@@ -27,7 +27,15 @@ from .dialogs.settings_dialog import SettingsDialog
 from .dialogs.export_dialog import ExportDialog
 from .dialogs.save_as_dialog import SaveAsDialog
 from .settings.config import Config
-from .utils.helpers import calculate_tile_grid, get_page_size_mm, mm_to_pixels, load_icon
+from .utils.helpers import (
+    calculate_tile_grid,
+    get_page_size_mm,
+    mm_to_pixels,
+    load_icon,
+    compute_page_grid_with_gutters,
+    summarize_page_grid,
+    compute_page_size_pixels,
+)
 from .utils.overlays import draw_scale_bar
 from .utils.app_logger import configure_from_config, get_logger
 
@@ -757,17 +765,15 @@ class MainWindow(QMainWindow):
             metadata_generator = MetadataPageGenerator()
 
             # Calculate grid dimensions
-            if page_grid:
-                tiles_x = len(set(page['x'] for page in page_grid))
-                tiles_y = len(set(page['y'] for page in page_grid))
-            else:
-                tiles_x = tiles_y = 0
+            summary = summarize_page_grid(page_grid or [])
+            tiles_x = summary['tiles_x']
+            tiles_y = summary['tiles_y']
 
             # Get document information
             document_info = self._get_document_info()
 
             # Add additional info for metadata page
-            document_info['total_tiles'] = len(page_grid)
+            document_info['total_tiles'] = summary['total_tiles']
             document_info['tiles_x'] = tiles_x
             document_info['tiles_y'] = tiles_y
             document_info['export_format'] = 'Print'
@@ -805,9 +811,11 @@ class MainWindow(QMainWindow):
             print(f"DEBUG: Creating tile for page: x={page['x']}, y={page['y']}, w={page['width']}, h={page['height']}")
             print(f"DEBUG: Source pixmap size: {source_pixmap.width()}x{source_pixmap.height()}")
 
-            # Create tile pixmap with the page dimensions
-            tile_width = int(page['width'])
-            tile_height = int(page['height'])
+            # Compute standardized tile layout (shared with preview path)
+            from .utils.helpers import compute_tile_layout
+            layout = compute_tile_layout(page, source_pixmap.width(), source_pixmap.height())
+            tile_width = int(layout['tile_width'])
+            tile_height = int(layout['tile_height'])
             tile_pixmap = QPixmap(tile_width, tile_height)
             tile_pixmap.fill(Qt.white)  # Fill with white background
 
@@ -822,41 +830,26 @@ class MainWindow(QMainWindow):
                 return QPixmap()
 
             # Set clipping region to printable area (inside gutters)
-            gutter = int(page.get('gutter', 0) or 0)
+            gutter = int(layout['gutter'])
             if gutter > 0:
-                printable_rect = QRect(
-                    gutter, gutter,
-                    max(0, tile_width - 2 * gutter),
-                    max(0, tile_height - 2 * gutter)
-                )
-                painter.setClipRect(printable_rect)
+                painter.setClipRect(layout['printable_rect'])
 
             # Copy the area directly from source to tile
-            # Calculate what part of the source we need to copy
-            source_x = max(0, int(page['x']))
-            source_y = max(0, int(page['y']))
-            source_w = min(source_pixmap.width() - source_x, tile_width)
-            source_h = min(source_pixmap.height() - source_y, tile_height)
+            src_rect = layout['source_rect']
+            dx, dy = layout['dest_pos']
 
-            # Calculate where to place it on the tile
-            dest_x = max(0, -int(page['x']))
-            dest_y = max(0, -int(page['y']))
+            print(f"DEBUG: Source rect: ({src_rect.x()}, {src_rect.y()}, {src_rect.width()}, {src_rect.height()})")
+            print(f"DEBUG: Dest position: ({dx}, {dy})")
 
-            print(f"DEBUG: Source rect: ({source_x}, {source_y}, {source_w}, {source_h})")
-            print(f"DEBUG: Dest position: ({dest_x}, {dest_y})")
-
-            if source_w > 0 and source_h > 0:
-                # Copy the source area
-                source_rect = QRect(source_x, source_y, source_w, source_h)
-                source_crop = source_pixmap.copy(source_rect)
-
+            if src_rect.width() > 0 and src_rect.height() > 0:
+                source_crop = source_pixmap.copy(src_rect)
                 if not source_crop.isNull():
-                    print(f"DEBUG: Drawing source crop {source_crop.width()}x{source_crop.height()} at ({dest_x}, {dest_y})")
-                    painter.drawPixmap(dest_x, dest_y, source_crop)
+                    print(f"DEBUG: Drawing source crop {source_crop.width()}x{source_crop.height()} at ({dx}, {dy})")
+                    painter.drawPixmap(int(dx), int(dy), source_crop)
                 else:
                     print("ERROR: Source crop is null")
             else:
-                print(f"ERROR: Invalid source dimensions: {source_w}x{source_h}")
+                print(f"ERROR: Invalid source dimensions: {src_rect.width()}x{src_rect.height()}")
 
             # Add gutter lines and page indicators if enabled
             self._add_tile_overlays(painter, tile_pixmap.size(), page)
@@ -1110,26 +1103,14 @@ class MainWindow(QMainWindow):
         doc_width = pixmap.width()
         doc_height = pixmap.height()
 
-        # Get page size from config (default A4)
+        # Resolve page size in pixels using scale and orientation
         page_size = self.config.get_default_page_size()
-        page_width_mm, page_height_mm = get_page_size_mm(page_size)
-
-        # Apply orientation preference
         orientation = self.config.get_page_orientation()
-        if orientation == "landscape":
-            # Force landscape (width > height)
-            if page_width_mm < page_height_mm:
-                page_width_mm, page_height_mm = page_height_mm, page_width_mm
-        elif orientation == "portrait":
-            # Force portrait (height > width)
-            if page_height_mm < page_width_mm:
-                page_width_mm, page_height_mm = page_height_mm, page_width_mm
-        # "auto" uses the default page size as-is
-
-        # Convert page size to pixels using document scale
-        # scale_factor is mm/pixel, so to get pixels from mm: pixels = mm / scale_factor
-        page_width_pixels = page_width_mm / scale_factor if scale_factor > 0 else page_width_mm
-        page_height_pixels = page_height_mm / scale_factor if scale_factor > 0 else page_height_mm
+        page_width_pixels, page_height_pixels = compute_page_size_pixels(
+            scale_factor_mm_per_px=scale_factor,
+            page_size_name=page_size,
+            orientation=orientation,
+        )
 
         # Safety check: prevent too many tiles
         if page_width_pixels < 50 or page_height_pixels < 50:
@@ -1147,10 +1128,12 @@ class MainWindow(QMainWindow):
         gutter_pixels = gutter_mm / scale_factor
 
         # Generate page grid (pages can overlap where gutters meet)
-        page_grid = self._calculate_page_grid_with_gutters(
-            doc_width, doc_height,
-            page_width_pixels, page_height_pixels,
-            gutter_pixels
+        page_grid = compute_page_grid_with_gutters(
+            doc_width_px=doc_width,
+            doc_height_px=doc_height,
+            page_width_px=page_width_pixels,
+            page_height_px=page_height_pixels,
+            gutter_px=gutter_pixels,
         )
 
         # Get scale info for preview
@@ -1168,52 +1151,14 @@ class MainWindow(QMainWindow):
         self._mark_project_dirty()
 
     def _calculate_page_grid_with_gutters(self, doc_width, doc_height, page_width, page_height, gutter_size):
-        """Calculate page grid where drawable areas tile seamlessly with no gaps."""
-        pages = []
-
-        # Calculate step size based on drawable area (printable area inside gutters)
-        # This ensures all document content falls within a drawable area
-        drawable_width = page_width - (2 * gutter_size)
-        drawable_height = page_height - (2 * gutter_size)
-
-        # Ensure drawable dimensions are positive to prevent infinite loops
-        if drawable_width <= 0 or drawable_height <= 0:
-            print(f"WARNING: Drawable area is non-positive. page_width={page_width}, page_height={page_height}, gutter_size={gutter_size}")
-            return [] # Return empty list if drawable area is invalid
-
-        # Step size equals drawable area size for seamless tiling
-        step_x = drawable_width
-        step_y = drawable_height
-
-        # Start pages offset by negative gutter so drawable areas start at (0,0)
-        y = -gutter_size
-        row = 0
-        while y < doc_height:
-            x = -gutter_size
-            col = 0
-            while x < doc_width:
-                # Pages maintain full dimensions even if they extend beyond document
-                # This ensures consistent page sizes for printing
-                pages.append({
-                    'x': x, 'y': y,
-                    'width': page_width, 'height': page_height,
-                    'row': row, 'col': col,
-                    'gutter': gutter_size
-                })
-
-                x += step_x
-                # Continue until drawable area covers document width
-                if x + gutter_size >= doc_width:
-                    break
-                col += 1
-
-            y += step_y
-            # Continue until drawable area covers document height
-            if y + gutter_size >= doc_height:
-                break
-            row += 1
-
-        return pages
+        """Deprecated: use utils.helpers.compute_page_grid_with_gutters()."""
+        return compute_page_grid_with_gutters(
+            doc_width_px=doc_width,
+            doc_height_px=doc_height,
+            page_width_px=page_width,
+            page_height_px=page_height,
+            gutter_px=gutter_size,
+        )
 
     def _determine_print_orientation(self):
         """Determine optimal print orientation based on tile content and user preferences."""

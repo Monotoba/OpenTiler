@@ -463,9 +463,7 @@ class DocumentViewer(QWidget):
         result = QPixmap(pixmap)
         painter = QPainter(result)
 
-        # Set up pen for datum line
-        pen = QPen(QColor(255, 0, 0), 3)  # Red color, 3px width
-        painter.setPen(pen)
+        # Prepare painter; specific pens are set for each element below
 
         # Draw endpoint handles only while the scaling tool is open
         if self.point_selection_mode:
@@ -595,7 +593,7 @@ class DocumentViewer(QWidget):
         return result
 
     def _draw_page_grid_overlay(self, pixmap):
-        """Draw page grid overlay with red page boundaries and blue gutter lines."""
+        """Draw page grid overlay (gutter lines, crop/registration marks)."""
         if not self.page_grid:
             return pixmap
 
@@ -636,10 +634,8 @@ class DocumentViewer(QWidget):
             height = page['height'] * self.zoom_factor
             gutter = page['gutter'] * self.zoom_factor
 
-            # Draw red page boundary (actual paper edge) - always shown
-            page_pen = QPen(QColor(255, 0, 0), 2)  # Red lines for page edges
-            painter.setPen(page_pen)
-            painter.drawRect(int(x), int(y), int(width), int(height))
+            # Omit drawing the outer page boundary in the main viewer
+            # (previously a red rectangle around each page).
 
             # Draw blue gutter lines (printable area boundary) - if enabled
             if config.get_gutter_lines_display() and gutter > 1:

@@ -270,7 +270,7 @@ class MetadataPageGenerator:
         return y_start + max(80, int(100 * self._scale))
 
     def _create_plan_view_composite(self, source_pixmap, page_grid, total_width, total_height, offset_x, offset_y, scale_factor: float = 1.0):
-        """Create a composite image showing the document with page boundaries."""
+        """Create a composite image showing the document with page layout overlays."""
         try:
             # Create canvas for the composite
             composite = QPixmap(int(total_width), int(total_height))
@@ -284,17 +284,13 @@ class MetadataPageGenerator:
                 doc_y = -offset_y
                 painter.drawPixmap(int(doc_x), int(doc_y), source_pixmap)
 
-                # Draw page boundaries and numbers
+                # Draw page layout overlays and numbers (no outer page boundary)
                 for i, page in enumerate(page_grid):
                     page_x = page['x'] - offset_x
                     page_y = page['y'] - offset_y
                     page_width = page['width']
                     page_height = page['height']
                     gutter = page.get('gutter', 0)
-
-                    # Draw page boundary (red)
-                    painter.setPen(QPen(QColor(255, 0, 0), 2))
-                    painter.drawRect(int(page_x), int(page_y), int(page_width), int(page_height))
 
                     # Draw gutter boundary (blue) if gutter exists
                     if gutter > 1:
@@ -376,14 +372,7 @@ class MetadataPageGenerator:
 
         x = self.margin
 
-        # Red line for page boundaries
-        painter.setPen(QPen(QColor(255, 0, 0), 2))
-        painter.drawLine(x, y, x + 20, y)
-        painter.setPen(QColor(0, 0, 0))
-        painter.drawText(x + 25, y + 5, "Page boundaries (print area)")
-
         # Blue line for gutter boundaries
-        x += 200
         painter.setPen(QPen(QColor(0, 100, 255), 1))
         painter.drawLine(x, y, x + 20, y)
         painter.setPen(QColor(0, 0, 0))

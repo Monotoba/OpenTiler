@@ -12,6 +12,7 @@ from ..utils.app_logger import get_logger
 
 from .base_exporter import BaseExporter
 from ..utils.metadata_page import MetadataPageGenerator, create_document_info
+from ..utils.helpers import summarize_page_grid
 from ..settings.config import config
 
 
@@ -171,14 +172,17 @@ class PDFExporter(BaseExporter):
             return False
 
     def _create_page_pixmap(self, source_pixmap: QPixmap, page: dict, scale_factor: float = 1.0) -> QPixmap:
-        """Create a pixmap for a single page."""
-        # Extract page information
-        x, y = page['x'], page['y']
-        width, height = page['width'], page['height']
-        gutter = page.get('gutter', 0)
+        """Create a pixmap for a single page using unified layout calculations."""
+        from ..utils.helpers import compute_tile_layout
+
+        # Compute standardized tile layout
+        layout = compute_tile_layout(page, source_pixmap.width(), source_pixmap.height())
+        width = int(layout['tile_width'])
+        height = int(layout['tile_height'])
+        gutter = int(layout['gutter'])
 
         # Create blank page pixmap
-        page_pixmap = QPixmap(int(width), int(height))
+        page_pixmap = QPixmap(width, height)
         page_pixmap.fill()  # Fill with white
 
         # Draw document content onto page
@@ -186,28 +190,14 @@ class PDFExporter(BaseExporter):
 
         # Set clipping region to printable area (inside gutters)
         if gutter > 0:
-            printable_rect = QRect(
-                int(gutter), int(gutter),
-                int(width - 2 * gutter), int(height - 2 * gutter)
-            )
-            painter.setClipRect(printable_rect)
+            painter.setClipRect(layout['printable_rect'])
 
-        # Calculate source area that overlaps with this page
-        source_rect = source_pixmap.rect()
-        page_rect = QRect(int(x), int(y), int(width), int(height))
-
-        # Find intersection
-        intersection = source_rect.intersected(page_rect)
-
-        if not intersection.isEmpty():
-            # Copy intersecting area from source
-            source_crop = source_pixmap.copy(intersection)
-
-            # Calculate destination position on page
-            dest_x = intersection.x() - x
-            dest_y = intersection.y() - y
-
-            painter.drawPixmap(int(dest_x), int(dest_y), source_crop)
+        # Copy intersecting area from source
+        src_rect = layout['source_rect']
+        if src_rect.width() > 0 and src_rect.height() > 0:
+            source_crop = source_pixmap.copy(src_rect)
+            dx, dy = layout['dest_pos']
+            painter.drawPixmap(int(dx), int(dy), source_crop)
 
         # Registration marks at printable corners (for export)
         try:
@@ -219,11 +209,7 @@ class PDFExporter(BaseExporter):
                 radius_px = int((diameter_mm * px_per_mm) / 2)
                 cross_len_px = int(cross_mm * px_per_mm)
 
-                printable_rect = QRect(
-                    int(gutter), int(gutter),
-                    int(width - 2 * gutter), int(height - 2 * gutter)
-                )
-                painter.setClipRect(printable_rect)
+                painter.setClipRect(layout['printable_rect'])
                 painter.setPen(QPen(QColor(0, 0, 0), 1))
                 centers = [
                     (int(gutter), int(gutter)),
@@ -274,17 +260,10 @@ class PDFExporter(BaseExporter):
             # Create metadata page generator
             metadata_generator = MetadataPageGenerator()
 
-            # Calculate grid dimensions
-            if page_grid:
-                min_x = min(page['x'] for page in page_grid)
-                max_x = max(page['x'] + page['width'] for page in page_grid)
-                min_y = min(page['y'] for page in page_grid)
-                max_y = max(page['y'] + page['height'] for page in page_grid)
-
-                tiles_x = len(set(page['x'] for page in page_grid))
-                tiles_y = len(set(page['y'] for page in page_grid))
-            else:
-                tiles_x = tiles_y = 0
+            # Calculate grid dimensions (counts only)
+            summary = summarize_page_grid(page_grid or [])
+            tiles_x = summary['tiles_x']
+            tiles_y = summary['tiles_y']
 
             # Get document information from metadata or kwargs
             document_name = kwargs.get('document_name', self.metadata.get('title', 'Untitled Document'))
