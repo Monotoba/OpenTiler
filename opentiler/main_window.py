@@ -146,6 +146,12 @@ class MainWindow(QMainWindow):
         export_action.triggered.connect(self.export_document)
         file_menu.addAction(export_action)
 
+        # Print Preview (before Print)
+        preview_action = QAction("Print Pre&view...", self)
+        preview_action.setShortcut(QKeySequence("Ctrl+Shift+P"))
+        preview_action.triggered.connect(self.print_preview_tiles)
+        file_menu.addAction(preview_action)
+
         print_action = QAction("&Print Tiles...", self)
         print_action.setShortcut(QKeySequence("Ctrl+P"))
         print_action.triggered.connect(self.print_tiles)
@@ -569,10 +575,8 @@ class MainWindow(QMainWindow):
             if print_dialog.exec() == QPrintDialog.Accepted:
                 get_logger('printing').debug("Print dialog accepted; starting print")
                 # Do not override user-selected page size/orientation after dialog
-                include_metadata = self.config.get_include_metadata_page()
-                metadata_position = self.config.get_metadata_page_position()
                 # Proceed with normal printing (tiles + metadata) using calibrated mapping
-                self._print_tiles_to_printer(printer)
+                self._print_tiles_to_printer(printer, show_message=True)
             else:
                 get_logger('printing').info("Print dialog cancelled")
                 self._printing_in_progress = False
@@ -584,6 +588,38 @@ class MainWindow(QMainWindow):
         finally:
             self._printing_in_progress = False
             get_logger('printing').debug("print_tiles() completed")
+
+    def print_preview_tiles(self):
+        """Open a print preview dialog rendering tiles (including metadata page if enabled)."""
+        get_logger('printing').debug("print_preview_tiles() called")
+
+        # Basic guards
+        if not self.document_viewer.current_pixmap:
+            QMessageBox.warning(self, "Print Preview", "No document loaded. Please load a document first.")
+            return
+        if not hasattr(self.document_viewer, 'page_grid') or not self.document_viewer.page_grid:
+            QMessageBox.warning(self, "Print Preview", "No tiles generated. Please apply scaling first to generate tiles.")
+            return
+
+        # Configure printer similarly to print_tiles
+        printer = QPrinter(QPrinter.HighResolution)
+        cfg_page_name = self.config.get_default_page_size()
+        page_size_id = self._qpagesize_from_name(cfg_page_name)
+        page_size = QPageSize(page_size_id)
+        orientation = self._determine_print_orientation()
+        printer.setPageSize(page_size)
+        printer.setPageLayout(QPageLayout(
+            page_size,
+            orientation,
+            QMarginsF(0, 0, 0, 0),
+            QPageLayout.Millimeter
+        ))
+
+        # Show preview dialog and render using the same printing pipeline (no success dialog)
+        preview = QPrintPreviewDialog(printer, self)
+        preview.setWindowTitle("Print Preview")
+        preview.paintRequested.connect(lambda p: self._print_tiles_to_printer(p, show_message=False))
+        preview.exec()
 
     def _print_debug_layout_page(self, printer):
         """TEMP: Print a single diagnostic page outlining printable area and gutter mapping.
@@ -760,8 +796,13 @@ class MainWindow(QMainWindow):
             return
         self._print_debug_layout_page(printer)
 
-    def _print_tiles_to_printer(self, printer):
-        """Print tiles to the specified printer."""
+    def _print_tiles_to_printer(self, printer, show_message: bool = True):
+        """Print tiles to the specified printer or preview.
+
+        Args:
+            printer: Target QPrinter from print/preview.
+            show_message: If True, show completion dialog; suppress in preview.
+        """
         print("DEBUG: _print_tiles_to_printer() called")
         painter = None
         try:
@@ -1037,12 +1078,13 @@ class MainWindow(QMainWindow):
             painter.end()
             print("DEBUG: Printing completed successfully")
 
-            # Show success message
-            QMessageBox.information(
-                self,
-                "Print Complete",
-                f"Successfully printed {printed_count} page(s)."
-            )
+            # Show success message unless suppressed (preview)
+            if show_message:
+                QMessageBox.information(
+                    self,
+                    "Print Complete",
+                    f"Successfully printed {printed_count} page(s)."
+                )
 
         except Exception as e:
             get_logger('printing').error(f"Print failed: {str(e)}")
@@ -1050,7 +1092,8 @@ class MainWindow(QMainWindow):
             traceback.print_exc()
             if painter and painter.isActive():
                 painter.end()
-            QMessageBox.critical(self, "Print Error", f"Failed to print tiles: {str(e)}")
+            if show_message:
+                QMessageBox.critical(self, "Print Error", f"Failed to print tiles: {str(e)}")
 
     def _qpagesize_from_name(self, name: str):
         """Map config page size string to QPageSize.SizeId."""
