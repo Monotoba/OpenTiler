@@ -1,0 +1,63 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch: {}
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Verify version matches tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF##*/}"
+          VERSION_FROM_TAG="${TAG#v}"
+          echo "Tag: $TAG  Version: $VERSION_FROM_TAG"
+          PYVER=$(python - <<'PY'
+import re, sys, pathlib
+v = None
+sp = pathlib.Path('setup.py').read_text()
+m = re.search(r'version\s*=\s*"([^"]+)"', sp)
+if m:
+    v = m.group(1)
+else:
+    print('Could not find version in setup.py'); sys.exit(2)
+print(v)
+PY
+          )
+          echo "setup.py version: $PYVER"
+          test "$PYVER" = "$VERSION_FROM_TAG" || { echo "Version mismatch: setup.py=$PYVER tag=$VERSION_FROM_TAG"; exit 1; }
+
+      - name: Install build tooling
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+
+      - name: Build distributions
+        run: |
+          python -m build
+
+      - name: Create GitHub Release and upload artifacts
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dist/**
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
