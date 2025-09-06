@@ -154,6 +154,134 @@ class ClickableLabel(QLabel):
                     pass
         super().mousePressEvent(event)
 
+    def mouseMoveEvent(self, event):
+        """Handle mouse move for endpoint dragging and live preview (on label)."""
+        # Live preview of measurement when one point is selected
+        try:
+            if self.parent_viewer and self.parent_viewer.point_selection_mode and not self.dragging and self.pixmap():
+                if len(self.parent_viewer.selected_points) == 1:
+                    label_size = self.size()
+                    pixmap_size = self.pixmap().size()
+                    x_offset = (label_size.width() - pixmap_size.width()) // 2
+                    y_offset = (label_size.height() - pixmap_size.height()) // 2
+                    image_x = event.pos().x() - x_offset
+                    image_y = event.pos().y() - y_offset
+                    # Clamp to pixmap bounds
+                    image_x = max(0, min(image_x, pixmap_size.width()))
+                    image_y = max(0, min(image_y, pixmap_size.height()))
+                    z = max(0.0001, self.parent_viewer.zoom_factor)
+                    original_x = image_x / z
+                    original_y = image_y / z
+                    if self.parent_viewer.temp_cursor_pos != (original_x, original_y):
+                        self.parent_viewer.temp_cursor_pos = (original_x, original_y)
+                        self.parent_viewer._update_display()
+        except Exception:
+            pass
+
+        # Hover highlight and drag initiation
+        if self.parent_viewer and self.parent_viewer.point_selection_mode:
+            # Hover highlight for endpoints when we have two points
+            if len(self.parent_viewer.selected_points) >= 2 and self.pixmap():
+                try:
+                    p1 = self.parent_viewer.selected_points[0]
+                    p2 = self.parent_viewer.selected_points[1]
+                    z = max(0.0001, self.parent_viewer.zoom_factor)
+                    p1_disp = QPoint(int(p1[0] * z), int(p1[1] * z))
+                    p2_disp = QPoint(int(p2[0] * z), int(p2[1] * z))
+                    label_size = self.size()
+                    pixmap_size = self.pixmap().size()
+                    x_offset = (label_size.width() - pixmap_size.width()) // 2
+                    y_offset = (label_size.height() - pixmap_size.height()) // 2
+                    cur_disp = event.pos() - QPoint(x_offset, y_offset)
+                    d1 = (cur_disp.x() - p1_disp.x())**2 + (cur_disp.y() - p1_disp.y())**2
+                    d2 = (cur_disp.x() - p2_disp.x())**2 + (cur_disp.y() - p2_disp.y())**2
+                    r2 = (self.hit_radius) ** 2
+                    new_hover = None
+                    if d1 <= r2 or d2 <= r2:
+                        new_hover = 0 if d1 <= d2 else 1
+                    if new_hover != self.parent_viewer.hover_endpoint:
+                        self.parent_viewer.hover_endpoint = new_hover
+                        self.parent_viewer._update_display()
+                except Exception:
+                    pass
+            # Forgiving capture when moving with button held near an endpoint
+            if (not self.dragging) and (event.buttons() & Qt.LeftButton) and len(self.parent_viewer.selected_points) >= 2 and self.pixmap():
+                p1 = self.parent_viewer.selected_points[0]
+                p2 = self.parent_viewer.selected_points[1]
+                z = max(0.0001, self.parent_viewer.zoom_factor)
+                p1_disp = QPoint(int(p1[0] * z), int(p1[1] * z))
+                p2_disp = QPoint(int(p2[0] * z), int(p2[1] * z))
+                label_size = self.size()
+                pixmap_size = self.pixmap().size()
+                x_offset = (label_size.width() - pixmap_size.width()) // 2
+                y_offset = (label_size.height() - pixmap_size.height()) // 2
+                cur_disp = event.pos() - QPoint(x_offset, y_offset)
+                d1 = (cur_disp.x() - p1_disp.x())**2 + (cur_disp.y() - p1_disp.y())**2
+                d2 = (cur_disp.x() - p2_disp.x())**2 + (cur_disp.y() - p2_disp.y())**2
+                r2 = (self.hit_radius * 2) ** 2
+                if d1 <= r2 or d2 <= r2:
+                    self.dragging = True
+                    self.dragging_index = 0 if d1 <= d2 else 1
+                    self.setCursor(QCursor(Qt.ClosedHandCursor))
+
+        # Update point during drag
+        if self.dragging and self.parent_viewer and self.parent_viewer.point_selection_mode and self.dragging_index is not None and self.pixmap():
+            # Map cursor to image coords
+            label_size = self.size()
+            pixmap_size = self.pixmap().size()
+            x_offset = (label_size.width() - pixmap_size.width()) // 2
+            y_offset = (label_size.height() - pixmap_size.height()) // 2
+            image_x = event.pos().x() - x_offset
+            image_y = event.pos().y() - y_offset
+            # Clamp
+            image_x = max(0, min(image_x, pixmap_size.width()))
+            image_y = max(0, min(image_y, pixmap_size.height()))
+            z = max(0.0001, self.parent_viewer.zoom_factor)
+            original_x = image_x / z
+            original_y = image_y / z
+            pts = list(self.parent_viewer.selected_points)
+            if len(pts) >= 2:
+                pts[self.dragging_index] = (original_x, original_y)
+                self.parent_viewer.selected_points = pts
+                try:
+                    self.parent_viewer.points_updated.emit(original_x, original_y, int(self.dragging_index))
+                except Exception:
+                    pass
+                self.parent_viewer._update_display()
+            event.accept(); return
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton and self.dragging:
+            self.dragging = False
+            self.dragging_index = None
+            # Restore cursor
+            if self.parent_viewer and self.parent_viewer.point_selection_mode:
+                self.setCursor(QCursor(Qt.CrossCursor))
+            else:
+                self.unsetCursor()
+            event.accept(); return
+        super().mouseReleaseEvent(event)
+
+    def enterEvent(self, event):
+        # Ensure cursor reflects selection mode even if outer viewport set a different cursor
+        if getattr(self, 'parent_viewer', None):
+            if self.parent_viewer.point_selection_mode:
+                self.setCursor(QCursor(Qt.CrossCursor))
+            else:
+                self.setCursor(QCursor(Qt.OpenHandCursor))
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        # Clear hover highlight on leave
+        if getattr(self, 'parent_viewer', None) and self.parent_viewer.hover_endpoint is not None:
+            self.parent_viewer.hover_endpoint = None
+            try:
+                self.parent_viewer._update_display()
+            except Exception:
+                pass
+        super().leaveEvent(event)
+
 
 
 
@@ -947,133 +1075,4 @@ class DocumentViewer(QWidget):
                 return True
         return False
 
-    def mouseMoveEvent(self, event):
-        """Handle mouse move for endpoint dragging and live preview."""
-        # Live preview: update temporary cursor position for measurement when one point is selected
-        try:
-            if self.parent_viewer and self.parent_viewer.point_selection_mode and not self.dragging and self.pixmap():
-                if len(self.parent_viewer.selected_points) == 1:
-                    label_size = self.size()
-                    pixmap_size = self.pixmap().size()
-                    x_offset = (label_size.width() - pixmap_size.width()) // 2
-                    y_offset = (label_size.height() - pixmap_size.height()) // 2
-                    image_x = event.pos().x() - x_offset
-                    image_y = event.pos().y() - y_offset
-                    # Clamp to pixmap bounds
-                    image_x = max(0, min(image_x, pixmap_size.width()))
-                    image_y = max(0, min(image_y, pixmap_size.height()))
-                    z = max(0.0001, self.parent_viewer.zoom_factor)
-                    original_x = image_x / z
-                    original_y = image_y / z
-                    if self.parent_viewer.temp_cursor_pos != (original_x, original_y):
-                        self.parent_viewer.temp_cursor_pos = (original_x, original_y)
-                        self.parent_viewer._update_display()
-        except Exception:
-            pass
-
-        # Existing hover/drag logic
-        if self.parent_viewer and self.parent_viewer.point_selection_mode:
-            # Hover highlight: detect nearest endpoint within radius
-            if len(self.parent_viewer.selected_points) >= 2 and self.pixmap():
-                try:
-                    p1 = self.parent_viewer.selected_points[0]
-                    p2 = self.parent_viewer.selected_points[1]
-                    z = max(0.0001, self.parent_viewer.zoom_factor)
-                    p1_disp = QPoint(int(p1[0] * z), int(p1[1] * z))
-                    p2_disp = QPoint(int(p2[0] * z), int(p2[1] * z))
-                    label_size = self.size()
-                    pixmap_size = self.pixmap().size()
-                    x_offset = (label_size.width() - pixmap_size.width()) // 2
-                    y_offset = (label_size.height() - pixmap_size.height()) // 2
-                    cur_disp = event.pos() - QPoint(x_offset, y_offset)
-                    d1 = (cur_disp.x() - p1_disp.x())**2 + (cur_disp.y() - p1_disp.y())**2
-                    d2 = (cur_disp.x() - p2_disp.x())**2 + (cur_disp.y() - p2_disp.y())**2
-                    r2 = (self.hit_radius) ** 2
-                    new_hover = None
-                    if d1 <= r2 or d2 <= r2:
-                        new_hover = 0 if d1 <= d2 else 1
-                    if new_hover != self.parent_viewer.hover_endpoint:
-                        self.parent_viewer.hover_endpoint = new_hover
-                        self.parent_viewer._update_display()
-                except Exception:
-                    pass
-            # If not already dragging, allow capture when moving with left button held near an endpoint
-            if (not self.dragging) and (event.buttons() & Qt.LeftButton) and len(self.parent_viewer.selected_points) >= 2:
-                # Attempt to initiate dragging if cursor is near an endpoint (forgiving radius)
-                p1 = self.parent_viewer.selected_points[0]
-                p2 = self.parent_viewer.selected_points[1]
-                z = max(0.0001, self.parent_viewer.zoom_factor)
-                p1_disp = QPoint(int(p1[0] * z), int(p1[1] * z))
-                p2_disp = QPoint(int(p2[0] * z), int(p2[1] * z))
-                label_size = self.size()
-                pixmap_size = self.pixmap().size() if self.pixmap() else QSize(1, 1)
-                x_offset = (label_size.width() - pixmap_size.width()) // 2
-                y_offset = (label_size.height() - pixmap_size.height()) // 2
-                cur_disp = event.pos() - QPoint(x_offset, y_offset)
-                d1 = (cur_disp.x() - p1_disp.x())**2 + (cur_disp.y() - p1_disp.y())**2
-                d2 = (cur_disp.x() - p2_disp.x())**2 + (cur_disp.y() - p2_disp.y())**2
-                r2 = (self.hit_radius * 2) ** 2
-                if d1 <= r2 or d2 <= r2:
-                    self.dragging = True
-                    self.dragging_index = 0 if d1 <= d2 else 1
-                    self.setCursor(QCursor(Qt.ClosedHandCursor))
-
-        if self.dragging and self.parent_viewer and self.parent_viewer.point_selection_mode and self.dragging_index is not None and self.pixmap():
-            # Map cursor pos to image coordinates
-            label_size = self.size()
-            pixmap_size = self.pixmap().size()
-            x_offset = (label_size.width() - pixmap_size.width()) // 2
-            y_offset = (label_size.height() - pixmap_size.height()) // 2
-            image_x = event.pos().x() - x_offset
-            image_y = event.pos().y() - y_offset
-            # Clamp to pixmap bounds
-            image_x = max(0, min(image_x, pixmap_size.width()))
-            image_y = max(0, min(image_y, pixmap_size.height()))
-            # Convert to original coords (pre-zoom)
-            z = max(0.0001, self.parent_viewer.zoom_factor)
-            original_x = image_x / z
-            original_y = image_y / z
-            # Update selected point
-            pts = list(self.parent_viewer.selected_points)
-            if len(pts) >= 2:
-                pts[self.dragging_index] = (original_x, original_y)
-                self.parent_viewer.selected_points = pts
-                # Notify and redraw
-                try:
-                    self.parent_viewer.points_updated.emit(original_x, original_y, int(self.dragging_index))
-                except Exception:
-                    pass
-                self.parent_viewer._update_display()
-            event.accept(); return
-        super().mouseMoveEvent(event)
-
-    def mouseReleaseEvent(self, event):
-        if event.button() == Qt.LeftButton and self.dragging:
-            self.dragging = False
-            self.dragging_index = None
-            # Restore cursor
-            if self.parent_viewer and self.parent_viewer.point_selection_mode:
-                self.setCursor(QCursor(Qt.CrossCursor))
-            else:
-                self.unsetCursor()
-            event.accept(); return
-        super().mouseReleaseEvent(event)
-
-    def enterEvent(self, event):
-        # Ensure cursor reflects selection mode even if outer viewport set a different cursor
-        if getattr(self, 'parent_viewer', None):
-            if self.parent_viewer.point_selection_mode:
-                self.setCursor(QCursor(Qt.CrossCursor))
-            else:
-                self.setCursor(QCursor(Qt.OpenHandCursor))
-        super().enterEvent(event)
-
-    def leaveEvent(self, event):
-        # Clear hover highlight on leave
-        if getattr(self, 'parent_viewer', None) and self.parent_viewer.hover_endpoint is not None:
-            self.parent_viewer.hover_endpoint = None
-            try:
-                self.parent_viewer._update_display()
-            except Exception:
-                pass
-        super().leaveEvent(event)
+    # Removed: mis-placed QLabel handlers were erroneously added on DocumentViewer
