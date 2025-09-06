@@ -97,6 +97,7 @@ class ClickableLabel(QLabel):
         self.dragging = False
         self.dragging_index = None  # 0 or 1
         self.hit_radius = 16  # pixels in display space
+        self.dragging_measure = False
 
     def set_parent_viewer(self, viewer):
         """Set reference to parent viewer for panning."""
@@ -172,7 +173,24 @@ class ClickableLabel(QLabel):
                 z = max(0.0001, self.parent_viewer.zoom_factor)
                 original_x = image_x / z
                 original_y = image_y / z
+                # Try selecting a measurement
                 if self.parent_viewer.select_measurement_at(original_x, original_y):
+                    # If selection occurred, also check if near an endpoint to start dragging
+                    idx = self.parent_viewer.selected_measure_index
+                    if idx is not None and 0 <= idx < len(self.parent_viewer.measurements):
+                        z = max(0.0001, self.parent_viewer.zoom_factor)
+                        m = self.parent_viewer.measurements[idx]
+                        p1 = QPoint(int(m['p1'][0]*z), int(m['p1'][1]*z))
+                        p2 = QPoint(int(m['p2'][0]*z), int(m['p2'][1]*z))
+                        cur = QPoint(int(image_x), int(image_y))
+                        d1 = (cur.x()-p1.x())**2 + (cur.y()-p1.y())**2
+                        d2 = (cur.x()-p2.x())**2 + (cur.y()-p2.y())**2
+                        r2 = (self.hit_radius) ** 2
+                        if d1 <= r2 or d2 <= r2:
+                            self.dragging = True
+                            self.dragging_measure = True
+                            self.dragging_index = 0 if d1 <= d2 else 1
+                            self.setCursor(QCursor(Qt.ClosedHandCursor))
                     self.parent_viewer._update_display()
                     event.accept(); return
         super().mousePressEvent(event)
@@ -247,8 +265,8 @@ class ClickableLabel(QLabel):
                     self.dragging_index = 0 if d1 <= d2 else 1
                     self.setCursor(QCursor(Qt.ClosedHandCursor))
 
-        # Update point during drag
-        if self.dragging and self.parent_viewer and self.parent_viewer.point_selection_mode and self.dragging_index is not None and self.pixmap():
+        # Update point during drag for scaling selection
+        if self.dragging and not self.dragging_measure and self.parent_viewer and self.parent_viewer.point_selection_mode and self.dragging_index is not None and self.pixmap():
             # Map cursor to image coords
             label_size = self.size()
             pixmap_size = self.pixmap().size()
@@ -272,12 +290,39 @@ class ClickableLabel(QLabel):
                     pass
                 self.parent_viewer._update_display()
             event.accept(); return
+
+        # Update endpoint during drag for a persisted measurement
+        if self.dragging and self.dragging_measure and self.parent_viewer and self.pixmap():
+            label_size = self.size()
+            pixmap_size = self.pixmap().size()
+            x_offset = (label_size.width() - pixmap_size.width()) // 2
+            y_offset = (label_size.height() - pixmap_size.height()) // 2
+            image_x = event.pos().x() - x_offset
+            image_y = event.pos().y() - y_offset
+            image_x = max(0, min(image_x, pixmap_size.width()))
+            image_y = max(0, min(image_y, pixmap_size.height()))
+            z = max(0.0001, self.parent_viewer.zoom_factor)
+            original_x = image_x / z
+            original_y = image_y / z
+            idx = self.parent_viewer.selected_measure_index
+            if idx is not None and 0 <= idx < len(self.parent_viewer.measurements):
+                m = dict(self.parent_viewer.measurements[idx])
+                if self.dragging_index == 0:
+                    m['p1'] = (original_x, original_y)
+                else:
+                    m['p2'] = (original_x, original_y)
+                # Update text based on new geometry
+                m['text'] = self.parent_viewer._format_measurement_text(m['p1'], m['p2'])
+                self.parent_viewer.measurements[idx] = m
+                self.parent_viewer._update_display()
+            event.accept(); return
         super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton and self.dragging:
             self.dragging = False
             self.dragging_index = None
+            self.dragging_measure = False
             # Restore cursor
             if self.parent_viewer and self.parent_viewer.point_selection_mode:
                 self.setCursor(QCursor(Qt.CrossCursor))
@@ -772,17 +817,16 @@ class DocumentViewer(QWidget):
             p2_x = m['p2'][0] * self.zoom_factor
             p2_y = m['p2'][1] * self.zoom_factor
 
-            # Line style
-            if config.get_scale_line_display():
-                pen = QPen(QColor(255, 0, 0), 2 if self.selected_measure_index != idx else 3)
-                pen.setStyle(Qt.CustomDashLine)
-                pen.setDashPattern([8, 3, 2, 3, 2, 3])
-                painter.setPen(pen)
-                painter.drawLine(int(p1_x), int(p1_y), int(p2_x), int(p2_y))
+            # Line style (always draw measurements on-screen)
+            pen = QPen(QColor(255, 0, 0), 2 if self.selected_measure_index != idx else 3)
+            pen.setStyle(Qt.CustomDashLine)
+            pen.setDashPattern([8, 3, 2, 3, 2, 3])
+            painter.setPen(pen)
+            painter.drawLine(int(p1_x), int(p1_y), int(p2_x), int(p2_y))
 
             # Label
             label = m.get('text', '')
-            if label and config.get_scale_text_display():
+            if label:
                 font = painter.font()
                 font.setPointSize(12)
                 font.setBold(True)
@@ -809,13 +853,16 @@ class DocumentViewer(QWidget):
                 painter.fillRect(bg, QColor(255, 255, 255, 200))
                 painter.drawText(int(tx), int(ty + text_rect.height()), label)
 
-            # Endpoint handles if selected
+            # Endpoint handles (always draw; highlight if selected)
+            handle_radius = 5
             if self.selected_measure_index == idx:
-                handle_radius = 5
                 painter.setBrush(QColor(255, 255, 0, 220))
                 painter.setPen(QPen(QColor(0, 0, 0), 1))
-                painter.drawEllipse(int(p1_x - handle_radius), int(p1_y - handle_radius), handle_radius*2, handle_radius*2)
-                painter.drawEllipse(int(p2_x - handle_radius), int(p2_y - handle_radius), handle_radius*2, handle_radius*2)
+            else:
+                painter.setBrush(QColor(255, 255, 255, 220))
+                painter.setPen(QPen(QColor(0, 0, 0), 1))
+            painter.drawEllipse(int(p1_x - handle_radius), int(p1_y - handle_radius), handle_radius*2, handle_radius*2)
+            painter.drawEllipse(int(p2_x - handle_radius), int(p2_y - handle_radius), handle_radius*2, handle_radius*2)
 
         painter.end()
         return result

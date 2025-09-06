@@ -95,7 +95,7 @@ class PreviewPanel(QWidget):
         # Remove the addStretch() call - we want the scroll area to take all space
         self.setLayout(layout)
 
-    def update_preview(self, pixmap, page_grid=None, scale_factor=1.0, scale_info=None, document_info=None, printer_area: bool = False):
+    def update_preview(self, pixmap, page_grid=None, scale_factor=1.0, scale_info=None, document_info=None, printer_area: bool = False, measurements=None):
         """Update the preview with individual page thumbnails."""
         # Clear existing thumbnails
         self._clear_thumbnails()
@@ -126,7 +126,7 @@ class PreviewPanel(QWidget):
 
         # Generate thumbnail for each tile page
         for i, page in enumerate(page_grid):
-            page_thumbnail = self._create_page_thumbnail(pixmap, page, page_number, scale_info, scale_factor)
+            page_thumbnail = self._create_page_thumbnail(pixmap, page, page_number, scale_info, scale_factor, measurements=measurements or [])
             self.thumbnail_layout.addWidget(page_thumbnail)
             page_number += 1
 
@@ -165,7 +165,7 @@ class PreviewPanel(QWidget):
             if child.widget() and child.widget() != self.no_pages_label:
                 child.widget().deleteLater()
 
-    def _create_page_thumbnail(self, source_pixmap, page, page_number, scale_info=None, scale_factor: float = 1.0):
+    def _create_page_thumbnail(self, source_pixmap, page, page_number, scale_info=None, scale_factor: float = 1.0, measurements=None):
         """Create a thumbnail widget for a single page."""
         # Compute standardized tile layout (shared with print path)
         layout = compute_tile_layout(page, source_pixmap.width(), source_pixmap.height())
@@ -280,6 +280,69 @@ class PreviewPanel(QWidget):
                     dp_p.drawEllipse(cx - radius_px, cy - radius_px, radius_px * 2, radius_px * 2)
                     dp_p.drawLine(cx - cross_len_px, cy, cx + cross_len_px, cy)
                     dp_p.drawLine(cx, cy - cross_len_px, cx, cy + cross_len_px)
+                dp_p.end()
+                display_pixmap = dp
+        except Exception:
+            pass
+
+        # Draw all measurements on the display pixmap (thumbnail overlay)
+        try:
+            if measurements:
+                dp = QPixmap(display_pixmap)
+                dp_p = QPainter(dp)
+                page_x = page.get('x', 0); page_y = page.get('y', 0)
+                page_w = max(1.0, float(page.get('width', 1)))
+                page_h = max(1.0, float(page.get('height', 1)))
+                sx = page_pixmap.width() / page_w
+                sy = page_pixmap.height() / page_h
+                # Map to display by subtracting calibrated inner offset
+                ox = cal_inner_rect.x(); oy = cal_inner_rect.y()
+                for m in measurements:
+                    p1 = m.get('p1'); p2 = m.get('p2'); label = m.get('text','')
+                    if not (p1 and p2):
+                        continue
+                    # skip if no intersection
+                    minx, maxx = min(p1[0], p2[0]), max(p1[0], p2[0])
+                    miny, maxy = min(p1[1], p2[1]), max(p1[1], p2[1])
+                    if maxx < page_x or minx > page_x + page_w or maxy < page_y or miny > page_y + page_h:
+                        continue
+                    p1x = (p1[0] - page_x) * sx - ox
+                    p1y = (p1[1] - page_y) * sy - oy
+                    p2x = (p2[0] - page_x) * sx - ox
+                    p2y = (p2[1] - page_y) * sy - oy
+                    pen = QPen(QColor(255,0,0), 2)
+                    pen.setStyle(Qt.CustomDashLine)
+                    pen.setDashPattern([8,3,2,3,2,3])
+                    dp_p.setPen(pen)
+                    dp_p.drawLine(int(p1x), int(p1y), int(p2x), int(p2y))
+                    # endpoints
+                    r = 3
+                    dp_p.setBrush(QColor(255,255,255,220))
+                    dp_p.setPen(QPen(QColor(0,0,0),1))
+                    dp_p.drawEllipse(int(p1x - r), int(p1y - r), r*2, r*2)
+                    dp_p.drawEllipse(int(p2x - r), int(p2y - r), r*2, r*2)
+                    if label:
+                        font = dp_p.font(); font.setPointSize(8); font.setBold(True)
+                        dp_p.setFont(font)
+                        dp_p.setPen(QPen(QColor(255,0,0),1))
+                        midx = (p1x + p2x)/2; midy = (p1y + p2y)/2
+                        dx = (p2x - p1x); dy = (p2y - p1y); dist = max(1.0, (dx*dx+dy*dy)**0.5)
+                        if dist > 1:
+                            ux, uy = dx/dist, dy/dist
+                            px, py = -uy, ux
+                        else:
+                            px, py = 0, -1
+                        text_rect = dp_p.fontMetrics().boundingRect(label)
+                        if dist >= (text_rect.width() + 12):
+                            tx = midx - text_rect.width()/2 + px*8
+                            ty = midy + py*8
+                        else:
+                            tx = p2x - text_rect.width()/2 + px*8
+                            ty = p2y + py*8 - text_rect.height()/2
+                        bg = text_rect.adjusted(-3,-2,3,2)
+                        bg.moveTopLeft(QPoint(int(tx - 3), int(ty - 2)))
+                        dp_p.fillRect(bg, QColor(255,255,255,200))
+                        dp_p.drawText(int(tx), int(ty + text_rect.height()), label)
                 dp_p.end()
                 display_pixmap = dp
         except Exception:

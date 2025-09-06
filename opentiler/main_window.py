@@ -1558,6 +1558,7 @@ class MainWindow(QMainWindow):
             scale_info,
             document_info,
             printer_area=preview_used_printer_metrics,
+            measurements=getattr(self.document_viewer, 'measurements', [])
         )
         self.document_viewer.set_page_grid(page_grid, gutter_pixels)
 
@@ -2098,6 +2099,8 @@ class MainWindow(QMainWindow):
                 'scale_factor': getattr(viewer, 'scale_factor', 1.0),
                 'selected_points': getattr(viewer, 'selected_points', []),
                 'measurement_text': getattr(viewer, 'measurement_text', ''),
+                'measurements': getattr(viewer, 'measurements', []),
+                'selected_measure_index': getattr(viewer, 'selected_measure_index', None),
                 'rotation': getattr(viewer, 'rotation', 0),
                 'zoom_factor': getattr(viewer, 'zoom_factor', 1.0),
             },
@@ -2119,6 +2122,11 @@ class MainWindow(QMainWindow):
         pts = vstate.get('selected_points') or []
         viewer.selected_points = pts
         viewer.set_measurement_text(vstate.get('measurement_text', ''))
+        try:
+            viewer.measurements = vstate.get('measurements', []) or []
+            viewer.selected_measure_index = vstate.get('selected_measure_index', None)
+        except Exception:
+            pass
         viewer.rotation = vstate.get('rotation', 0)
         viewer.zoom_factor = vstate.get('zoom_factor', 1.0)
 
