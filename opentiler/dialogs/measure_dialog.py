@@ -80,6 +80,9 @@ class MeasureDialog(QDialog):
             self.px_dist_label.setText("0.0 px")
             self.mm_dist_label.setText("0.0 mm")
             self.in_dist_label.setText("0.000 in")
+            # Clear overlay text in viewer
+            if hasattr(self.parent(), 'document_viewer'):
+                self.parent().document_viewer.set_measurement_text("")
             return
         dx = self.point2[0] - self.point1[0]
         dy = self.point2[1] - self.point1[1]
@@ -93,10 +96,16 @@ class MeasureDialog(QDialog):
             inches = mm / 25.4
             self.mm_dist_label.setText(f"{mm:.3f} mm")
             self.in_dist_label.setText(f"{inches:.4f} in")
+            # Update overlay text on the viewer (drawn above the line)
+            if hasattr(self.parent(), 'document_viewer'):
+                self.parent().document_viewer.set_measurement_text(f"{mm:.2f} mm ({inches:.3f} in)")
         else:
             # No scale set — warn user once
             self.mm_dist_label.setText("(set scale)")
             self.in_dist_label.setText("(set scale)")
+            if hasattr(self.parent(), 'document_viewer'):
+                # Fall back to pixels if desired; for now clear to avoid implying scale
+                self.parent().document_viewer.set_measurement_text("")
 
     def on_point_selected(self, x, y):
         if self.point_count == 0:
@@ -148,4 +157,3 @@ class MeasureDialog(QDialog):
         if hasattr(self.parent(), 'document_viewer'):
             self.parent().document_viewer.set_point_selection_mode(False)
         super().closeEvent(event)
-

@@ -27,6 +27,7 @@ from .dialogs.settings_dialog import SettingsDialog
 from .dialogs.printer_calibration import PrinterCalibrationDialog
 from .dialogs.export_dialog import ExportDialog
 from .dialogs.save_as_dialog import SaveAsDialog
+from .dialogs.measure_dialog import MeasureDialog
 from .settings.config import Config
 from .utils.helpers import (
     calculate_tile_grid,

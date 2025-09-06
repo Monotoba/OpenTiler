@@ -182,6 +182,7 @@ class DocumentViewer(QWidget):
         self.gutter_size = 0  # Gutter size in pixels
         self.measurement_text = ""  # Store measurement text for display
         self.hover_endpoint = None   # which endpoint is hovered (0/1)
+        self.temp_cursor_pos = None  # live cursor pos in image coords for preview
         self.init_ui()
 
     def init_ui(self):
@@ -489,6 +490,20 @@ class DocumentViewer(QWidget):
                 painter.setPen(QPen(QColor(0, 0, 0), 1))
                 painter.drawText(int(display_x + handle_radius + 4), int(display_y - handle_radius - 2), f"P{i + 1}")
 
+        # Live preview: if one point selected and in selection mode, draw a temp line to cursor
+        if self.point_selection_mode and len(self.selected_points) == 1 and self.temp_cursor_pos is not None:
+            from ..settings.config import config
+            p1_x = self.selected_points[0][0] * self.zoom_factor
+            p1_y = self.selected_points[0][1] * self.zoom_factor
+            p2_x = self.temp_cursor_pos[0] * self.zoom_factor
+            p2_y = self.temp_cursor_pos[1] * self.zoom_factor
+            if config.get_scale_line_display():
+                pen = QPen(QColor(255, 0, 0), 2)
+                pen.setStyle(Qt.CustomDashLine)
+                pen.setDashPattern([8, 3, 2, 3, 2, 3])
+                painter.setPen(pen)
+                painter.drawLine(int(p1_x), int(p1_y), int(p2_x), int(p2_y))
+
         # Draw line between points if we have two
         if len(self.selected_points) == 2:
             # Import config here to avoid circular imports
@@ -498,6 +513,14 @@ class DocumentViewer(QWidget):
             p1_y = self.selected_points[0][1] * self.zoom_factor
             p2_x = self.selected_points[1][0] * self.zoom_factor
             p2_y = self.selected_points[1][1] * self.zoom_factor
+
+            # Draw scale line (red dot–dash–dot) if enabled
+            if config.get_scale_line_display():
+                pen = QPen(QColor(255, 0, 0), 2)
+                pen.setStyle(Qt.CustomDashLine)
+                pen.setDashPattern([8, 3, 2, 3, 2, 3])
+                painter.setPen(pen)
+                painter.drawLine(int(p1_x), int(p1_y), int(p2_x), int(p2_y))
 
             # Draw datum line if enabled
             if config.get_datum_line_display():
@@ -521,7 +544,7 @@ class DocumentViewer(QWidget):
                 painter.setPen(datum_pen)
                 painter.drawLine(int(p1_x), int(p1_y), int(p2_x), int(p2_y))
 
-            # Draw measurement text above the line if available and enabled
+            # Draw measurement text with smart placement if available and enabled
             if self.measurement_text and config.get_scale_text_display():
                 # Calculate midpoint of the line
                 mid_x = (p1_x + p2_x) / 2
@@ -537,18 +560,38 @@ class DocumentViewer(QWidget):
                 text_pen = QPen(QColor(255, 0, 0), 1)
                 painter.setPen(text_pen)
 
-                # Calculate text position (above the line)
+                # Calculate geometry
+                dx = (p2_x - p1_x)
+                dy = (p2_y - p1_y)
+                dist = max(1.0, (dx*dx + dy*dy) ** 0.5)
+                ux, uy = dx / dist, dy / dist
+                # Perpendicular unit vector
+                px, py = -uy, ux
+
                 text_rect = painter.fontMetrics().boundingRect(self.measurement_text)
-                text_x = mid_x - text_rect.width() / 2
-                text_y = mid_y - 15  # 15 pixels above the line
+                margin = 10
+                offset = 14  # perpendicular offset
 
-                # Draw background rectangle for better visibility
+                # Decide placement: center if enough length, else near p2 end
+                if dist >= (text_rect.width() + margin * 2):
+                    # Centered above the line
+                    text_x = mid_x - text_rect.width() / 2 + px * 0
+                    text_y = mid_y - 0
+                    # move perpendicular up by offset
+                    text_x += px * offset
+                    text_y += py * offset
+                else:
+                    # Place near p2 end, offset perpendicular
+                    text_x = p2_x - text_rect.width() / 2 + px * offset
+                    text_y = p2_y - text_rect.height() / 2 + py * offset
+
+                # Background for readability
                 bg_rect = text_rect.adjusted(-5, -2, 5, 2)
-                bg_rect.moveTopLeft(QPoint(int(text_x - 5), int(text_y - text_rect.height() - 2)))
-                painter.fillRect(bg_rect, QColor(255, 255, 255, 200))  # Semi-transparent white
+                bg_rect.moveTopLeft(QPoint(int(text_x - 5), int(text_y - 2)))
+                painter.fillRect(bg_rect, QColor(255, 255, 255, 200))
 
-                # Draw the measurement text
-                painter.drawText(int(text_x), int(text_y), self.measurement_text)
+                # Draw text baseline at computed position
+                painter.drawText(int(text_x), int(text_y + text_rect.height()), self.measurement_text)
 
         painter.end()
         return result
@@ -840,11 +883,13 @@ class DocumentViewer(QWidget):
             self.image_label.setCursor(QCursor(Qt.CrossCursor))
             self.selected_points.clear()
             self.measurement_text = ""
+            self.temp_cursor_pos = None
         else:
             self.scroll_area.viewport().setCursor(QCursor(Qt.OpenHandCursor))
             self.image_label.setCursor(QCursor(Qt.OpenHandCursor))
             # Clear hover state so handles disappear
             self.hover_endpoint = None
+            self.temp_cursor_pos = None
 
     def set_measurement_text(self, text):
         """Set the measurement text to display above the scaling line."""
@@ -880,7 +925,9 @@ class DocumentViewer(QWidget):
 
             self.point_selected.emit(original_x, original_y)
             self.selected_points.append((original_x, original_y))
-
+            # Reset live cursor preview after placing second point
+            if len(self.selected_points) >= 2:
+                self.temp_cursor_pos = None
             # Update display to show selected points
             self._update_display()
 
@@ -898,7 +945,30 @@ class DocumentViewer(QWidget):
         return False
 
     def mouseMoveEvent(self, event):
-        """Handle mouse move for endpoint dragging."""
+        """Handle mouse move for endpoint dragging and live preview."""
+        # Live preview: update temporary cursor position for measurement when one point is selected
+        try:
+            if self.parent_viewer and self.parent_viewer.point_selection_mode and not self.dragging and self.pixmap():
+                if len(self.parent_viewer.selected_points) == 1:
+                    label_size = self.size()
+                    pixmap_size = self.pixmap().size()
+                    x_offset = (label_size.width() - pixmap_size.width()) // 2
+                    y_offset = (label_size.height() - pixmap_size.height()) // 2
+                    image_x = event.pos().x() - x_offset
+                    image_y = event.pos().y() - y_offset
+                    # Clamp to pixmap bounds
+                    image_x = max(0, min(image_x, pixmap_size.width()))
+                    image_y = max(0, min(image_y, pixmap_size.height()))
+                    z = max(0.0001, self.parent_viewer.zoom_factor)
+                    original_x = image_x / z
+                    original_y = image_y / z
+                    if self.parent_viewer.temp_cursor_pos != (original_x, original_y):
+                        self.parent_viewer.temp_cursor_pos = (original_x, original_y)
+                        self.parent_viewer._update_display()
+        except Exception:
+            pass
+
+        # Existing hover/drag logic
         if self.parent_viewer and self.parent_viewer.point_selection_mode:
             # Hover highlight: detect nearest endpoint within radius
             if len(self.parent_viewer.selected_points) >= 2 and self.pixmap():
