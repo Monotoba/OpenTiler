@@ -183,6 +183,9 @@ class DocumentViewer(QWidget):
         self.measurement_text = ""  # Store measurement text for display
         self.hover_endpoint = None   # which endpoint is hovered (0/1)
         self.temp_cursor_pos = None  # live cursor pos in image coords for preview
+        # Safety defaults in case events bubble unexpectedly
+        self.dragging = False
+        self.dragging_index = None
         self.init_ui()
 
     def init_ui(self):

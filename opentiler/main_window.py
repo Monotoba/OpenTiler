@@ -52,6 +52,7 @@ class MainWindow(QMainWindow):
         self.settings_dialog = None
         self.export_dialog = None
         self.save_as_dialog = None
+        self.measure_dialog = None
         # Project state
         self.current_project_path = None
         self._project_dirty = False
@@ -199,6 +200,11 @@ class MainWindow(QMainWindow):
         scale_tool_action.setShortcut(QKeySequence("Ctrl+S"))
         scale_tool_action.triggered.connect(self.show_scaling_dialog)
         tools_menu.addAction(scale_tool_action)
+
+        measure_tool_action = QAction("&Measure Tool", self)
+        measure_tool_action.setShortcut(QKeySequence("Ctrl+M"))
+        measure_tool_action.triggered.connect(self.show_measure_tool)
+        tools_menu.addAction(measure_tool_action)
 
         unit_converter_action = QAction("&Unit Converter", self)
         unit_converter_action.setShortcut(QKeySequence("Ctrl+U"))
