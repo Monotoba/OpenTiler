@@ -132,11 +132,12 @@ class PageViewerDialog(QDialog):
         zoom_100_shortcut = QShortcut(QKeySequence("Ctrl+1"), self)
         zoom_100_shortcut.activated.connect(self.zoom_100)
 
-    def show_page(self, page_pixmap, page_number, page_info=None, scale_info=None):
+    def show_page(self, page_pixmap, page_number, page_info=None, scale_info=None, measurements=None):
         """Show a specific page in the viewer."""
         self.current_page_pixmap = page_pixmap.copy()
         self.page_info = page_info
         self.scale_info = scale_info
+        self.measurements = measurements or []
         self.zoom_factor = 1.0
 
         # Update title
@@ -160,8 +161,9 @@ class PageViewerDialog(QDialog):
         if not self.current_page_pixmap:
             return
 
-        # Add scale line/text overlay if available
+        # Add overlays: scale line (legacy) and all measurements
         display_pixmap = self._add_scale_overlay(self.current_page_pixmap)
+        display_pixmap = self._add_measurements_overlay(display_pixmap)
 
         # Apply zoom
         if self.zoom_factor != 1.0:
@@ -316,6 +318,73 @@ class PageViewerDialog(QDialog):
         painter.end()
         return result
 
+    def _add_measurements_overlay(self, pixmap):
+        """Draw all measurement overlays that intersect this page."""
+        try:
+            if not getattr(self, 'measurements', None) or not self.page_info:
+                return pixmap
+            # Skip for metadata pages
+            if self.page_info.get('type') == 'metadata':
+                return pixmap
+            page_x = self.page_info['x']; page_y = self.page_info['y']
+            page_w = self.page_info['width']; page_h = self.page_info['height']
+            result = QPixmap(pixmap)
+            painter = QPainter(result)
+            for m in self.measurements:
+                p1 = m.get('p1'); p2 = m.get('p2'); label = m.get('text', '')
+                if not (p1 and p2):
+                    continue
+                # bbox intersect
+                minx, maxx = min(p1[0], p2[0]), max(p1[0], p2[0])
+                miny, maxy = min(p1[1], p2[1]), max(p1[1], p2[1])
+                if maxx < page_x or minx > page_x + page_w or maxy < page_y or miny > page_y + page_h:
+                    continue
+                # Map to page pixmap coords
+                sx = pixmap.width() / page_w
+                sy = pixmap.height() / page_h
+                p1x = (p1[0] - page_x) * sx
+                p1y = (p1[1] - page_y) * sy
+                p2x = (p2[0] - page_x) * sx
+                p2y = (p2[1] - page_y) * sy
+                # Draw line
+                pen = QPen(QColor(255, 0, 0), 3)
+                pen.setStyle(Qt.CustomDashLine)
+                pen.setDashPattern([10, 4, 2, 4, 2, 4])
+                painter.setPen(pen)
+                painter.drawLine(int(p1x), int(p1y), int(p2x), int(p2y))
+                # Endpoints
+                painter.setPen(QPen(QColor(0, 0, 0), 1))
+                painter.setBrush(QColor(255, 255, 255))
+                painter.drawEllipse(int(p1x - 4), int(p1y - 4), 8, 8)
+                painter.drawEllipse(int(p2x - 4), int(p2y - 4), 8, 8)
+                # Label
+                if label:
+                    font = painter.font(); font.setPointSize(14); font.setBold(True)
+                    painter.setFont(font)
+                    painter.setPen(QPen(QColor(255, 0, 0), 1))
+                    midx = (p1x + p2x) / 2; midy = (p1y + p2y) / 2
+                    dx = (p2x - p1x); dy = (p2y - p1y); dist = max(1.0, (dx*dx + dy*dy) ** 0.5)
+                    if dist > 1:
+                        ux, uy = dx/dist, dy/dist
+                        px, py = -uy, ux
+                    else:
+                        px, py = 0, -1
+                    text_rect = painter.fontMetrics().boundingRect(label)
+                    if dist >= (text_rect.width() + 18):
+                        tx = midx - text_rect.width()/2 + px*14
+                        ty = midy + py*14
+                    else:
+                        tx = p2x - text_rect.width()/2 + px*14
+                        ty = p2y + py*14 - text_rect.height()/2
+                    bg = text_rect.adjusted(-5, -3, 5, 3)
+                    bg.moveTopLeft(QPoint(int(tx - 5), int(ty - 3)))
+                    painter.fillRect(bg, QColor(255, 255, 255, 200))
+                    painter.drawText(int(tx), int(ty + text_rect.height()), label)
+            painter.end()
+            return result
+        except Exception:
+            return pixmap
+
     def zoom_in(self):
         """Zoom in on the page."""
         self.zoom_factor *= 1.25
@@ -364,12 +433,13 @@ class PageViewerDialog(QDialog):
 class ClickablePageThumbnail(QLabel):
     """A clickable page thumbnail that opens in the page viewer."""
 
-    def __init__(self, page_pixmap, page_number, page_info, parent=None, scale_info=None):
+    def __init__(self, page_pixmap, page_number, page_info, parent=None, scale_info=None, measurements=None):
         super().__init__(parent)
         self.page_pixmap = page_pixmap
         self.page_number = page_number
         self.page_info = page_info
         self.scale_info = scale_info
+        self.measurements = measurements or []
         self.page_viewer = None
 
         # Set up the thumbnail
@@ -410,6 +480,6 @@ class ClickablePageThumbnail(QLabel):
         if not self.page_viewer:
             self.page_viewer = PageViewerDialog(self.parent())
 
-        self.page_viewer.show_page(self.page_pixmap, self.page_number, self.page_info, self.scale_info)
+        self.page_viewer.show_page(self.page_pixmap, self.page_number, self.page_info, self.scale_info, self.measurements)
         self.page_viewer.raise_()
         self.page_viewer.activateWindow()

@@ -378,7 +378,8 @@ class PreviewPanel(QWidget):
             page_number,
             page,  # Page info dict
             self,
-            scale_info  # Scale info for page viewer
+            scale_info,  # Scale info for page viewer
+            measurements=measurements or []
         )
         thumbnail_label.setPixmap(scaled_thumbnail)
         thumbnail_label.setAlignment(Qt.AlignCenter)
