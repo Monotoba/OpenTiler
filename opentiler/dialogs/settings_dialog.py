@@ -242,6 +242,11 @@ class SettingsDialog(QDialog):
         self.scale_text_print_check.setToolTip("Include the measured distance text when printing/exporting.")
         scale_layout.addRow(self.scale_text_print_check)
 
+        # Convenience: single switch to print both line and text
+        self.measure_print_check = QCheckBox("Print measurements (line + text)")
+        self.measure_print_check.setToolTip("Convenience toggle to include both the measured line and its distance text when printing/exporting.")
+        scale_layout.addRow(self.measure_print_check)
+
         scale_group.setLayout(scale_layout)
         layout.addWidget(scale_group)
 
@@ -528,6 +533,8 @@ class SettingsDialog(QDialog):
         self.scale_line_print_check.setChecked(config.get_scale_line_print())
         self.scale_text_display_check.setChecked(config.get_scale_text_display())
         self.scale_text_print_check.setChecked(config.get_scale_text_print())
+        # Measurement convenience reflects both line+text print enabled
+        self.measure_print_check.setChecked(bool(config.get_scale_line_print() and config.get_scale_text_print()))
 
         # Page indicator settings
         self.indicator_display_check.setChecked(config.get_page_indicator_display())
@@ -646,6 +653,12 @@ class SettingsDialog(QDialog):
         config.set_datum_line_style(self.datum_style_combo.currentText())
         config.set_datum_line_width_px(self.datum_width_spin.value())
         config.set_datum_line_color(self.datum_color.name())
+
+        # Measurement print convenience: if toggled, set both underlying options
+        if hasattr(self, 'measure_print_check'):
+            want = bool(self.measure_print_check.isChecked())
+            config.set_scale_line_print(want)
+            config.set_scale_text_print(want)
 
     def choose_datum_color(self):
         color = QColorDialog.getColor(self.datum_color, self, "Choose Datum Line Color")
