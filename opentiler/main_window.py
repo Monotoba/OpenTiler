@@ -79,10 +79,11 @@ class MainWindow(QMainWindow):
         # Create document viewer
         self.document_viewer = DocumentViewer()
         main_splitter.addWidget(self.document_viewer)
-        # Mark project dirty when user selects or drags points
+        # Mark project dirty when user selects or drags points; refresh previews on measurement updates
         try:
             self.document_viewer.point_selected.connect(lambda *_: self._mark_project_dirty())
             self.document_viewer.points_updated.connect(lambda *_: self._mark_project_dirty())
+            self.document_viewer.measurements_changed.connect(self._refresh_preview_with_measurements)
         except Exception:
             pass
 
@@ -1947,6 +1948,29 @@ class MainWindow(QMainWindow):
 
         self.status_bar.showMessage("Settings updated")
         self._mark_project_dirty()
+
+    def _refresh_preview_with_measurements(self):
+        """Redraw thumbnails to include current measurements without recalculating the grid."""
+        try:
+            viewer = self.document_viewer
+            if not getattr(viewer, 'current_pixmap', None) or not getattr(viewer, 'page_grid', None):
+                return
+            pixmap = viewer.current_pixmap
+            page_grid = viewer.page_grid
+            scale_factor = getattr(viewer, 'scale_factor', 1.0)
+            scale_info = self._get_scale_info()
+            document_info = self._get_document_info()
+            self.preview_panel.update_preview(
+                pixmap,
+                page_grid,
+                scale_factor,
+                scale_info,
+                document_info,
+                printer_area=False,
+                measurements=getattr(viewer, 'measurements', [])
+            )
+        except Exception:
+            pass
 
     # ----------------------
     # Project management

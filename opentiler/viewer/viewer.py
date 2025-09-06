@@ -315,6 +315,10 @@ class ClickableLabel(QLabel):
                 m['text'] = self.parent_viewer._format_measurement_text(m['p1'], m['p2'])
                 self.parent_viewer.measurements[idx] = m
                 self.parent_viewer._update_display()
+                try:
+                    self.parent_viewer.measurements_changed.emit()
+                except Exception:
+                    pass
             event.accept(); return
         super().mouseMoveEvent(event)
 
@@ -363,6 +367,7 @@ class DocumentViewer(QWidget):
     scale_changed = Signal(float)  # Emitted when scale changes
     point_selected = Signal(float, float)  # Emitted when a point is selected (x, y)
     points_updated = Signal(float, float, int)  # Emitted when an endpoint is dragged (x, y, index)
+    measurements_changed = Signal()  # Emitted when measurements change
 
     def __init__(self):
         super().__init__()
@@ -919,6 +924,10 @@ class DocumentViewer(QWidget):
                 self.measurements.pop(self.selected_measure_index)
                 self.selected_measure_index = None
                 self._update_display()
+                try:
+                    self.measurements_changed.emit()
+                except Exception:
+                    pass
                 event.accept(); return
         super().keyPressEvent(event)
 
@@ -1258,6 +1267,10 @@ class DocumentViewer(QWidget):
                     p2 = self.selected_points[1]
                     text = self._format_measurement_text(p1, p2)
                     self.measurements.append({'p1': p1, 'p2': p2, 'text': text})
+                    try:
+                        self.measurements_changed.emit()
+                    except Exception:
+                        pass
                     # Prepare for next measurement
                     self.selected_points.clear()
                     self.temp_cursor_pos = None
