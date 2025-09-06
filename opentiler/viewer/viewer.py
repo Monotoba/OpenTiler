@@ -104,6 +104,12 @@ class ClickableLabel(QLabel):
 
     def mousePressEvent(self, event):
         """Handle mouse press events."""
+        if event.button() == Qt.LeftButton and self.parent_viewer:
+            # Ensure viewer gets focus for Delete handling
+            try:
+                self.parent_viewer.setFocus()
+            except Exception:
+                pass
         if event.button() == Qt.LeftButton and self.parent_viewer and self.parent_viewer.point_selection_mode:
             mods = event.modifiers()
             # If two points exist, start dragging the nearest endpoint (no modifier required)
@@ -152,6 +158,23 @@ class ClickableLabel(QLabel):
                         event.accept(); return
                 except Exception:
                     pass
+        elif event.button() == Qt.LeftButton and self.parent_viewer:
+            # Not in point selection: allow selecting existing measurement for delete
+            if self.pixmap():
+                label_size = self.size()
+                pixmap_size = self.pixmap().size() if self.pixmap() else QSize(1, 1)
+                x_offset = (label_size.width() - pixmap_size.width()) // 2
+                y_offset = (label_size.height() - pixmap_size.height()) // 2
+                image_x = event.pos().x() - x_offset
+                image_y = event.pos().y() - y_offset
+                image_x = max(0, min(image_x, pixmap_size.width()))
+                image_y = max(0, min(image_y, pixmap_size.height()))
+                z = max(0.0001, self.parent_viewer.zoom_factor)
+                original_x = image_x / z
+                original_y = image_y / z
+                if self.parent_viewer.select_measurement_at(original_x, original_y):
+                    self.parent_viewer._update_display()
+                    event.accept(); return
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
@@ -314,6 +337,9 @@ class DocumentViewer(QWidget):
         # Safety defaults in case events bubble unexpectedly
         self.dragging = False
         self.dragging_index = None
+        # Multiple measurements support
+        self.measurements = []  # list of { 'p1':(x,y), 'p2':(x,y), 'text':str }
+        self.selected_measure_index = None
         self.init_ui()
 
     def init_ui(self):
@@ -350,6 +376,8 @@ class DocumentViewer(QWidget):
         # Initialize panning state
         self.panning = False
         self.last_pan_point = QPoint()
+        # Accept focus for Delete key handling
+        self.setFocusPolicy(Qt.StrongFocus)
 
     def load_document(self, file_path):
         """Load a document from file path."""
@@ -574,6 +602,10 @@ class DocumentViewer(QWidget):
         if (self.point_selection_mode and self.selected_points) or (len(self.selected_points) >= 2):
             scaled = self._draw_selected_points(scaled)
 
+        # Draw existing measurements (persisted)
+        if self.measurements:
+            scaled = self._draw_measurements(scaled)
+
         # Draw page grid overlay if pages are defined
         if self.page_grid:
             scaled = self._draw_page_grid_overlay(scaled)
@@ -726,6 +758,122 @@ class DocumentViewer(QWidget):
 
         painter.end()
         return result
+
+    def _draw_measurements(self, pixmap):
+        """Draw all persisted measurements on the pixmap."""
+        if not self.measurements:
+            return pixmap
+        from ..settings.config import config
+        result = QPixmap(pixmap)
+        painter = QPainter(result)
+        for idx, m in enumerate(self.measurements):
+            p1_x = m['p1'][0] * self.zoom_factor
+            p1_y = m['p1'][1] * self.zoom_factor
+            p2_x = m['p2'][0] * self.zoom_factor
+            p2_y = m['p2'][1] * self.zoom_factor
+
+            # Line style
+            if config.get_scale_line_display():
+                pen = QPen(QColor(255, 0, 0), 2 if self.selected_measure_index != idx else 3)
+                pen.setStyle(Qt.CustomDashLine)
+                pen.setDashPattern([8, 3, 2, 3, 2, 3])
+                painter.setPen(pen)
+                painter.drawLine(int(p1_x), int(p1_y), int(p2_x), int(p2_y))
+
+            # Label
+            label = m.get('text', '')
+            if label and config.get_scale_text_display():
+                font = painter.font()
+                font.setPointSize(12)
+                font.setBold(True)
+                painter.setFont(font)
+                text_pen = QPen(QColor(255, 0, 0), 1)
+                painter.setPen(text_pen)
+                mid_x = (p1_x + p2_x) / 2
+                mid_y = (p1_y + p2_y) / 2
+                dx, dy = (p2_x - p1_x), (p2_y - p1_y)
+                dist = max(1.0, (dx*dx + dy*dy) ** 0.5)
+                ux, uy = dx / dist, dy / dist
+                px, py = -uy, ux
+                text_rect = painter.fontMetrics().boundingRect(label)
+                margin = 10
+                offset = 14
+                if dist >= (text_rect.width() + margin * 2):
+                    tx = mid_x + px * offset - text_rect.width() / 2
+                    ty = mid_y + py * offset
+                else:
+                    tx = p2_x + px * offset - text_rect.width() / 2
+                    ty = p2_y + py * offset - text_rect.height() / 2
+                bg = text_rect.adjusted(-5, -2, 5, 2)
+                bg.moveTopLeft(QPoint(int(tx - 5), int(ty - 2)))
+                painter.fillRect(bg, QColor(255, 255, 255, 200))
+                painter.drawText(int(tx), int(ty + text_rect.height()), label)
+
+            # Endpoint handles if selected
+            if self.selected_measure_index == idx:
+                handle_radius = 5
+                painter.setBrush(QColor(255, 255, 0, 220))
+                painter.setPen(QPen(QColor(0, 0, 0), 1))
+                painter.drawEllipse(int(p1_x - handle_radius), int(p1_y - handle_radius), handle_radius*2, handle_radius*2)
+                painter.drawEllipse(int(p2_x - handle_radius), int(p2_y - handle_radius), handle_radius*2, handle_radius*2)
+
+        painter.end()
+        return result
+
+    def _format_measurement_text(self, p1, p2):
+        dx = p2[0] - p1[0]
+        dy = p2[1] - p1[1]
+        px_dist = (dx*dx + dy*dy) ** 0.5
+        scale = float(getattr(self, 'scale_factor', 1.0) or 1.0)
+        if scale > 0:
+            mm = px_dist * scale
+            inches = mm / 25.4
+            return f"{mm:.2f} mm ({inches:.3f} in)"
+        return ""
+
+    def select_measurement_at(self, x, y):
+        """Select a measurement by proximity to endpoints or line. x,y in original coords."""
+        if not self.measurements:
+            self.selected_measure_index = None
+            return False
+        # Tolerance in display pixels
+        tol = 12
+        z = max(0.0001, self.zoom_factor)
+        click = (x*z, y*z)
+        def dist2(ax, ay, bx, by):
+            dx = ax - bx; dy = ay - by
+            return dx*dx + dy*dy
+        best_idx = None
+        best_d2 = (tol*tol) + 1
+        for idx, m in enumerate(self.measurements):
+            p1 = (m['p1'][0]*z, m['p1'][1]*z)
+            p2 = (m['p2'][0]*z, m['p2'][1]*z)
+            # endpoint proximity
+            d2p1 = dist2(click[0], click[1], p1[0], p1[1])
+            d2p2 = dist2(click[0], click[1], p2[0], p2[1])
+            d2min = min(d2p1, d2p2)
+            # line distance (point to segment)
+            vx, vy = (p2[0]-p1[0], p2[1]-p1[1])
+            seg_len2 = max(1.0, vx*vx + vy*vy)
+            t = ((click[0]-p1[0])*vx + (click[1]-p1[1])*vy) / seg_len2
+            t = max(0.0, min(1.0, t))
+            proj = (p1[0] + t*vx, p1[1] + t*vy)
+            d2line = dist2(click[0], click[1], proj[0], proj[1])
+            d2 = min(d2min, d2line)
+            if d2 <= tol*tol and d2 < best_d2:
+                best_d2 = d2
+                best_idx = idx
+        self.selected_measure_index = best_idx
+        return best_idx is not None
+
+    def keyPressEvent(self, event):
+        if event.key() in (Qt.Key_Delete, Qt.Key_Backspace):
+            if self.selected_measure_index is not None and 0 <= self.selected_measure_index < len(self.measurements):
+                self.measurements.pop(self.selected_measure_index)
+                self.selected_measure_index = None
+                self._update_display()
+                event.accept(); return
+        super().keyPressEvent(event)
 
     def _draw_tile_grid_overlay(self, pixmap):
         """Draw tile grid overlay on the document."""
@@ -1033,7 +1181,7 @@ class DocumentViewer(QWidget):
 
     def on_image_clicked(self, pos):
         """Handle image click for point selection."""
-        if not self.point_selection_mode or not self.current_pixmap:
+        if not self.current_pixmap:
             return
 
         # Convert click position to image coordinates
@@ -1054,13 +1202,24 @@ class DocumentViewer(QWidget):
             original_x = image_x / self.zoom_factor
             original_y = image_y / self.zoom_factor
 
-            self.point_selected.emit(original_x, original_y)
-            self.selected_points.append((original_x, original_y))
-            # Reset live cursor preview after placing second point
-            if len(self.selected_points) >= 2:
-                self.temp_cursor_pos = None
-            # Update display to show selected points
-            self._update_display()
+            if self.point_selection_mode:
+                self.point_selected.emit(original_x, original_y)
+                self.selected_points.append((original_x, original_y))
+                # Finalize a measurement when we have two points
+                if len(self.selected_points) >= 2:
+                    p1 = self.selected_points[0]
+                    p2 = self.selected_points[1]
+                    text = self._format_measurement_text(p1, p2)
+                    self.measurements.append({'p1': p1, 'p2': p2, 'text': text})
+                    # Prepare for next measurement
+                    self.selected_points.clear()
+                    self.temp_cursor_pos = None
+                # Update display
+                self._update_display()
+            else:
+                # Selection mode off: allow selecting an existing measurement for deletion
+                self.select_measurement_at(original_x, original_y)
+                self._update_display()
 
     def eventFilter(self, obj, event):
         """Event filter to handle wheel events for zooming."""

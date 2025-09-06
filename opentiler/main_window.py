@@ -1358,50 +1358,54 @@ class MainWindow(QMainWindow):
             except Exception:
                 pass
 
-        # Print the scale line/text if enabled
+        # Print all measurement lines/text if enabled
         try:
-            if config.get_scale_line_print():
-                scale_info = self._get_scale_info()
-                if scale_info:
-                    point1 = scale_info.get('point1')
-                    point2 = scale_info.get('point2')
-                    measurement_text = scale_info.get('measurement_text', '')
-                    if point1 and point2:
-                        # Page boundaries in document coords
-                        page_x = page['x']
-                        page_y = page['y']
-                        page_doc_w = page['width']
-                        page_doc_h = page['height']
-
+            if config.get_scale_line_print() and hasattr(self, 'document_viewer'):
+                measurements = getattr(self.document_viewer, 'measurements', []) or []
+                if measurements:
+                    page_x = page['x']; page_y = page['y']
+                    page_doc_w = max(1.0, page['width']); page_doc_h = max(1.0, page['height'])
+                    for m in measurements:
+                        p1 = m.get('p1'); p2 = m.get('p2'); label = m.get('text', '')
+                        if not (p1 and p2):
+                            continue
                         # Convert to tile pixmap coords
-                        p1_x = (point1[0] - page_x) * (tile_size.width() / page_doc_w)
-                        p1_y = (point1[1] - page_y) * (tile_size.height() / page_doc_h)
-                        p2_x = (point2[0] - page_x) * (tile_size.width() / page_doc_w)
-                        p2_y = (point2[1] - page_y) * (tile_size.height() / page_doc_h)
-
+                        p1_x = (p1[0] - page_x) * (tile_size.width() / page_doc_w)
+                        p1_y = (p1[1] - page_y) * (tile_size.height() / page_doc_h)
+                        p2_x = (p2[0] - page_x) * (tile_size.width() / page_doc_w)
+                        p2_y = (p2[1] - page_y) * (tile_size.height() / page_doc_h)
                         pen = QPen(QColor(255, 0, 0), 2)
                         pen.setStyle(Qt.CustomDashLine)
                         pen.setDashPattern([8, 3, 2, 3, 2, 3])
                         painter.setPen(pen)
                         painter.drawLine(int(p1_x), int(p1_y), int(p2_x), int(p2_y))
-
-                        # Optional text
-                        if config.get_scale_text_print() and measurement_text:
+                        if config.get_scale_text_print() and label:
                             mid_x = (p1_x + p2_x) / 2
                             mid_y = (p1_y + p2_y) / 2
-                            font = painter.font()
-                            font.setPointSize(10)
-                            font.setBold(True)
+                            font = painter.font(); font.setPointSize(10); font.setBold(True)
                             painter.setFont(font)
-                            text_pen = QPen(QColor(255, 0, 0), 1)
-                            painter.setPen(text_pen)
-                            text_rect = painter.fontMetrics().boundingRect(measurement_text)
-                            tx = mid_x - text_rect.width() / 2
-                            ty = mid_y - 12
+                            text_pen = QPen(QColor(255, 0, 0), 1); painter.setPen(text_pen)
+                            text_rect = painter.fontMetrics().boundingRect(label)
+                            # Prefer centered if there is room
+                            dx = (p2_x - p1_x); dy = (p2_y - p1_y)
+                            dist = max(1.0, (dx*dx + dy*dy) ** 0.5)
+                            if dist >= (text_rect.width() + 16):
+                                tx = mid_x - text_rect.width() / 2
+                                ty = mid_y - 12
+                            else:
+                                # Offset from p2
+                                # Perpendicular
+                                if dist > 1:
+                                    ux, uy = dx/dist, dy/dist
+                                    px, py = -uy, ux
+                                else:
+                                    px, py = 0, -1
+                                tx = p2_x + px * 12 - text_rect.width() / 2
+                                ty = p2_y + py * 12 - text_rect.height() / 2
                             bg_rect = text_rect.adjusted(-3, -2, 3, 2)
                             bg_rect.moveTopLeft(QPoint(int(tx - 3), int(ty - text_rect.height() - 2)))
                             painter.fillRect(bg_rect, QColor(255, 255, 255, 200))
-                            painter.drawText(int(tx), int(ty), measurement_text)
+                            painter.drawText(int(tx), int(ty), label)
         except Exception:
             pass
 
