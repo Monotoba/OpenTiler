@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.2] - 2025-09-07
+
+### Added
+- CI test matrix for Python 3.10–3.13; official support set to Python 3.10+.
+- mypy configuration (`mypy.ini`) to keep static typing checks practical with Qt/third‑party libs.
+- Contributors section and Contributing docs surfaced in app/docs.
+
+### Changed
+- Release workflow stabilized (removed YAML heredocs; version checks use `python -c`).
+- Lint/format workflows: auto‑format with Black/isort; flake8 configured to align with Black.
+- Tests refactored to avoid optional hard deps in CI; integration tests marked/isolated.
+- Optional/GUI imports guarded to run in headless CI (Qt shims for helpers).
+
+### Fixed
+- Flake8 errors (unused vars/import order/indent) across dialogs, viewer, and plugins.
+- Type hint issues (use `typing.Callable`; guard external command types) to satisfy mypy.
+- Help/About version strings and in‑app version display synchronized with release.
+
 ## [1.3.1] - 2025-09-06
 
 ### Added
