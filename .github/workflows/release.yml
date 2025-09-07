@@ -56,19 +56,19 @@ jobs:
           VERSION_FROM_TAG="${TAG#v}"
           echo "Tag: $TAG  Version: $VERSION_FROM_TAG"
           PYVER=$(python - <<'PY'
-import re, sys, pathlib
-sp = pathlib.Path('setup.py').read_text()
-m = re.search(r'version\s*=\s*"([^"]+)"', sp)
-print(m.group(1) if m else 'MISSING')
+            import re, sys, pathlib
+            sp = pathlib.Path('setup.py').read_text()
+            m = re.search(r'version\s*=\s*"([^"]+)"', sp)
+            print(m.group(1) if m else 'MISSING')
 PY
           )
           echo "setup.py version: $PYVER"
           test "$PYVER" = "$VERSION_FROM_TAG" || { echo "Version mismatch: setup.py=$PYVER tag=$VERSION_FROM_TAG"; exit 1; }
           INITVER=$(python - <<'PY'
-import re, sys, pathlib
-text = pathlib.Path('opentiler/__init__.py').read_text()
-m = re.search(r"__version__\s*=\s*['\"]([^'\"]+)['\"]", text)
-print(m.group(1) if m else 'MISSING')
+            import re, sys, pathlib
+            text = pathlib.Path('opentiler/__init__.py').read_text()
+            m = re.search(r"__version__\s*=\s*['\"]([^'\"]+)['\"]", text)
+            print(m.group(1) if m else 'MISSING')
 PY
           )
           echo "__init__ version: $INITVER"
