@@ -22,11 +22,11 @@ jobs:
           python -m pip install --upgrade pip
           if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; else pip install pytest pytest-cov; fi
           pip install -e .
-      - name: Run tests (not slow)
+      - name: Run tests (unit and fast)
         env:
           QT_QPA_PLATFORM: offscreen
         run: |
-          pytest -m "not slow" --cov=opentiler --cov-report=term-missing
+          pytest -m "not slow and not integration" --cov=opentiler --cov-report=term-missing
 
   build-sdist-wheel:
     name: Build sdist/wheel

@@ -23,20 +23,31 @@ from pathlib import Path
 from typing import Optional, Tuple
 import logging
 
+# Dependency availability flag
+HAS_DEPENDENCIES = True
+
 try:
     import pywinctl as pwc
     import mss
     from PIL import Image, ImageDraw, ImageFont
 except ImportError as e:
-    print(f"❌ Missing required dependency: {e}")
-    print("Install with: pip install pywinctl mss Pillow")
-    sys.exit(1)
+    # Defer hard failure to runtime or CLI entry; allow module import for optional usage.
+    HAS_DEPENDENCIES = False
+    pwc = None  # type: ignore
+    mss = None  # type: ignore
+    Image = None  # type: ignore
+    ImageDraw = None  # type: ignore
+    ImageFont = None  # type: ignore
 
 
 class ScreenCapture:
     """Cross-platform screen capture utility."""
     
     def __init__(self):
+        if not HAS_DEPENDENCIES:
+            raise ImportError(
+                "screen_capture dependencies missing; install with: pip install pywinctl mss Pillow"
+            )
         self.logger = self._setup_logging()
         self.sct = mss.mss()
         
@@ -48,7 +59,7 @@ class ScreenCapture:
         )
         return logging.getLogger(__name__)
     
-    def get_active_window(self) -> Optional[pwc.Window]:
+    def get_active_window(self) -> Optional[object]:
         """Get the currently active window."""
         try:
             active_window = pwc.getActiveWindow()
@@ -73,7 +84,7 @@ class ScreenCapture:
             self.logger.error(f"Error listing windows: {e}")
             return []
     
-    def find_window_by_title(self, title: str, partial_match: bool = True) -> Optional[pwc.Window]:
+    def find_window_by_title(self, title: str, partial_match: bool = True) -> Optional[object]:
         """Find window by title (supports partial matching)."""
         try:
             windows = self.list_windows()
@@ -93,7 +104,7 @@ class ScreenCapture:
             self.logger.error(f"Error finding window: {e}")
             return None
     
-    def capture_window(self, window: pwc.Window, output_path: str, 
+    def capture_window(self, window: object, output_path: str, 
                       target_size: Optional[Tuple[int, int]] = None,
                       format_type: str = "png", quality: int = 95) -> bool:
         """Capture a specific window."""
@@ -187,7 +198,7 @@ class ScreenCapture:
             self.logger.error(f"Error capturing fullscreen: {e}")
             return False
     
-    def _save_image(self, img: Image.Image, output_path: str, 
+    def _save_image(self, img, output_path: str, 
                    format_type: str, quality: int) -> None:
         """Save image with specified format and quality."""
         # Ensure output directory exists
@@ -226,6 +237,10 @@ class ScreenCapture:
 
 def main():
     """Main entry point."""
+    if not HAS_DEPENDENCIES:
+        print("❌ Missing required dependency: No module named required screen capture deps")
+        print("Install with: pip install pywinctl mss Pillow")
+        return 1
     parser = argparse.ArgumentParser(
         description="Cross-platform screen capture tool",
         formatter_class=argparse.RawDescriptionHelpFormatter,

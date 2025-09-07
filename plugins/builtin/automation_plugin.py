@@ -25,9 +25,9 @@ from PySide6.QtGui import QKeySequence, QShortcut, QAction
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "tools" / "screen_capture"))
 
 try:
-    from screen_capture import ScreenCapture
-    SCREEN_CAPTURE_AVAILABLE = True
-except ImportError:
+    from screen_capture import ScreenCapture, HAS_DEPENDENCIES as _SC_DEPS
+    SCREEN_CAPTURE_AVAILABLE = bool(_SC_DEPS)
+except Exception:
     SCREEN_CAPTURE_AVAILABLE = False
 
 from ..base_plugin import BasePlugin, PluginInfo
@@ -266,7 +266,12 @@ class AutomationPlugin(BasePlugin):
 
         # Screenshot capture
         if SCREEN_CAPTURE_AVAILABLE:
-            self.screen_capture = ScreenCapture()
+            try:
+                self.screen_capture = ScreenCapture()
+            except Exception:
+                # Dependencies may be unavailable at runtime
+                self.screen_capture = None
+                self.config['enable_screen_capture'] = False
 
     def initialize(self) -> bool:
         """Initialize the automation plugin."""
