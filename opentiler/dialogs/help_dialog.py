@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
     QWidget,
     QToolBar,
 )
+from PySide6.QtPrintSupport import QPrinter, QPrintDialog
 
 
 def _find_help_dir(start_dir: Optional[Path] = None, max_depth: int = 6) -> Optional[Path]:
@@ -119,6 +120,12 @@ class HelpDialog(QDialog):
         open_ext_action.setToolTip("Open current topic in your default browser")
         open_ext_action.triggered.connect(self._open_current_in_browser)
         toolbar.addAction(open_ext_action)
+
+        print_action = QAction("Print", self)
+        print_action.setToolTip("Print current topic")
+        print_action.setShortcut("Ctrl+P")
+        print_action.triggered.connect(self._print_current_topic)
+        toolbar.addAction(print_action)
 
         # Populate topics
         self._populate_topics_tree()
@@ -376,6 +383,21 @@ class HelpDialog(QDialog):
             super().closeEvent(event)
 
     # --- Helpers ---------------------------------------------------------
+    def _print_current_topic(self):
+        try:
+            printer = QPrinter(QPrinter.HighResolution)
+            dlg = QPrintDialog(printer, self)
+            dlg.setWindowTitle("Print Help Topic")
+            if dlg.exec() == QPrintDialog.Accepted:
+                # Print the current document content
+                # QTextBrowser inherits QTextEdit; both support print(printer)
+                try:
+                    self.viewer.print(printer)
+                except Exception:
+                    # Fallback to document-level print
+                    self.viewer.document().print(printer)
+        except Exception:
+            pass
     def _wrap_html(self, body_html: str, base_href: str, css_text: str, title: str = "OpenTiler Help") -> str:
         return f"""<!DOCTYPE html>
 <html>
