@@ -5,6 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2025-09-06
+
+### Added
+- Contributing guides: `docs/CONTRIBUTING.md` and in-app help topic `opentiler/help/contributing.md`.
+
+### Changed
+- About dialog: adds “Contributors:” section with a call to action inviting community contributions.
+- Version references updated to 1.3.1 across code, in-app help, and docs.
+
+### Internal
+- Release: bump version to 1.3.1 across code, help, and docs.
+
+## [1.3.0] - 2025-09-06
+
+### Added
+- In-app Help improvements:
+  - Recursive help navigation with filtering (QTreeWidget-based).
+  - Markdown rendering (uses `python-markdown` when available; falls back to Qt Markdown).
+  - “Open in Browser” action (renders MD to temp HTML with base href).
+  - Topic titles derived from first H1; fallback to filename.
+  - Bundled `help.css` and assets; populated help topics under `opentiler/help/`.
+- Help toolbar: Print action using `QPrinter/QPrintDialog`.
+
+### CI
+- Release workflow: GitHub Actions builds on tag push and creates a release with artifacts; checks `setup.py` version against tag.
+
+## [1.2.0] - 2025-09-02
+
+### Added
+- Measurements: multiple overlays with selection, drag endpoints, click-to-select, Delete/Backspace removal; persisted in project state.
+- Printing: option to print measurement overlays (line + text) when enabled.
+- Settings: convenience toggle “Print measurements (line + text)” tying to existing print flags.
+
+### Changed
+- Viewer/Previews: always render measurement overlays; live preview while measuring; show overlays in thumbnails.
+
+### Fixed
+- Preview refresh: auto-refresh page thumbnails when measurements change (add/drag/delete).
+- Viewer input handling: safer event handling and defaults to avoid bubbling errors; centralized temp cursor handling.
+
 ## [1.0.0] - 2025-01-XX
 
 ### Added
