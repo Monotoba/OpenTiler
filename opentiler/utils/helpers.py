@@ -6,9 +6,30 @@ import math
 import os
 from typing import Tuple, List, Optional, Union, Dict, Any
 
-from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import QRect
+# Optional Qt imports to avoid hard dependency during headless/unit testing
+try:
+    from PySide6.QtGui import QIcon
+    from PySide6.QtWidgets import QApplication
+    from PySide6.QtCore import QRect
+    _HAS_QT = True
+except Exception:
+    _HAS_QT = False
+    # Minimal shims so non-Qt utility functions can import safely
+    class QIcon:  # type: ignore
+        def __init__(self, *args, **kwargs):
+            pass
+        def isNull(self):
+            return True
+        @staticmethod
+        def fromTheme(name: str):
+            return QIcon()
+    class QApplication:  # type: ignore
+        @staticmethod
+        def instance():
+            return None
+    class QRect:  # type: ignore
+        def __init__(self, *args, **kwargs):
+            self.args = args
 
 def _find_assets_dir(start_dir: Optional[str] = None, max_depth: int = 6) -> Optional[str]:
     """
@@ -46,6 +67,10 @@ def load_icon(icon_name: Union[str, QIcon],
       - an absolute path or path-like string,
       - a basename (without extension) — we try .png, .svg, .ico extensions.
     """
+    # If Qt is unavailable, return an empty icon
+    if not _HAS_QT:
+        return QIcon()
+
     # If caller passed a QIcon already, return it
     if isinstance(icon_name, QIcon):
         return icon_name
