@@ -26,8 +26,13 @@ class PrinterCalibrationDialog(QDialog):
         header_row.addWidget(header_label)
         header_row.addItem(QSpacerItem(20, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
         help_btn = QPushButton("Help")
-        help_btn.setToolTip("Open calibration help (coming soon)")
-        # TODO: Link help_btn to a help URL or dialog when available
+        help_btn.setToolTip("Open calibration help")
+        try:
+            help_btn.clicked.connect(lambda: getattr(self.parent(), 'show_help', lambda *a, **k: None)(
+                'printer_calibration.md'
+            ))
+        except Exception:
+            pass
         header_row.addWidget(help_btn)
         layout.addLayout(header_row)
 

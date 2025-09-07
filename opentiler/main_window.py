@@ -66,7 +66,7 @@ class MainWindow(QMainWindow):
         except Exception:
             pass
         self.setWindowTitle("OpenTiler")
-        self.setWindowIcon(load_icon("opentiler-icon.png", fallback=None))
+        self.setWindowIcon(load_icon("opentiler-icon.png", fallback="OpenTiler.ico"))
         self.setMinimumSize(QSize(1024, 768))
 
         # Create central widget and layout
@@ -231,6 +231,11 @@ class MainWindow(QMainWindow):
 
         # Help menu (last)
         help_menu = menubar.addMenu("&Help")
+
+        help_contents_action = QAction("&Help Contents", self)
+        help_contents_action.setShortcut(QKeySequence.HelpContents)
+        help_contents_action.triggered.connect(self.show_help)
+        help_menu.addAction(help_contents_action)
 
         about_action = QAction("&About", self)
         about_action.triggered.connect(self.show_about)
@@ -2434,3 +2439,19 @@ class MainWindow(QMainWindow):
             "License: MIT License with Attribution Requirement\n"
             "Copyright: © 2025 Randall Morgan"
         )
+
+    def show_help(self, topic: str = ""):
+        """Open the Help dialog optionally at a given topic (relative filename)."""
+        try:
+            from .dialogs.help_dialog import HelpDialog
+            if not hasattr(self, "_help_dialog") or self._help_dialog is None:
+                self._help_dialog = HelpDialog(self, start_topic=topic or None)
+            else:
+                if topic:
+                    self._help_dialog.open_topic(topic)
+            self._help_dialog.show()
+            self._help_dialog.raise_()
+            self._help_dialog.activateWindow()
+        except Exception:
+            # Silently ignore to avoid crashing Help menu; in practice this should not fail.
+            pass

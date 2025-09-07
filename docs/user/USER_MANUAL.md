@@ -1,5 +1,7 @@
 # OpenTiler User Manual
 
+Note: In-app help (Help → Help Contents) is available in OpenTiler 1.2.0 and reflects the current menus and tools.
+
 ![OpenTiler Hero](../images/opentiler-hero-image.png)
 
 *Professional document scaling and tiling for architects, engineers, and professionals*

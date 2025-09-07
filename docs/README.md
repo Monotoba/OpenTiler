@@ -1,5 +1,7 @@
 # OpenTiler Documentation
 
+Note: As of version 1.2.0, OpenTiler includes an in-app Help system (Help → Help Contents) that renders Markdown topics from `opentiler/help/`. The in-app help is aligned with the current menu structure and tools.
+
 ![OpenTiler Main Interface](images/opentiler-hero-image.png)
 
 Welcome to the OpenTiler documentation! OpenTiler is a professional document scaling and tiling application designed for architects, engineers, and professionals who need to print large-format documents on standard printers.
