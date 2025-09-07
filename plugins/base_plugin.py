@@ -7,7 +7,7 @@ This module defines the base plugin interface that all OpenTiler plugins must im
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Callable
+from typing import Any, Callable, Dict, List, Optional
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QAction
