@@ -1,7 +1,7 @@
 
 # User Manual
 
-This manual reflects the current UI and menu structure in OpenTiler 1.2.0.
+This manual reflects the current UI and menu structure in OpenTiler 1.3.0.
 
 ## Main Concepts
 - Document Viewer: shows the loaded image/PDF with zoom, rotate, and fit.

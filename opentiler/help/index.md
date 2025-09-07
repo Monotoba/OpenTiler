@@ -25,7 +25,6 @@ Quick links to popular topics:
 
 ---
 
-Version: 1.2.0
+Version: 1.3.0
 
 ![Help Menu](../docs/images/17-help-menu.png)
-

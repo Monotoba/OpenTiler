@@ -1,6 +1,6 @@
 # OpenTiler Documentation
 
-Note: As of version 1.2.0, OpenTiler includes an in-app Help system (Help → Help Contents) that renders Markdown topics from `opentiler/help/`. The in-app help is aligned with the current menu structure and tools.
+Note: As of version 1.3.0, OpenTiler includes an in-app Help system (Help → Help Contents) that renders Markdown topics from `opentiler/help/`. The in-app help is aligned with the current menu structure and tools.
 
 ![OpenTiler Main Interface](images/opentiler-hero-image.png)
 

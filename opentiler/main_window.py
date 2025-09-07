@@ -2433,7 +2433,7 @@ class MainWindow(QMainWindow):
         QMessageBox.about(
             self,
             "About OpenTiler",
-            "OpenTiler v0.1.0\n\n"
+            "OpenTiler v1.3.0\n\n"
             "A PySide6-based desktop application for scaling and tiling architectural drawings.\n\n"
             "Author: Randall Morgan\n"
             "License: MIT License with Attribution Requirement\n"
