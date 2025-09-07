@@ -57,7 +57,7 @@ OPTIONAL_REQUIREMENTS['all'] = ALL_OPTIONAL
 
 setup(
     name="opentiler",
-    version="1.3.0",
+    version="1.3.1",
     author="Randall Morgan",
     author_email="randall@example.com",
     description="Professional Document Scaling and Tiling Application",

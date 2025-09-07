@@ -22,9 +22,10 @@ Quick links to popular topics:
 - [FAQ](faq.md)
 - [Troubleshooting](troubleshooting.md)
 - [Developer Guide](developer.md)
+- [Contributing](contributing.md)
 
 ---
 
-Version: 1.3.0
+Version: 1.3.1
 
 ![Help Menu](../docs/images/17-help-menu.png)

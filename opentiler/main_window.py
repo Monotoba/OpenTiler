@@ -2433,11 +2433,13 @@ class MainWindow(QMainWindow):
         QMessageBox.about(
             self,
             "About OpenTiler",
-            "OpenTiler v1.3.0\n\n"
+            "OpenTiler v1.3.1\n\n"
             "A PySide6-based desktop application for scaling and tiling architectural drawings.\n\n"
             "Author: Randall Morgan\n"
             "License: MIT License with Attribution Requirement\n"
-            "Copyright: © 2025 Randall Morgan"
+            "Copyright: © 2025 Randall Morgan\n\n"
+            "Contributors:\n"
+            "Get your name listed here by adding features, fixing bugs, or creating a useful plugin."
         )
 
     def show_help(self, topic: str = ""):
