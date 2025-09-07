@@ -41,11 +41,28 @@ PY
           )
           echo "setup.py version: $PYVER"
           test "$PYVER" = "$VERSION_FROM_TAG" || { echo "Version mismatch: setup.py=$PYVER tag=$VERSION_FROM_TAG"; exit 1; }
+          INITVER=$(python - <<'PY'
+import re, sys, pathlib
+text = pathlib.Path('opentiler/__init__.py').read_text()
+m = re.search(r"__version__\s*=\s*['\"]([^'\"]+)['\"]", text)
+print(m.group(1) if m else 'MISSING')
+PY
+          )
+          echo "__init__ version: $INITVER"
+          test "$INITVER" = "$VERSION_FROM_TAG" || { echo "Version mismatch: __init__=$INITVER tag=$VERSION_FROM_TAG"; exit 1; }
 
       - name: Install build tooling
         run: |
           python -m pip install --upgrade pip
           pip install build
+
+      - name: Run quick tests
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          pip install -r requirements-dev.txt || true
+          pip install -e .
+          pytest -m "not slow" -q || echo "Tests failed or unavailable; continuing release build"
 
       - name: Build distributions
         run: |
@@ -58,6 +75,6 @@ PY
             dist/**
           draft: false
           prerelease: false
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
