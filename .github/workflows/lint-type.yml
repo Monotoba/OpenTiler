@@ -31,28 +31,18 @@ jobs:
           python -m pip install --upgrade pip
           if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; else pip install black isort flake8 mypy; fi
 
-      - name: Run black + isort (format on PRs)
-        if: github.event_name == 'pull_request'
+      - name: Run black + isort (format)
         run: |
           black .
           isort .
 
-      - name: Auto-commit formatting (PRs only)
-        if: github.event_name == 'pull_request'
+      - name: Auto-commit formatting
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "style: format with black/isort"
           commit_user_name: github-actions[bot]
           commit_user_email: 41898282+github-actions[bot]@users.noreply.github.com
           branch: ${{ github.head_ref || github.ref_name }}
-
-      - name: Black (check on pushes)
-        if: github.event_name != 'pull_request'
-        run: black --check .
-
-      - name: isort (check-only on pushes)
-        if: github.event_name != 'pull_request'
-        run: isort --check-only .
 
       - name: flake8
         run: flake8 .
