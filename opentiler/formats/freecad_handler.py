@@ -12,8 +12,8 @@ from typing import Any, Dict, Optional
 
 # Attempt to import FreeCAD modules; define fallbacks for linters if unavailable
 try:  # pragma: no cover - optional dependency
-    import FreeCAD  # type: ignore
     import Draft  # type: ignore
+    import FreeCAD  # type: ignore
     import Part  # type: ignore
     import TechDraw  # type: ignore
 except Exception:  # pragma: no cover - ignore in environments without FreeCAD
