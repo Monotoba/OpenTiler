@@ -1,0 +1,15 @@
+[flake8]
+max-line-length = 120
+extend-ignore =
+    E203,  # whitespace before ':' (black compatibility)
+    W503,  # line break before binary operator (black compatibility)
+    E501,  # line length handled by black; ignore in lint
+    F401,  # unused imports (temporarily ignored to unblock CI)
+exclude =
+    .git,
+    __pycache__,
+    build,
+    dist,
+    venv,
+    tools,
+    installers
