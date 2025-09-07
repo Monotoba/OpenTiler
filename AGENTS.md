@@ -19,7 +19,7 @@
  - Build dist: `python -m build` or `python setup.py sdist bdist_wheel` (see `BUILD_INSTRUCTIONS.md`).
 
  ## Coding Style & Naming
- - Python 3.8+; 4-space indent; PEP 8.
+ - Python 3.10+; 4-space indent; PEP 8.
  - Format: `black .`; Imports: `isort .`; Lint: `flake8`; Types: `mypy opentiler`.
  - Names: modules/functions `snake_case`, classes `CamelCase`, constants `UPPER_SNAKE`.
  - UI resources live under `opentiler/assets/`.

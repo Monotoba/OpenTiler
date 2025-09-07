@@ -116,7 +116,7 @@ OpenTiler/
 
 ### Prerequisites
 ```bash
-# Python 3.8+ required
+# Python 3.10+ required
 python --version
 
 # Virtual environment (recommended)

@@ -289,7 +289,7 @@ class DXFHandler:
                         "width": extents.extmax.x - extents.extmin.x,
                         "height": extents.extmax.y - extents.extmin.y,
                     }
-            except:
+            except Exception:
                 pass
 
             return info

@@ -9,7 +9,7 @@ This is a short in-app summary. For the full guide, see repo `docs/developer/DEV
 - Tests: `pytest -q` (GUI tests run offscreen)
 
 ## Coding Style
-- Python 3.8+, PEP 8, black, isort, flake8, mypy.
+- Python 3.10+, PEP 8, black, isort, flake8, mypy.
 - Names: snake_case for funcs, CamelCase for classes.
 
 ## Plugins

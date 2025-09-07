@@ -7,12 +7,6 @@ License: MIT License with Attribution Requirement
 Copyright: © 2025 Randall Morgan
 """
 
-import os
-import sys
-
-# Add the opentiler package to the Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "opentiler"))
-
 from opentiler.main_app import main
 
 # TODO: Complete adding measurement tool.

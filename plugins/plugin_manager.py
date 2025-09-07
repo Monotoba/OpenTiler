@@ -156,7 +156,7 @@ class PluginManager(QObject):
             # Find plugin file
             plugin_path = self._find_plugin_path(plugin_name)
             if not plugin_path:
-                raise PluginLoadError(plugin_name, f"Plugin file not found")
+                raise PluginLoadError(plugin_name, "Plugin file not found")
 
             # Load plugin module
             plugin_class = self._load_plugin_module(plugin_name, plugin_path)

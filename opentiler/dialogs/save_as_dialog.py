@@ -33,7 +33,6 @@ class SaveAsWorker(QThread):
         """Run save-as operation in background thread."""
         try:
             success = False
-            error_details = ""
 
             if isinstance(self.handler, DXFHandler):
                 success = self.handler.save_as_dxf(

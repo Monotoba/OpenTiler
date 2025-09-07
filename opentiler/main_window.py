@@ -895,6 +895,12 @@ class MainWindow(QMainWindow):
                 pass
 
             # Labels
+            # Compute printable area in pixels for label if needed
+            try:
+                pl = printer.pageLayout()
+                pr_px = pl.paintRectPixels(printer.resolution())
+            except Exception:
+                pr_px = QRect(0, 0, eff_rect.width(), eff_rect.height())
             painter.setPen(QPen(QColor(0, 0, 0), 1))
             font = painter.font()
             font.setPointSize(10)
@@ -1011,9 +1017,7 @@ class MainWindow(QMainWindow):
                 pl = printer.pageLayout()
                 return pl.paintRectPixels(printer.resolution())
 
-            # Capture page size to reuse when switching orientation
-            page_layout = printer.pageLayout()
-            page_size = page_layout.pageSize()
+            # Capture printable rect below drives geometry; page layout retained by printer
             page_rect = printable_rect()
             print(
                 f"DEBUG: Initial print page rect: {page_rect.width()}x{page_rect.height()}"
@@ -1451,7 +1455,7 @@ class MainWindow(QMainWindow):
             self._add_tile_overlays(painter, tile_pixmap.size(), page)
 
             painter.end()
-            print(f"DEBUG: Tile creation completed successfully")
+            print("DEBUG: Tile creation completed successfully")
             return tile_pixmap
 
         except Exception as e:

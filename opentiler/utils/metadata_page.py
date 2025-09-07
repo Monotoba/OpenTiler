@@ -641,5 +641,5 @@ def _get_file_size_string(file_path: str) -> str:
             return f"{size / 1024:.1f} KB"
         else:
             return f"{size / (1024 * 1024):.1f} MB"
-    except:
+    except Exception:
         return "Unknown"

@@ -5,7 +5,7 @@
 [![CI/CD Pipeline](https://github.com/Monotoba/OpenTiler/actions/workflows/ci.yml/badge.svg)](https://github.com/Monotoba/OpenTiler/actions/workflows/ci.yml)
 [![Basic Tests](https://github.com/Monotoba/OpenTiler/actions/workflows/basic-test.yml/badge.svg)](https://github.com/Monotoba/OpenTiler/actions/workflows/basic-test.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![PySide6](https://img.shields.io/badge/GUI-PySide6-green.svg)](https://www.qt.io/qt-for-python)
 
 A PySide6-based desktop application for scaling and tiling architectural drawings, blueprints, and technical documents.

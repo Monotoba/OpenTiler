@@ -9,3 +9,10 @@ exclude =
     venv,
     tools,
     installers
+
+per-file-ignores =
+    main.py: E402
+    tests/test_utils.py: E402
+    plugins/builtin/automation_plugin.py: E402,E129,E128,F811,E722
+    opentiler/main_window.py: F541
+    opentiler/formats/freecad_handler.py: F821

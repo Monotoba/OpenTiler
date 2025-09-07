@@ -10,7 +10,7 @@ Thanks for your interest in improving OpenTiler! Contributions of all kinds are 
 - Run tests: `pytest -q` (GUI tests run offscreen).
 
 ## Development Guidelines
-- Style: Python 3.8+, PEP 8, 4-space indent. Format with `black .`, sort imports with `isort .`, lint with `flake8`.
+- Style: Python 3.10+, PEP 8, 4-space indent. Format with `black .`, sort imports with `isort .`, lint with `flake8`.
 - Types: prefer type hints; run `mypy opentiler`.
 - Tests: add or update tests for your changes. Use markers (`gui`, `integration`, `slow`) as appropriate.
 - Docs: update user/dev docs and in-app help when behavior changes.

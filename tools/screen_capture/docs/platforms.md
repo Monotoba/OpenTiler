@@ -5,7 +5,7 @@ This document covers platform-specific considerations, requirements, and behavio
 ## 🪟 Windows
 
 ### Requirements
-- **Python**: 3.8+
+- **Python**: 3.10+
 - **Dependencies**: pywinctl, mss, Pillow
 - **Permissions**: No special permissions required
 
@@ -48,7 +48,7 @@ python screen_capture.py -w -o test.png --verbose
 ## 🍎 macOS
 
 ### Requirements
-- **Python**: 3.8+
+- **Python**: 3.10+
 - **macOS**: 10.14+ (Mojave or later)
 - **Dependencies**: pywinctl, mss, Pillow
 - **Permissions**: Screen Recording permission may be required
@@ -112,7 +112,7 @@ if window:
 ## 🐧 Linux
 
 ### Requirements
-- **Python**: 3.8+
+- **Python**: 3.10+
 - **Display Server**: X11 or Wayland
 - **Dependencies**: pywinctl, mss, Pillow
 - **System Packages**: May require additional packages

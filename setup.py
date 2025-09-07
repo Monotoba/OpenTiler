@@ -92,7 +92,7 @@ setup(
     # Requirements
     install_requires=CORE_REQUIREMENTS,
     extras_require=OPTIONAL_REQUIREMENTS,
-    python_requires=">=3.8",
+    python_requires=">=3.10",
     # Entry points
     entry_points={
         "console_scripts": [
@@ -116,11 +116,10 @@ setup(
         "Operating System :: MacOS",
         "Operating System :: POSIX :: Linux",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
         "Topic :: Multimedia :: Graphics",
         "Topic :: Multimedia :: Graphics :: Graphics Conversion",
         "Topic :: Office/Business",

@@ -104,7 +104,7 @@ install_system_deps() {
                 git curl wget
             ;;
         *)
-            print_warning "Unknown distribution. Please install Python 3.8+, pip, and development tools manually."
+            print_warning "Unknown distribution. Please install Python 3.10+, pip, and development tools manually."
             print_info "Required packages: python3, python3-pip, python3-dev, build-essential, Qt5 libraries"
             ;;
     esac
@@ -125,7 +125,7 @@ check_python() {
             print_status "Python $PYTHON_VERSION found"
             PYTHON_CMD="python3"
         else
-            print_error "Python $PYTHON_VERSION found, but 3.8+ required"
+            print_error "Python $PYTHON_VERSION found, but 3.10+ required"
             exit 1
         fi
     else

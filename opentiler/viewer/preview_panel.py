@@ -203,7 +203,7 @@ class PreviewPanel(QWidget):
         )
         width = layout["tile_width"]
         height = layout["tile_height"]
-        gutter = layout["gutter"]
+        # gutter value is computed in layout; no direct use here
 
         # Create a blank page pixmap with the correct page dimensions
         # This maintains the page orientation and shows empty areas

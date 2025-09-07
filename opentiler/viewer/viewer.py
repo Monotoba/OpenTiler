@@ -118,7 +118,7 @@ class ClickableLabel(QLabel):
             and self.parent_viewer
             and self.parent_viewer.point_selection_mode
         ):
-            mods = event.modifiers()
+            _ = event.modifiers()
             # If two points exist, start dragging the nearest endpoint (no modifier required)
             if len(self.parent_viewer.selected_points) >= 2:
                 # Compute display-space endpoints

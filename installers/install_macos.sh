@@ -71,7 +71,7 @@ else
     print_status "Homebrew found"
 fi
 
-# Check for Python 3.8+
+# Check for Python 3.10+
 echo "🐍 Checking for Python..."
 if command -v python3 &> /dev/null; then
     PYTHON_VERSION=$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
@@ -82,7 +82,7 @@ if command -v python3 &> /dev/null; then
         print_status "Python $PYTHON_VERSION found"
         PYTHON_CMD="python3"
     else
-        print_warning "Python $PYTHON_VERSION found, but 3.8+ required"
+        print_warning "Python $PYTHON_VERSION found, but 3.10+ required"
         PYTHON_CMD=""
     fi
 else

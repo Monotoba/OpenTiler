@@ -178,7 +178,7 @@ class PluginInfoWidget(QWidget):
             return
 
         # Get hook manager to check registered hooks
-        hook_manager = get_hook_manager()
+        # hook_manager = get_hook_manager()
 
         row = 0
         for handler in hook_handlers:
@@ -204,7 +204,7 @@ class PluginInfoWidget(QWidget):
                 if child.widget():
                     child.widget().deleteLater()
         else:
-            layout = QVBoxLayout(self.settings_widget)
+            QVBoxLayout(self.settings_widget)
 
         if not self.plugin:
             return

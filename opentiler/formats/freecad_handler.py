@@ -10,6 +10,18 @@ import xml.etree.ElementTree as ET
 import zipfile
 from typing import Any, Dict, Optional
 
+# Attempt to import FreeCAD modules; define fallbacks for linters if unavailable
+try:  # pragma: no cover - optional dependency
+    import FreeCAD  # type: ignore
+    import Draft  # type: ignore
+    import Part  # type: ignore
+    import TechDraw  # type: ignore
+except Exception:  # pragma: no cover - ignore in environments without FreeCAD
+    FreeCAD = None  # type: ignore
+    Draft = None  # type: ignore
+    Part = None  # type: ignore
+    TechDraw = None  # type: ignore
+
 from PySide6.QtGui import QPainter, QPixmap
 from PySide6.QtWidgets import QMessageBox
 
@@ -75,7 +87,7 @@ def _detect_freecad():
             else:
                 FREECAD_AVAILABLE = False
 
-    except Exception as e:
+    except Exception:
         # Silently fail - don't print errors during normal operation
         FREECAD_AVAILABLE = False
 
