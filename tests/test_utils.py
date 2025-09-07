@@ -9,8 +9,8 @@ import pytest
 # Set Qt platform to offscreen for headless testing
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
-from opentiler.utils.helpers import (calculate_distance,  # noqa: E402
-                                     calculate_scale_factor, convert_units,
+from opentiler.utils.helpers import calculate_distance  # noqa: E402
+from opentiler.utils.helpers import (calculate_scale_factor, convert_units,
                                      format_scale_ratio, get_page_size_mm,
                                      validate_numeric_input)
 

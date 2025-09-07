@@ -188,7 +188,8 @@ class PlanViewAccess(QObject):
         return False
 
     from typing import Callable
-    def add_overlay(self, overlay_id: str, painter_func: 'Callable[..., Any]') -> bool:
+
+    def add_overlay(self, overlay_id: str, painter_func: "Callable[..., Any]") -> bool:
         """
         Add a custom overlay to the plan view.
 
