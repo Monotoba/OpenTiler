@@ -9,7 +9,7 @@ including plan views, tile previews, measurements, and transformations.
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union, Callable
 
 from PySide6.QtCore import QObject, QPointF, QRectF, Signal
 from PySide6.QtGui import QImage, QPainter, QPixmap, QTransform
@@ -187,9 +187,7 @@ class PlanViewAccess(QObject):
                 return True
         return False
 
-    from typing import Callable
-
-    def add_overlay(self, overlay_id: str, painter_func: "Callable[..., Any]") -> bool:
+    def add_overlay(self, overlay_id: str, painter_func: Callable[..., Any]) -> bool:
         """
         Add a custom overlay to the plan view.
 

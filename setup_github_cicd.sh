@@ -78,7 +78,7 @@ git commit -m "Initial release: OpenTiler v1.0.0
 
 Features:
 ✅ Professional PySide6 GUI with comprehensive documentation
-✅ Interactive scaling tool with real-world measurements  
+✅ Interactive scaling tool with real-world measurements
 ✅ Advanced tiling system with assembly guides
 ✅ Extensible plugin architecture with automation support
 ✅ Cross-platform support (Windows/macOS/Linux)

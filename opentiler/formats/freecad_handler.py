@@ -313,6 +313,9 @@ FreeCAD.closeDocument(doc.Name)
 
             try:
                 # Run FreeCAD with the script
+                # Ensure FREECAD_COMMAND is a string
+                if not isinstance(FREECAD_COMMAND, str):
+                    return QPixmap()
                 result = subprocess.run(
                     [FREECAD_COMMAND, "-c", script_path],
                     capture_output=True,

@@ -7,7 +7,7 @@ This module defines the base plugin interface that all OpenTiler plugins must im
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Callable
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QAction
@@ -145,7 +145,7 @@ class BasePlugin(QObject):
         """
         return None
 
-    def get_keyboard_shortcuts(self) -> Dict[str, callable]:
+    def get_keyboard_shortcuts(self) -> Dict[str, Callable[..., Any]]:
         """
         Get keyboard shortcuts provided by this plugin.
 
