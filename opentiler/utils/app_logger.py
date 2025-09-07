@@ -16,13 +16,13 @@ except Exception:  # pragma: no cover
 
 
 COMPONENTS = {
-    'printing',
-    'projects',
-    'preview',
-    'viewer',
-    'export',
-    'metadata',
-    'settings',
+    "printing",
+    "projects",
+    "preview",
+    "viewer",
+    "export",
+    "metadata",
+    "settings",
 }
 
 
@@ -42,7 +42,7 @@ class ComponentFilter(logging.Filter):
             # Allow only errors/critical through when disabled
             return record.levelno >= logging.ERROR
 
-        component = getattr(record, 'component', None)
+        component = getattr(record, "component", None)
         if not component:
             return True
 
@@ -58,7 +58,7 @@ class ComponentFilter(logging.Filter):
 
 def _safe_bool(value) -> bool:
     if isinstance(value, str):
-        return value.lower() == 'true'
+        return value.lower() == "true"
     return bool(value)
 
 
@@ -73,17 +73,17 @@ def configure_from_config(conf=None, handler: Optional[logging.Handler] = None) 
     if conf is not None:
         app_config = conf
 
-    level_name = (app_config.get("logging_level", "WARNING") if app_config else "WARNING")
+    level_name = app_config.get("logging_level", "WARNING") if app_config else "WARNING"
     level = getattr(logging, str(level_name).upper(), logging.WARNING)
 
-    logger = logging.getLogger('opentiler')
+    logger = logging.getLogger("opentiler")
     logger.setLevel(level)
 
     # Ensure a single handler
     if handler is None:
         handler = logging.StreamHandler()
         handler.setLevel(level)
-        formatter = logging.Formatter('[%(levelname)s] %(component)s: %(message)s')
+        formatter = logging.Formatter("[%(levelname)s] %(component)s: %(message)s")
         handler.setFormatter(formatter)
 
     # Clear existing handlers to avoid duplication
@@ -95,6 +95,5 @@ def configure_from_config(conf=None, handler: Optional[logging.Handler] = None) 
 
 def get_logger(component: str) -> logging.LoggerAdapter:
     """Get a component-tagged logger adapter."""
-    base = logging.getLogger('opentiler')
-    return logging.LoggerAdapter(base, extra={'component': component})
-
+    base = logging.getLogger("opentiler")
+    return logging.LoggerAdapter(base, extra={"component": component})

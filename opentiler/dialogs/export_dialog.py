@@ -3,17 +3,16 @@ Export dialog for OpenTiler.
 """
 
 import os
-from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
-    QLabel, QPushButton, QComboBox, QSpinBox, QCheckBox,
-    QLineEdit, QFileDialog, QGroupBox, QMessageBox,
-    QProgressBar, QTextEdit
-)
+
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtGui import QFont
+from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QFileDialog,
+                               QFormLayout, QGroupBox, QHBoxLayout, QLabel,
+                               QLineEdit, QMessageBox, QProgressBar,
+                               QPushButton, QSpinBox, QTextEdit, QVBoxLayout)
 
-from ..exporter.pdf_exporter import PDFExporter
 from ..exporter.image_exporter import ImageExporter
+from ..exporter.pdf_exporter import PDFExporter
 
 
 class ExportWorker(QThread):
@@ -35,24 +34,26 @@ class ExportWorker(QThread):
         try:
             print(f"ExportWorker: Starting export to {self.output_path}")
             print(f"ExportWorker: Page grid has {len(self.page_grid)} pages")
-            print(f"ExportWorker: Source pixmap size: {self.source_pixmap.width()}x{self.source_pixmap.height()}")
+            print(
+                f"ExportWorker: Source pixmap size: {self.source_pixmap.width()}x{self.source_pixmap.height()}"
+            )
             print(f"ExportWorker: Export kwargs: {self.kwargs}")
 
             success = self.exporter.export(
-                self.source_pixmap,
-                self.page_grid,
-                self.output_path,
-                **self.kwargs
+                self.source_pixmap, self.page_grid, self.output_path, **self.kwargs
             )
 
             print(f"ExportWorker: Export result: {success}")
 
             if success:
-                self.finished.emit(True, f"Export completed successfully: {self.output_path}")
+                self.finished.emit(
+                    True, f"Export completed successfully: {self.output_path}"
+                )
             else:
                 self.finished.emit(False, "Export failed - check console for details")
         except Exception as e:
             import traceback
+
             error_details = traceback.format_exc()
             print(f"ExportWorker: Exception occurred: {error_details}")
             self.finished.emit(False, f"Export error: {str(e)}")
@@ -83,13 +84,15 @@ class ExportDialog(QDialog):
         format_layout = QFormLayout()
 
         self.format_combo = QComboBox()
-        self.format_combo.addItems([
-            "PDF (Multi-page)",
-            "PDF (Single-page Composite)",
-            "PNG Images",
-            "JPEG Images",
-            "TIFF Images"
-        ])
+        self.format_combo.addItems(
+            [
+                "PDF (Multi-page)",
+                "PDF (Single-page Composite)",
+                "PNG Images",
+                "JPEG Images",
+                "TIFF Images",
+            ]
+        )
         # Per-item tooltips
         tips = {
             "PDF (Multi-page)": (
@@ -235,8 +238,10 @@ class ExportDialog(QDialog):
         # Toggle a subtle hint in the preview panel when composite-like outputs are selected
         try:
             mw = self.parent()
-            composite_like = (is_pdf and "Composite" in format_text) or (is_image and self.composite_check.isChecked())
-            if hasattr(mw, 'preview_panel') and mw.preview_panel:
+            composite_like = (is_pdf and "Composite" in format_text) or (
+                is_image and self.composite_check.isChecked()
+            )
+            if hasattr(mw, "preview_panel") and mw.preview_panel:
                 mw.preview_panel.set_composite_hint_visible(composite_like)
         except Exception:
             pass
@@ -301,13 +306,16 @@ class ExportDialog(QDialog):
 
         # Calculate total pages including metadata page
         from ..settings.config import config
+
         tile_count = len(page_grid)
         include_metadata = config.get_include_metadata_page()
         total_pages = tile_count + (1 if include_metadata else 0)
 
         # Update status
         if include_metadata:
-            self.status_text.append(f"Ready to export {total_pages} pages ({tile_count} tiles + 1 metadata)")
+            self.status_text.append(
+                f"Ready to export {total_pages} pages ({tile_count} tiles + 1 metadata)"
+            )
             position = config.get_metadata_page_position()
             self.status_text.append(f"Metadata page will be included ({position})")
         else:
@@ -329,15 +337,13 @@ class ExportDialog(QDialog):
 
         if "PDF" in format_text:
             exporter = PDFExporter()
-            kwargs = {
-                'page_size': self.page_size_combo.currentText()
-            }
+            kwargs = {"page_size": self.page_size_combo.currentText()}
             # Add document information for metadata page
             kwargs.update(self.document_info)
 
             # Check if composite PDF is requested
             if "Composite" in format_text:
-                kwargs['composite'] = True
+                kwargs["composite"] = True
         else:
             exporter = ImageExporter()
             if "PNG" in format_text:
@@ -350,8 +356,8 @@ class ExportDialog(QDialog):
                 image_format = "PNG"
 
             kwargs = {
-                'image_format': image_format,
-                'quality': self.quality_spin.value()
+                "image_format": image_format,
+                "quality": self.quality_spin.value(),
             }
 
             # Use composite export if requested
@@ -380,7 +386,9 @@ class ExportDialog(QDialog):
         self.status_text.append(message)
 
         if success:
-            QMessageBox.information(self, "Export Complete", "Export completed successfully!")
+            QMessageBox.information(
+                self, "Export Complete", "Export completed successfully!"
+            )
             self.accept()
         else:
             QMessageBox.warning(self, "Export Failed", f"Export failed: {message}")

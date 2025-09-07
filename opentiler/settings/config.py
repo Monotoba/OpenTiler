@@ -2,9 +2,10 @@
 Configuration management for OpenTiler.
 """
 
-import os
 import json
+import os
 from pathlib import Path
+
 from PySide6.QtCore import QSettings
 
 
@@ -44,7 +45,9 @@ class Config:
             self.settings.setValue("gutter_size_mm", 10.0)
 
         if not self.settings.contains("page_orientation"):
-            self.settings.setValue("page_orientation", "auto")  # auto, landscape, portrait
+            self.settings.setValue(
+                "page_orientation", "auto"
+            )  # auto, landscape, portrait
 
         # Page indicator settings
         if not self.settings.contains("page_indicator_position"):
@@ -177,7 +180,13 @@ class Config:
             self.settings.setValue("logging_level", "WARNING")
         # Per-component toggles (default True)
         for comp in [
-            'printing', 'projects', 'preview', 'viewer', 'export', 'metadata', 'settings'
+            "printing",
+            "projects",
+            "preview",
+            "viewer",
+            "export",
+            "metadata",
+            "settings",
         ]:
             key = f"logging_{comp}"
             if not self.settings.contains(key):
@@ -217,7 +226,9 @@ class Config:
             v = float(self.get("print_calibration_portrait_v_mm", 0.0))
         return h, v
 
-    def set_print_calibration(self, orientation: str, horizontal_mm: float, vertical_mm: float) -> None:
+    def set_print_calibration(
+        self, orientation: str, horizontal_mm: float, vertical_mm: float
+    ) -> None:
         """Set per-orientation calibration offsets in millimeters."""
         ori = (orientation or "portrait").lower()
         if ori == "landscape":
@@ -358,7 +369,7 @@ class Config:
     def get_page_indicator_display(self):
         """Get whether to display page indicators."""
         value = self.get("page_indicator_display", True)
-        return str(value).lower() == 'true' if isinstance(value, str) else bool(value)
+        return str(value).lower() == "true" if isinstance(value, str) else bool(value)
 
     def set_page_indicator_display(self, display):
         """Set whether to display page indicators."""
@@ -367,7 +378,7 @@ class Config:
     def get_page_indicator_print(self):
         """Get whether to print page indicators."""
         value = self.get("page_indicator_print", True)
-        return str(value).lower() == 'true' if isinstance(value, str) else bool(value)
+        return str(value).lower() == "true" if isinstance(value, str) else bool(value)
 
     def set_page_indicator_print(self, print_enabled):
         """Set whether to print page indicators."""
@@ -377,7 +388,7 @@ class Config:
     def get_gutter_lines_display(self):
         """Get whether to display gutter lines."""
         value = self.get("gutter_lines_display", True)
-        return str(value).lower() == 'true' if isinstance(value, str) else bool(value)
+        return str(value).lower() == "true" if isinstance(value, str) else bool(value)
 
     def set_gutter_lines_display(self, display):
         """Set whether to display gutter lines."""
@@ -386,7 +397,7 @@ class Config:
     def get_gutter_lines_print(self):
         """Get whether to print gutter lines."""
         value = self.get("gutter_lines_print", True)
-        return str(value).lower() == 'true' if isinstance(value, str) else bool(value)
+        return str(value).lower() == "true" if isinstance(value, str) else bool(value)
 
     def set_gutter_lines_print(self, print_enabled):
         """Set whether to print gutter lines."""
@@ -396,7 +407,7 @@ class Config:
     def get_crop_marks_display(self):
         """Get whether to display crop marks."""
         value = self.get("crop_marks_display", True)
-        return str(value).lower() == 'true' if isinstance(value, str) else bool(value)
+        return str(value).lower() == "true" if isinstance(value, str) else bool(value)
 
     def set_crop_marks_display(self, display):
         """Set whether to display crop marks."""
@@ -405,7 +416,7 @@ class Config:
     def get_crop_marks_print(self):
         """Get whether to print crop marks."""
         value = self.get("crop_marks_print", True)
-        return str(value).lower() == 'true' if isinstance(value, str) else bool(value)
+        return str(value).lower() == "true" if isinstance(value, str) else bool(value)
 
     def set_crop_marks_print(self, print_enabled):
         """Set whether to print crop marks."""
@@ -414,14 +425,14 @@ class Config:
     # Scale bar overlay settings
     def get_scale_bar_display(self):
         value = self.get("scale_bar_display", True)
-        return str(value).lower() == 'true' if isinstance(value, str) else bool(value)
+        return str(value).lower() == "true" if isinstance(value, str) else bool(value)
 
     def set_scale_bar_display(self, display):
         self.set("scale_bar_display", bool(display))
 
     def get_scale_bar_print(self):
         value = self.get("scale_bar_print", True)
-        return str(value).lower() == 'true' if isinstance(value, str) else bool(value)
+        return str(value).lower() == "true" if isinstance(value, str) else bool(value)
 
     def set_scale_bar_print(self, print_enabled):
         self.set("scale_bar_print", bool(print_enabled))
@@ -466,7 +477,7 @@ class Config:
     def get_reg_marks_display(self):
         """Get whether to display registration marks."""
         value = self.get("reg_marks_display", True)
-        return str(value).lower() == 'true' if isinstance(value, str) else bool(value)
+        return str(value).lower() == "true" if isinstance(value, str) else bool(value)
 
     def set_reg_marks_display(self, display):
         """Set whether to display registration marks."""
@@ -475,7 +486,7 @@ class Config:
     def get_reg_marks_print(self):
         """Get whether to print registration marks."""
         value = self.get("reg_marks_print", True)
-        return str(value).lower() == 'true' if isinstance(value, str) else bool(value)
+        return str(value).lower() == "true" if isinstance(value, str) else bool(value)
 
     def set_reg_marks_print(self, print_enabled):
         """Set whether to print registration marks."""
@@ -501,7 +512,7 @@ class Config:
     def get_scale_line_display(self):
         """Get whether to display scale line."""
         value = self.get("scale_line_display", True)
-        return str(value).lower() == 'true' if isinstance(value, str) else bool(value)
+        return str(value).lower() == "true" if isinstance(value, str) else bool(value)
 
     def set_scale_line_display(self, display):
         """Set whether to display scale line."""
@@ -510,7 +521,7 @@ class Config:
     def get_scale_line_print(self):
         """Get whether to print scale line."""
         value = self.get("scale_line_print", True)
-        return str(value).lower() == 'true' if isinstance(value, str) else bool(value)
+        return str(value).lower() == "true" if isinstance(value, str) else bool(value)
 
     def set_scale_line_print(self, print_enabled):
         """Set whether to print scale line."""
@@ -519,7 +530,7 @@ class Config:
     def get_scale_text_display(self):
         """Get whether to display scale text."""
         value = self.get("scale_text_display", True)
-        return str(value).lower() == 'true' if isinstance(value, str) else bool(value)
+        return str(value).lower() == "true" if isinstance(value, str) else bool(value)
 
     def set_scale_text_display(self, display):
         """Set whether to display scale text."""
@@ -528,7 +539,7 @@ class Config:
     def get_scale_text_print(self):
         """Get whether to print scale text."""
         value = self.get("scale_text_print", True)
-        return str(value).lower() == 'true' if isinstance(value, str) else bool(value)
+        return str(value).lower() == "true" if isinstance(value, str) else bool(value)
 
     def set_scale_text_print(self, print_enabled):
         """Set whether to print scale text."""
@@ -537,14 +548,14 @@ class Config:
     # Datum line settings
     def get_datum_line_display(self):
         value = self.get("datum_line_display", True)
-        return str(value).lower() == 'true' if isinstance(value, str) else bool(value)
+        return str(value).lower() == "true" if isinstance(value, str) else bool(value)
 
     def set_datum_line_display(self, display):
         self.set("datum_line_display", bool(display))
 
     def get_datum_line_print(self):
         value = self.get("datum_line_print", False)
-        return str(value).lower() == 'true' if isinstance(value, str) else bool(value)
+        return str(value).lower() == "true" if isinstance(value, str) else bool(value)
 
     def set_datum_line_print(self, print_enabled):
         self.set("datum_line_print", bool(print_enabled))
@@ -684,7 +695,7 @@ class Config:
 
     def get_open_last_project_on_startup(self):
         value = self.get("open_last_project_on_startup", False)
-        return str(value).lower() == 'true' if isinstance(value, str) else bool(value)
+        return str(value).lower() == "true" if isinstance(value, str) else bool(value)
 
     def set_open_last_project_on_startup(self, enabled):
         self.set("open_last_project_on_startup", bool(enabled))
@@ -692,7 +703,7 @@ class Config:
     # Logging settings
     def get_logging_enabled(self):
         val = self.get("logging_enabled", False)
-        return str(val).lower() == 'true' if isinstance(val, str) else bool(val)
+        return str(val).lower() == "true" if isinstance(val, str) else bool(val)
 
     def set_logging_enabled(self, enabled):
         self.set("logging_enabled", bool(enabled))
@@ -705,7 +716,7 @@ class Config:
 
     def get_logging_component_enabled(self, component: str):
         val = self.get(f"logging_{component}", True)
-        return str(val).lower() == 'true' if isinstance(val, str) else bool(val)
+        return str(val).lower() == "true" if isinstance(val, str) else bool(val)
 
     def set_logging_component_enabled(self, component: str, enabled: bool):
         self.set(f"logging_{component}", bool(enabled))

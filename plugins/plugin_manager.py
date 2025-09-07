@@ -5,20 +5,22 @@ Plugin Manager for OpenTiler Plugin System
 This module manages the loading, initialization, and lifecycle of plugins.
 """
 
-import os
-import sys
 import importlib
 import importlib.util
 import json
 import logging
+import os
+import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Type, Any
+from typing import Any, Dict, List, Optional, Type
+
 from PySide6.QtCore import QObject, Signal
 
-from .base_plugin import BasePlugin, PluginInfo, PluginLoadError, PluginInitError
-from .plugin_registry import PluginRegistry
+from .base_plugin import (BasePlugin, PluginInfo, PluginInitError,
+                          PluginLoadError)
+from .content_access import AccessLevel, ContentAccessManager
 from .hook_system import get_hook_manager
-from .content_access import ContentAccessManager, AccessLevel
+from .plugin_registry import PluginRegistry
 
 
 class PluginManager(QObject):
@@ -29,9 +31,9 @@ class PluginManager(QObject):
     """
 
     # Signals
-    plugin_loaded = Signal(str)      # Plugin name
-    plugin_enabled = Signal(str)     # Plugin name
-    plugin_disabled = Signal(str)    # Plugin name
+    plugin_loaded = Signal(str)  # Plugin name
+    plugin_enabled = Signal(str)  # Plugin name
+    plugin_disabled = Signal(str)  # Plugin name
     plugin_error = Signal(str, str)  # Plugin name, error message
 
     def __init__(self, main_window=None, config_dir: Optional[str] = None):
@@ -61,14 +63,16 @@ class PluginManager(QObject):
         self.content_access_manager = ContentAccessManager(main_window)
 
         # Configuration
-        self.config_dir = Path(config_dir) if config_dir else Path.cwd() / "config" / "plugins"
+        self.config_dir = (
+            Path(config_dir) if config_dir else Path.cwd() / "config" / "plugins"
+        )
         self.config_dir.mkdir(parents=True, exist_ok=True)
 
         # Plugin directories
         self.plugin_dirs = [
             Path(__file__).parent / "builtin",  # Built-in plugins
             Path.cwd() / "plugins" / "external",  # External plugins
-            self.config_dir / "user"  # User plugins
+            self.config_dir / "user",  # User plugins
         ]
 
         # Ensure plugin directories exist
@@ -95,14 +99,18 @@ class PluginManager(QObject):
 
             # Look for Python files and packages
             for item in plugin_dir.iterdir():
-                if item.is_file() and item.suffix == '.py' and not item.name.startswith('_'):
+                if (
+                    item.is_file()
+                    and item.suffix == ".py"
+                    and not item.name.startswith("_")
+                ):
                     # Single file plugin
                     plugin_name = item.stem
                     if self._is_valid_plugin(item):
                         discovered.append(plugin_name)
                         self.logger.info(f"Discovered plugin: {plugin_name}")
 
-                elif item.is_dir() and not item.name.startswith('_'):
+                elif item.is_dir() and not item.name.startswith("_"):
                     # Package plugin
                     init_file = item / "__init__.py"
                     if init_file.exists() and self._is_valid_plugin(init_file):
@@ -124,9 +132,9 @@ class PluginManager(QObject):
         """
         try:
             # Read file and check for BasePlugin inheritance
-            with open(plugin_path, 'r', encoding='utf-8') as f:
+            with open(plugin_path, "r", encoding="utf-8") as f:
                 content = f.read()
-                return 'BasePlugin' in content and 'class' in content
+                return "BasePlugin" in content and "class" in content
         except Exception:
             return False
 
@@ -160,7 +168,9 @@ class PluginManager(QObject):
 
             # Validate plugin
             if not isinstance(plugin_instance, BasePlugin):
-                raise PluginLoadError(plugin_name, "Plugin does not inherit from BasePlugin")
+                raise PluginLoadError(
+                    plugin_name, "Plugin does not inherit from BasePlugin"
+                )
 
             # Store plugin
             self.plugin_classes[plugin_name] = plugin_class
@@ -201,7 +211,9 @@ class PluginManager(QObject):
 
         return None
 
-    def _load_plugin_module(self, plugin_name: str, plugin_path: Path) -> Optional[Type[BasePlugin]]:
+    def _load_plugin_module(
+        self, plugin_name: str, plugin_path: Path
+    ) -> Optional[Type[BasePlugin]]:
         """Load plugin module and return plugin class."""
         try:
             # Create module spec
@@ -225,9 +237,11 @@ class PluginManager(QObject):
             # Find plugin class
             for attr_name in dir(module):
                 attr = getattr(module, attr_name)
-                if (isinstance(attr, type) and
-                    issubclass(attr, BasePlugin) and
-                    attr != BasePlugin):
+                if (
+                    isinstance(attr, type)
+                    and issubclass(attr, BasePlugin)
+                    and attr != BasePlugin
+                ):
                     return attr
 
             return None
@@ -271,9 +285,12 @@ class PluginManager(QObject):
                 if any(requirements.values()):
                     # Determine access level based on plugin requirements
                     access_level = AccessLevel.READ_ONLY
-                    if requirements.get('transformations', False):
+                    if requirements.get("transformations", False):
                         access_level = AccessLevel.FULL_CONTROL
-                    elif any(requirements.get(key, False) for key in ['measurements', 'tile_preview']):
+                    elif any(
+                        requirements.get(key, False)
+                        for key in ["measurements", "tile_preview"]
+                    ):
                         access_level = AccessLevel.READ_WRITE
 
                     # Grant access
@@ -282,13 +299,15 @@ class PluginManager(QObject):
                     )
 
                     # Store access reference in plugin if it has the attribute
-                    if hasattr(plugin, 'content_access_objects'):
+                    if hasattr(plugin, "content_access_objects"):
                         plugin.content_access_objects = access_objects
 
                 self.logger.info(f"Initialized plugin: {plugin_name}")
                 return True
             else:
-                raise PluginInitError(plugin_name, "Plugin initialization returned False")
+                raise PluginInitError(
+                    plugin_name, "Plugin initialization returned False"
+                )
 
         except Exception as e:
             self.logger.error(f"Failed to initialize plugin {plugin_name}: {e}")
@@ -353,7 +372,7 @@ class PluginManager(QObject):
         config_file = self.config_dir / "plugins.json"
         if config_file.exists():
             try:
-                with open(config_file, 'r') as f:
+                with open(config_file, "r") as f:
                     self.plugin_configs = json.load(f)
             except Exception as e:
                 self.logger.error(f"Failed to load plugin config: {e}")
@@ -362,7 +381,7 @@ class PluginManager(QObject):
         """Save plugin configurations."""
         config_file = self.config_dir / "plugins.json"
         try:
-            with open(config_file, 'w') as f:
+            with open(config_file, "w") as f:
                 json.dump(self.plugin_configs, f, indent=2)
         except Exception as e:
             self.logger.error(f"Failed to save plugin config: {e}")

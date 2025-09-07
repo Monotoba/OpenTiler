@@ -4,13 +4,13 @@ Handles saving original documents in different CAD formats.
 """
 
 import os
-from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
-    QLabel, QPushButton, QComboBox, QLineEdit, QFileDialog,
-    QGroupBox, QMessageBox, QTextEdit, QCheckBox
-)
+
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtGui import QFont
+from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QFileDialog,
+                               QFormLayout, QGroupBox, QHBoxLayout, QLabel,
+                               QLineEdit, QMessageBox, QPushButton, QTextEdit,
+                               QVBoxLayout)
 
 from ..formats.dxf_handler import DXFHandler
 from ..formats.freecad_handler import FreeCADHandler
@@ -37,14 +37,12 @@ class SaveAsWorker(QThread):
 
             if isinstance(self.handler, DXFHandler):
                 success = self.handler.save_as_dxf(
-                    self.source_pixmap, self.output_path,
-                    self.scale_factor, self.units
+                    self.source_pixmap, self.output_path, self.scale_factor, self.units
                 )
                 format_name = "DXF"
             elif isinstance(self.handler, FreeCADHandler):
                 success = self.handler.save_as_freecad(
-                    self.source_pixmap, self.output_path,
-                    self.scale_factor, self.units
+                    self.source_pixmap, self.output_path, self.scale_factor, self.units
                 )
                 format_name = "FreeCAD"
             else:
@@ -165,7 +163,9 @@ class SaveAsDialog(QDialog):
         if dxf_available:
             self.status_text.append("✅ DXF support available")
         else:
-            self.status_text.append("⚠️ DXF support not available - install 'ezdxf' and 'matplotlib'")
+            self.status_text.append(
+                "⚠️ DXF support not available - install 'ezdxf' and 'matplotlib'"
+            )
 
         if freecad_available:
             freecad_status = FreeCADHandler.get_availability_status()
@@ -232,11 +232,15 @@ class SaveAsDialog(QDialog):
             self.scale_label.setText("Not set (1:1)")
 
         # Update status
-        self.status_text.append(f"Document loaded: {source_pixmap.width()}x{source_pixmap.height()} pixels")
+        self.status_text.append(
+            f"Document loaded: {source_pixmap.width()}x{source_pixmap.height()} pixels"
+        )
         if scale_factor != 1.0:
             real_width = source_pixmap.width() * scale_factor
             real_height = source_pixmap.height() * scale_factor
-            self.status_text.append(f"Real-world size: {real_width:.2f}x{real_height:.2f} mm")
+            self.status_text.append(
+                f"Real-world size: {real_width:.2f}x{real_height:.2f} mm"
+            )
 
     def start_save(self):
         """Start the save process."""
@@ -254,29 +258,35 @@ class SaveAsDialog(QDialog):
 
         # Add proper file extension if missing
         if "DXF" in format_text:
-            if not output_path.lower().endswith('.dxf'):
-                output_path += '.dxf'
+            if not output_path.lower().endswith(".dxf"):
+                output_path += ".dxf"
                 self.output_path_edit.setText(output_path)
                 self.status_text.append(f"Added .dxf extension: {output_path}")
         elif "FreeCAD" in format_text:
-            if not output_path.lower().endswith('.fcstd'):
-                output_path += '.FCStd'
+            if not output_path.lower().endswith(".fcstd"):
+                output_path += ".FCStd"
                 self.output_path_edit.setText(output_path)
                 self.status_text.append(f"Added .FCStd extension: {output_path}")
 
         # Check format availability
         if "DXF" in format_text:
             if not DXFHandler.is_available():
-                QMessageBox.warning(self, "DXF Not Available",
-                                  "DXF support requires 'ezdxf' and 'matplotlib' packages.\n"
-                                  "Install with: pip install ezdxf matplotlib")
+                QMessageBox.warning(
+                    self,
+                    "DXF Not Available",
+                    "DXF support requires 'ezdxf' and 'matplotlib' packages.\n"
+                    "Install with: pip install ezdxf matplotlib",
+                )
                 return
             handler = DXFHandler()
         elif "FreeCAD" in format_text:
             if not FreeCADHandler.is_available():
-                QMessageBox.warning(self, "FreeCAD Not Available",
-                                  "FreeCAD support requires FreeCAD to be installed.\n"
-                                  "Please install FreeCAD and ensure it's in your system PATH.")
+                QMessageBox.warning(
+                    self,
+                    "FreeCAD Not Available",
+                    "FreeCAD support requires FreeCAD to be installed.\n"
+                    "Please install FreeCAD and ensure it's in your system PATH.",
+                )
                 return
             handler = FreeCADHandler()
         else:
@@ -301,7 +311,9 @@ class SaveAsDialog(QDialog):
         self.status_text.append(message)
 
         if success:
-            QMessageBox.information(self, "Save Complete", "Document saved successfully!")
+            QMessageBox.information(
+                self, "Save Complete", "Document saved successfully!"
+            )
             self.accept()
         else:
             QMessageBox.warning(self, "Save Failed", f"Save failed: {message}")

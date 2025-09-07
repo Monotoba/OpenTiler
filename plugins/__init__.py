@@ -9,13 +9,8 @@ allowing for extensible functionality through dynamically loaded plugins.
 __version__ = "1.0.0"
 __author__ = "OpenTiler Development Team"
 
-from .plugin_manager import PluginManager
 from .base_plugin import BasePlugin, PluginInfo
+from .plugin_manager import PluginManager
 from .plugin_registry import PluginRegistry
 
-__all__ = [
-    'PluginManager',
-    'BasePlugin', 
-    'PluginInfo',
-    'PluginRegistry'
-]
+__all__ = ["PluginManager", "BasePlugin", "PluginInfo", "PluginRegistry"]

@@ -1,5 +1,5 @@
 from PySide6.QtCore import QRect
-from PySide6.QtGui import QPainter, QColor
+from PySide6.QtGui import QColor, QPainter
 
 
 def _mm_to_px(mm: float, scale_factor_mm_per_px: float) -> float:
@@ -9,18 +9,20 @@ def _mm_to_px(mm: float, scale_factor_mm_per_px: float) -> float:
     return mm * 2.0  # Fallback heuristic
 
 
-def draw_scale_bar(painter: QPainter,
-                   tile_width: int,
-                   tile_height: int,
-                   gutter: int,
-                   scale_factor_mm_per_px: float,
-                   units: str,
-                   location: str,
-                   length_in: float,
-                   length_cm: float,
-                   opacity_percent: int,
-                   thickness_mm: float = 5.0,
-                   padding_mm: float = 5.0):
+def draw_scale_bar(
+    painter: QPainter,
+    tile_width: int,
+    tile_height: int,
+    gutter: int,
+    scale_factor_mm_per_px: float,
+    units: str,
+    location: str,
+    length_in: float,
+    length_cm: float,
+    opacity_percent: int,
+    thickness_mm: float = 5.0,
+    padding_mm: float = 5.0,
+):
     """
     Draw a scale bar with alternating dark/light blocks.
 
@@ -30,7 +32,7 @@ def draw_scale_bar(painter: QPainter,
     """
     try:
         # Compute target length in pixels
-        if units.lower() == 'inches':
+        if units.lower() == "inches":
             total_mm = length_in * 25.4
         else:
             total_mm = length_cm * 10.0  # cm to mm
@@ -40,9 +42,9 @@ def draw_scale_bar(painter: QPainter,
         padding_px = int(round(_mm_to_px(padding_mm, scale_factor_mm_per_px)))
 
         # Determine orientation and base rect according to location
-        loc_parts = (location or 'Page-S').split('-')
-        zone = (loc_parts[0] if len(loc_parts) > 0 else 'Page').lower()
-        dir8 = (loc_parts[1] if len(loc_parts) > 1 else 'S').upper()
+        loc_parts = (location or "Page-S").split("-")
+        zone = (loc_parts[0] if len(loc_parts) > 0 else "Page").lower()
+        dir8 = (loc_parts[1] if len(loc_parts) > 1 else "S").upper()
 
         # Compute printable rect
         printable_x = gutter
@@ -52,14 +54,14 @@ def draw_scale_bar(painter: QPainter,
 
         # Base rect where the scale bar will be placed
         # Horizontal by default for N/S and corners; vertical for E/W
-        horizontal = dir8 in ('N', 'NE', 'NW', 'S', 'SE', 'SW')
+        horizontal = dir8 in ("N", "NE", "NW", "S", "SE", "SW")
 
-        if zone == 'page':
+        if zone == "page":
             if horizontal:
                 x = printable_x + padding_px
                 w = max(0, min(total_px, printable_w - 2 * padding_px))
                 h = min(thickness_px, max(0, printable_h - 2 * padding_px))
-                if dir8 in ('N', 'NE', 'NW'):
+                if dir8 in ("N", "NE", "NW"):
                     y = printable_y + padding_px
                 else:
                     y = printable_y + printable_h - padding_px - h
@@ -67,7 +69,7 @@ def draw_scale_bar(painter: QPainter,
                 y = printable_y + padding_px
                 h = max(0, min(total_px, printable_h - 2 * padding_px))
                 w = min(thickness_px, max(0, printable_w - 2 * padding_px))
-                if dir8 == 'E':
+                if dir8 == "E":
                     x = printable_x + printable_w - padding_px - w
                 else:  # 'W'
                     x = printable_x + padding_px
@@ -76,7 +78,7 @@ def draw_scale_bar(painter: QPainter,
                 x = padding_px
                 w = max(0, min(total_px, tile_width - 2 * padding_px))
                 h = min(thickness_px, max(0, gutter - padding_px))
-                if dir8 in ('N', 'NE', 'NW'):
+                if dir8 in ("N", "NE", "NW"):
                     y = max(0, gutter - h - padding_px)
                 else:
                     y = tile_height - max(0, gutter - padding_px)
@@ -84,12 +86,16 @@ def draw_scale_bar(painter: QPainter,
                 y = padding_px
                 h = max(0, min(total_px, tile_height - 2 * padding_px))
                 w = min(thickness_px, max(0, gutter - padding_px))
-                if dir8 == 'E':
+                if dir8 == "E":
                     x = tile_width - max(0, gutter - padding_px)
                 else:
                     x = max(0, gutter - w - padding_px)
 
-        bar_rect = QRect(int(x), int(y), int(w), int(h)) if horizontal else QRect(int(x), int(y), int(w), int(h))
+        bar_rect = (
+            QRect(int(x), int(y), int(w), int(h))
+            if horizontal
+            else QRect(int(x), int(y), int(w), int(h))
+        )
         if bar_rect.width() <= 0 or bar_rect.height() <= 0:
             return
 
@@ -99,7 +105,7 @@ def draw_scale_bar(painter: QPainter,
 
         # Build segment lengths in pixels
         segs = []
-        if units.lower() == 'inches':
+        if units.lower() == "inches":
             qtr_px = _mm_to_px(25.4 / 4.0, scale_factor_mm_per_px)
             half_px = _mm_to_px(25.4 / 2.0, scale_factor_mm_per_px)
             one_in_px = _mm_to_px(25.4, scale_factor_mm_per_px)
@@ -138,9 +144,19 @@ def draw_scale_bar(painter: QPainter,
         total_drawn = 0
         for s in segs:
             if horizontal:
-                seg_rect = QRect(bar_rect.left() + curr, bar_rect.top(), min(s, bar_rect.width() - curr), bar_rect.height())
+                seg_rect = QRect(
+                    bar_rect.left() + curr,
+                    bar_rect.top(),
+                    min(s, bar_rect.width() - curr),
+                    bar_rect.height(),
+                )
             else:
-                seg_rect = QRect(bar_rect.left(), bar_rect.top() + curr, bar_rect.width(), min(s, bar_rect.height() - curr))
+                seg_rect = QRect(
+                    bar_rect.left(),
+                    bar_rect.top() + curr,
+                    bar_rect.width(),
+                    min(s, bar_rect.height() - curr),
+                )
             if seg_rect.width() <= 0 or seg_rect.height() <= 0:
                 break
             color = QColor(0, 0, 0) if dark else QColor(255, 255, 255)

@@ -4,8 +4,9 @@ Metadata page generator for OpenTiler exports.
 
 import os
 from datetime import datetime
-from PySide6.QtCore import QSize, QPoint, Qt, QRect
-from PySide6.QtGui import QPixmap, QPainter, QFont, QColor, QPen
+
+from PySide6.QtCore import QPoint, QRect, QSize, Qt
+from PySide6.QtGui import QColor, QFont, QPainter, QPen, QPixmap
 
 
 class MetadataPageGenerator:
@@ -16,7 +17,9 @@ class MetadataPageGenerator:
         self.margin = 100  # Base margin (scaled per page)
         self._scale = 1.0
 
-    def generate_metadata_page(self, document_info: dict, page_size: QSize = None) -> QPixmap:
+    def generate_metadata_page(
+        self, document_info: dict, page_size: QSize = None
+    ) -> QPixmap:
         """
         Generate a metadata summary page.
 
@@ -44,11 +47,21 @@ class MetadataPageGenerator:
 
         # Draw the metadata page (flowing layout)
         y = self._draw_header(painter, document_info)
-        y = self._draw_document_info(painter, document_info, y + max(12, int(16 * self._scale)))
-        y = self._draw_scale_info(painter, document_info, y + max(12, int(16 * self._scale)))
-        y = self._draw_tiling_info(painter, document_info, y + max(12, int(16 * self._scale)))
-        y = self._draw_export_info(painter, document_info, y + max(12, int(16 * self._scale)))
-        y = self._draw_plan_view(painter, document_info, y + max(20, int(24 * self._scale)))
+        y = self._draw_document_info(
+            painter, document_info, y + max(12, int(16 * self._scale))
+        )
+        y = self._draw_scale_info(
+            painter, document_info, y + max(12, int(16 * self._scale))
+        )
+        y = self._draw_tiling_info(
+            painter, document_info, y + max(12, int(16 * self._scale))
+        )
+        y = self._draw_export_info(
+            painter, document_info, y + max(12, int(16 * self._scale))
+        )
+        y = self._draw_plan_view(
+            painter, document_info, y + max(20, int(24 * self._scale))
+        )
         self._draw_footer(painter, document_info, y + max(20, int(24 * self._scale)))
 
         painter.end()
@@ -73,7 +86,9 @@ class MetadataPageGenerator:
         painter.drawText(brand_x, brand_y, brand_text)
 
         # Project name as page title (left/top)
-        title_text = info.get('project_name') or info.get('document_name') or 'Untitled Project'
+        title_text = (
+            info.get("project_name") or info.get("document_name") or "Untitled Project"
+        )
         title_font = QFont("Arial")
         title_font.setBold(True)
         title_font.setPixelSize(max(24, int(64 * self._scale)))
@@ -113,12 +128,18 @@ class MetadataPageGenerator:
 
         # Document details
         details = [
-            ("Project Name:", info.get('project_name', '') or 'Untitled Project'),
-            ("Document Name:", info.get('document_name', 'Unknown')),
-            ("Original File:", info.get('original_file', 'Unknown')),
-            ("File Size:", info.get('file_size', 'Unknown')),
-            ("Document Dimensions:", f"{info.get('doc_width', 0)} x {info.get('doc_height', 0)} pixels"),
-            ("Real-world Size:", f"{info.get('real_width', 0):.2f} x {info.get('real_height', 0):.2f} {info.get('units', 'mm')}"),
+            ("Project Name:", info.get("project_name", "") or "Untitled Project"),
+            ("Document Name:", info.get("document_name", "Unknown")),
+            ("Original File:", info.get("original_file", "Unknown")),
+            ("File Size:", info.get("file_size", "Unknown")),
+            (
+                "Document Dimensions:",
+                f"{info.get('doc_width', 0)} x {info.get('doc_height', 0)} pixels",
+            ),
+            (
+                "Real-world Size:",
+                f"{info.get('real_width', 0):.2f} x {info.get('real_height', 0):.2f} {info.get('units', 'mm')}",
+            ),
         ]
 
         y = self._draw_details_list(painter, details, y)
@@ -130,8 +151,8 @@ class MetadataPageGenerator:
         y += max(28, int(36 * self._scale))
 
         # Scale details
-        scale_factor = info.get('scale_factor', 1.0)
-        units = info.get('units', 'mm')
+        scale_factor = info.get("scale_factor", 1.0)
+        units = info.get("units", "mm")
 
         details = [
             ("Scale Factor:", f"{scale_factor:.6f} {units}/pixel"),
@@ -150,12 +171,18 @@ class MetadataPageGenerator:
 
         # Tiling details
         details = [
-            ("Total Tiles:", str(info.get('total_tiles', 0))),
-            ("Tile Arrangement:", f"{info.get('tiles_x', 0)} x {info.get('tiles_y', 0)}"),
-            ("Page Size:", info.get('page_size', 'A4')),
-            ("Page Orientation:", info.get('page_orientation', 'auto')),
+            ("Total Tiles:", str(info.get("total_tiles", 0))),
+            (
+                "Tile Arrangement:",
+                f"{info.get('tiles_x', 0)} x {info.get('tiles_y', 0)}",
+            ),
+            ("Page Size:", info.get("page_size", "A4")),
+            ("Page Orientation:", info.get("page_orientation", "auto")),
             ("Gutter Size:", f"{info.get('gutter_size', 10.0)} mm"),
-            ("Overlap Area:", f"{info.get('gutter_size', 10.0) * 2} mm between adjacent tiles"),
+            (
+                "Overlap Area:",
+                f"{info.get('gutter_size', 10.0) * 2} mm between adjacent tiles",
+            ),
         ]
 
         y = self._draw_details_list(painter, details, y)
@@ -168,11 +195,11 @@ class MetadataPageGenerator:
 
         # Export details
         details = [
-            ("Export Format:", info.get('export_format', 'PDF')),
+            ("Export Format:", info.get("export_format", "PDF")),
             ("DPI:", f"{info.get('dpi', 300)} dpi"),
-            ("Export Date:", datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
-            ("OpenTiler Version:", info.get('version', '1.0')),
-            ("Output Directory:", info.get('output_dir', 'Unknown')),
+            ("Export Date:", datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+            ("OpenTiler Version:", info.get("version", "1.0")),
+            ("Output Directory:", info.get("output_dir", "Unknown")),
         ]
 
         y = self._draw_details_list(painter, details, y)
@@ -190,31 +217,37 @@ class MetadataPageGenerator:
             y += 50
 
             # Get source pixmap and page grid from document info
-            source_pixmap = info.get('source_pixmap')
-            page_grid = info.get('page_grid', [])
+            source_pixmap = info.get("source_pixmap")
+            page_grid = info.get("page_grid", [])
 
             if not source_pixmap or not page_grid:
                 # Draw placeholder text if no plan view available
                 painter.setPen(QColor(100, 100, 100))
-                painter.drawText(self.margin, y + 20, "Plan view not available for preview")
+                painter.drawText(
+                    self.margin, y + 20, "Plan view not available for preview"
+                )
                 return
 
             # Validate source pixmap
             if source_pixmap.isNull():
                 painter.setPen(QColor(100, 100, 100))
-                painter.drawText(self.margin, y + 20, "Plan view: Invalid source document")
+                painter.drawText(
+                    self.margin, y + 20, "Plan view: Invalid source document"
+                )
                 return
 
             # Calculate available space beneath current y
             available_width = self.page_size.width() - (2 * self.margin)
-            available_height = max(120, self.page_size.height() - y - self.margin - footer_reserved)
+            available_height = max(
+                120, self.page_size.height() - y - self.margin - footer_reserved
+            )
 
             # Calculate the total area covered by all pages
             if page_grid:
-                min_x = min(page['x'] for page in page_grid)
-                max_x = max(page['x'] + page['width'] for page in page_grid)
-                min_y = min(page['y'] for page in page_grid)
-                max_y = max(page['y'] + page['height'] for page in page_grid)
+                min_x = min(page["x"] for page in page_grid)
+                max_x = max(page["x"] + page["width"] for page in page_grid)
+                min_y = min(page["y"] for page in page_grid)
+                max_y = max(page["y"] + page["height"] for page in page_grid)
 
                 total_width = max_x - min_x
                 total_height = max_y - min_y
@@ -237,17 +270,24 @@ class MetadataPageGenerator:
             plan_y = y
 
             # Create a composite image showing the document with page overlays
-            scale_factor = info.get('scale_factor', 1.0)
+            scale_factor = info.get("scale_factor", 1.0)
             composite = self._create_plan_view_composite(
-                source_pixmap, page_grid, total_width, total_height, min_x, min_y, scale_factor
+                source_pixmap,
+                page_grid,
+                total_width,
+                total_height,
+                min_x,
+                min_y,
+                scale_factor,
             )
 
             if composite and not composite.isNull():
                 # Scale the composite to fit
                 scaled_composite = composite.scaled(
-                    scaled_width, scaled_height,
+                    scaled_width,
+                    scaled_height,
                     Qt.KeepAspectRatio,
-                    Qt.SmoothTransformation
+                    Qt.SmoothTransformation,
                 )
 
                 # Draw the scaled plan view
@@ -255,10 +295,14 @@ class MetadataPageGenerator:
 
                 # Draw border around plan view
                 painter.setPen(QPen(QColor(100, 100, 100), 1))
-                painter.drawRect(plan_x, plan_y, scaled_composite.width(), scaled_composite.height())
+                painter.drawRect(
+                    plan_x, plan_y, scaled_composite.width(), scaled_composite.height()
+                )
 
                 # Add legend below the plan view
-                legend_y = plan_y + scaled_composite.height() + max(12, int(16 * self._scale))
+                legend_y = (
+                    plan_y + scaled_composite.height() + max(12, int(16 * self._scale))
+                )
                 self._draw_plan_view_legend(painter, legend_y)
                 return legend_y + max(24, int(28 * self._scale))
 
@@ -269,7 +313,16 @@ class MetadataPageGenerator:
             painter.drawText(self.margin, y_start + 20, f"Plan view error: {str(e)}")
         return y_start + max(80, int(100 * self._scale))
 
-    def _create_plan_view_composite(self, source_pixmap, page_grid, total_width, total_height, offset_x, offset_y, scale_factor: float = 1.0):
+    def _create_plan_view_composite(
+        self,
+        source_pixmap,
+        page_grid,
+        total_width,
+        total_height,
+        offset_x,
+        offset_y,
+        scale_factor: float = 1.0,
+    ):
         """Create a composite image showing the document with page layout overlays."""
         try:
             # Create canvas for the composite
@@ -286,11 +339,11 @@ class MetadataPageGenerator:
 
                 # Draw page layout overlays and numbers (no outer page boundary)
                 for i, page in enumerate(page_grid):
-                    page_x = page['x'] - offset_x
-                    page_y = page['y'] - offset_y
-                    page_width = page['width']
-                    page_height = page['height']
-                    gutter = page.get('gutter', 0)
+                    page_x = page["x"] - offset_x
+                    page_y = page["y"] - offset_y
+                    page_width = page["width"]
+                    page_height = page["height"]
+                    gutter = page.get("gutter", 0)
 
                     # Draw gutter boundary (blue) if gutter exists
                     if gutter > 1:
@@ -301,20 +354,35 @@ class MetadataPageGenerator:
                         gutter_height = page_height - (2 * gutter)
 
                         if gutter_width > 0 and gutter_height > 0:
-                            painter.drawRect(int(gutter_x), int(gutter_y), int(gutter_width), int(gutter_height))
+                            painter.drawRect(
+                                int(gutter_x),
+                                int(gutter_y),
+                                int(gutter_width),
+                                int(gutter_height),
+                            )
 
                             # Registration marks at printable corners (quarters), using doc scale to size
                             try:
                                 from ..settings.config import config
+
                                 if config.get_reg_marks_display():
-                                    px_per_mm = (1.0 / scale_factor) if scale_factor and scale_factor > 0 else 2.0
+                                    px_per_mm = (
+                                        (1.0 / scale_factor)
+                                        if scale_factor and scale_factor > 0
+                                        else 2.0
+                                    )
                                     diameter_mm = config.get_reg_mark_diameter_mm()
                                     cross_mm = config.get_reg_mark_crosshair_mm()
                                     radius_px = int((diameter_mm * px_per_mm) / 2)
                                     cross_len_px = int(cross_mm * px_per_mm)
 
                                     # Clip to printable rect
-                                    printable_rect = QRect(int(gutter_x), int(gutter_y), int(gutter_width), int(gutter_height))
+                                    printable_rect = QRect(
+                                        int(gutter_x),
+                                        int(gutter_y),
+                                        int(gutter_width),
+                                        int(gutter_height),
+                                    )
                                     painter.save()
                                     painter.setClipRect(printable_rect)
                                     painter.setPen(QPen(QColor(0, 0, 0), 1))
@@ -323,12 +391,24 @@ class MetadataPageGenerator:
                                         (int(gutter_x), int(gutter_y)),
                                         (int(gutter_x + gutter_width), int(gutter_y)),
                                         (int(gutter_x), int(gutter_y + gutter_height)),
-                                        (int(gutter_x + gutter_width), int(gutter_y + gutter_height)),
+                                        (
+                                            int(gutter_x + gutter_width),
+                                            int(gutter_y + gutter_height),
+                                        ),
                                     ]
                                     for cx, cy in centers:
-                                        painter.drawEllipse(cx - radius_px, cy - radius_px, radius_px * 2, radius_px * 2)
-                                        painter.drawLine(cx - cross_len_px, cy, cx + cross_len_px, cy)
-                                        painter.drawLine(cx, cy - cross_len_px, cx, cy + cross_len_px)
+                                        painter.drawEllipse(
+                                            cx - radius_px,
+                                            cy - radius_px,
+                                            radius_px * 2,
+                                            radius_px * 2,
+                                        )
+                                        painter.drawLine(
+                                            cx - cross_len_px, cy, cx + cross_len_px, cy
+                                        )
+                                        painter.drawLine(
+                                            cx, cy - cross_len_px, cx, cy + cross_len_px
+                                        )
                                     painter.restore()
                             except Exception:
                                 pass
@@ -347,8 +427,18 @@ class MetadataPageGenerator:
                     text_y = page_y + (page_height + text_rect.height()) / 2
 
                     # Draw text background for visibility
-                    bg_rect = text_rect.adjusted(-int(6 * self._scale), -int(4 * self._scale), int(6 * self._scale), int(4 * self._scale))
-                    bg_rect.moveCenter(QPoint(int(text_x + text_rect.width()/2), int(text_y - text_rect.height()/2)))
+                    bg_rect = text_rect.adjusted(
+                        -int(6 * self._scale),
+                        -int(4 * self._scale),
+                        int(6 * self._scale),
+                        int(4 * self._scale),
+                    )
+                    bg_rect.moveCenter(
+                        QPoint(
+                            int(text_x + text_rect.width() / 2),
+                            int(text_y - text_rect.height() / 2),
+                        )
+                    )
                     painter.fillRect(bg_rect, QColor(0, 0, 0, 150))
 
                     # Draw page number
@@ -400,7 +490,7 @@ class MetadataPageGenerator:
             "3. Use the Page Assembly Map above to understand tile arrangement",
             "4. Align tiles using the gutter lines and crop marks",
             "5. Overlap tiles in the gutter area for seamless assembly",
-            "6. Use the page numbers (P1, P2, etc.) to ensure correct positioning"
+            "6. Use the page numbers (P1, P2, etc.) to ensure correct positioning",
         ]
 
         line_step = max(14, int(26 * self._scale))
@@ -410,7 +500,9 @@ class MetadataPageGenerator:
 
         # Copyright
         y += 20
-        painter.drawText(self.margin, y, "Generated by OpenTiler - © 2024 Randall Morgan")
+        painter.drawText(
+            self.margin, y, "Generated by OpenTiler - © 2024 Randall Morgan"
+        )
 
     def _draw_section_header(self, painter: QPainter, title: str, y: int):
         """Draw a section header."""
@@ -482,9 +574,17 @@ class MetadataPageGenerator:
             return f"1:{ratio:.1f}"
 
 
-def create_document_info(document_name: str, original_file: str, scale_factor: float,
-                        units: str, doc_width: int, doc_height: int,
-                        tiles_x: int, tiles_y: int, **kwargs) -> dict:
+def create_document_info(
+    document_name: str,
+    original_file: str,
+    scale_factor: float,
+    units: str,
+    doc_width: int,
+    doc_height: int,
+    tiles_x: int,
+    tiles_y: int,
+    **kwargs,
+) -> dict:
     """
     Create a document info dictionary for metadata page generation.
 
@@ -506,19 +606,23 @@ def create_document_info(document_name: str, original_file: str, scale_factor: f
     real_height = doc_height * scale_factor
 
     info = {
-        'document_name': document_name,
-        'original_file': os.path.basename(original_file) if original_file else 'Unknown',
-        'file_size': _get_file_size_string(original_file) if original_file else 'Unknown',
-        'doc_width': doc_width,
-        'doc_height': doc_height,
-        'real_width': real_width,
-        'real_height': real_height,
-        'scale_factor': scale_factor,
-        'units': units,
-        'tiles_x': tiles_x,
-        'tiles_y': tiles_y,
-        'total_tiles': tiles_x * tiles_y,
-        'version': '1.0',
+        "document_name": document_name,
+        "original_file": (
+            os.path.basename(original_file) if original_file else "Unknown"
+        ),
+        "file_size": (
+            _get_file_size_string(original_file) if original_file else "Unknown"
+        ),
+        "doc_width": doc_width,
+        "doc_height": doc_height,
+        "real_width": real_width,
+        "real_height": real_height,
+        "scale_factor": scale_factor,
+        "units": units,
+        "tiles_x": tiles_x,
+        "tiles_y": tiles_y,
+        "total_tiles": tiles_x * tiles_y,
+        "version": "1.0",
     }
 
     # Add any additional metadata

@@ -7,10 +7,10 @@ with 10mm gutters, and exports a multi-page PDF using the PDFExporter.
 """
 
 import os
-from typing import List, Dict
+from typing import Dict, List
 
-from PySide6.QtGui import QGuiApplication, QPainter, QPixmap, QColor, QPen
-from PySide6.QtCore import Qt, QRect
+from PySide6.QtCore import QRect, Qt
+from PySide6.QtGui import QColor, QGuiApplication, QPainter, QPen, QPixmap
 
 from opentiler.exporter.pdf_exporter import PDFExporter
 from opentiler.settings.config import config
@@ -46,7 +46,9 @@ def create_test_pixmap(width: int, height: int) -> QPixmap:
     return pix
 
 
-def calc_page_grid_with_gutters(doc_w: float, doc_h: float, page_w: float, page_h: float, gutter: float) -> List[Dict]:
+def calc_page_grid_with_gutters(
+    doc_w: float, doc_h: float, page_w: float, page_h: float, gutter: float
+) -> List[Dict]:
     # Drawable area inside gutters
     drawable_w = page_w - (2 * gutter)
     drawable_h = page_h - (2 * gutter)
@@ -62,12 +64,17 @@ def calc_page_grid_with_gutters(doc_w: float, doc_h: float, page_w: float, page_
         x = -gutter
         col = 0
         while x < doc_w:
-            pages.append({
-                'x': x, 'y': y,
-                'width': page_w, 'height': page_h,
-                'row': row, 'col': col,
-                'gutter': gutter
-            })
+            pages.append(
+                {
+                    "x": x,
+                    "y": y,
+                    "width": page_w,
+                    "height": page_h,
+                    "row": row,
+                    "col": col,
+                    "gutter": gutter,
+                }
+            )
             x += step_x
             if x + gutter >= doc_w:
                 break
@@ -89,7 +96,7 @@ def main() -> int:
     scale_factor = 0.5
 
     # Page size and gutter
-    page_size = 'A4'
+    page_size = "A4"
     page_w_mm, page_h_mm = get_page_size_mm(page_size)
     gutter_mm = float(config.get_gutter_size_mm())  # default 10mm
 
@@ -99,12 +106,14 @@ def main() -> int:
     gutter_px = gutter_mm / scale_factor
 
     # Build page grid
-    pages = calc_page_grid_with_gutters(src.width(), src.height(), page_w_px, page_h_px, gutter_px)
+    pages = calc_page_grid_with_gutters(
+        src.width(), src.height(), page_w_px, page_h_px, gutter_px
+    )
 
     # Export multipage
-    out_dir = os.path.join(os.path.dirname(__file__), 'validation_output')
+    out_dir = os.path.join(os.path.dirname(__file__), "validation_output")
     os.makedirs(out_dir, exist_ok=True)
-    out_pdf = os.path.join(out_dir, 'test_gutter_fix.pdf')
+    out_pdf = os.path.join(out_dir, "test_gutter_fix.pdf")
 
     exporter = PDFExporter()
     ok = exporter.export(
@@ -112,35 +121,35 @@ def main() -> int:
         page_grid=pages,
         output_path=out_pdf,
         page_size=page_size,
-        document_name='Gutter Validation',
-        original_file='',
+        document_name="Gutter Validation",
+        original_file="",
         scale_factor=scale_factor,
-        units='mm',
-        page_orientation='auto',
+        units="mm",
+        page_orientation="auto",
         gutter_size=gutter_mm,
-        output_dir=out_dir
+        output_dir=out_dir,
     )
 
     print(f"Validation PDF written: {out_pdf}, success={ok}")
     # Export composite
-    out_pdf_composite = os.path.join(out_dir, 'test_gutter_fix_composite.pdf')
+    out_pdf_composite = os.path.join(out_dir, "test_gutter_fix_composite.pdf")
     ok2 = exporter.export(
         source_pixmap=src,
         page_grid=pages,
         output_path=out_pdf_composite,
         page_size=page_size,
-        document_name='Gutter Validation (Composite)',
-        original_file='',
+        document_name="Gutter Validation (Composite)",
+        original_file="",
         scale_factor=scale_factor,
-        units='mm',
-        page_orientation='auto',
+        units="mm",
+        page_orientation="auto",
         gutter_size=gutter_mm,
         output_dir=out_dir,
-        composite=True
+        composite=True,
     )
     print(f"Validation composite PDF written: {out_pdf_composite}, success={ok2}")
     return 0 if (ok and ok2) else 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     raise SystemExit(main())

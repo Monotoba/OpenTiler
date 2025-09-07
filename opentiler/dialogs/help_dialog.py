@@ -9,30 +9,22 @@ Embedded images and relative links resolve using the help directory as the base 
 from __future__ import annotations
 
 import os
+import re
+import tempfile
 from pathlib import Path
 from typing import List, Optional
-import tempfile
-import re
 
-from PySide6.QtCore import Qt, QUrl, QSize
+from PySide6.QtCore import QSize, Qt, QUrl
 from PySide6.QtGui import QAction, QDesktopServices
-from PySide6.QtWidgets import (
-    QDialog,
-    QVBoxLayout,
-    QHBoxLayout,
-    QTreeWidget,
-    QTreeWidgetItem,
-    QTextBrowser,
-    QSplitter,
-    QLineEdit,
-    QLabel,
-    QWidget,
-    QToolBar,
-)
-from PySide6.QtPrintSupport import QPrinter, QPrintDialog
+from PySide6.QtPrintSupport import QPrintDialog, QPrinter
+from PySide6.QtWidgets import (QDialog, QHBoxLayout, QLabel, QLineEdit,
+                               QSplitter, QTextBrowser, QToolBar, QTreeWidget,
+                               QTreeWidgetItem, QVBoxLayout, QWidget)
 
 
-def _find_help_dir(start_dir: Optional[Path] = None, max_depth: int = 6) -> Optional[Path]:
+def _find_help_dir(
+    start_dir: Optional[Path] = None, max_depth: int = 6
+) -> Optional[Path]:
     """Find the help directory under the package tree.
 
     Walk up from the given start directory (or this file's parent) up to max_depth
@@ -147,7 +139,9 @@ class HelpDialog(QDialog):
         self.topics_tree.clear()
         if not self.help_dir:
             # Show a basic message if help dir not available
-            placeholder = QTreeWidgetItem(["No help directory found. Create opentiler/help/ …"]) 
+            placeholder = QTreeWidgetItem(
+                ["No help directory found. Create opentiler/help/ …"]
+            )
             placeholder.setDisabled(True)
             self.topics_tree.addTopLevelItem(placeholder)
             self.viewer.setHtml(
@@ -160,7 +154,12 @@ class HelpDialog(QDialog):
         # Build recursive tree: direct files at root, subdirectories as nodes
         # Add top-level files
         for p in sorted(self.help_dir.iterdir(), key=lambda x: x.name.lower()):
-            if p.is_file() and p.suffix.lower() in (".md", ".markdown", ".html", ".htm"):
+            if p.is_file() and p.suffix.lower() in (
+                ".md",
+                ".markdown",
+                ".html",
+                ".htm",
+            ):
                 title = self._display_title_for(p) or p.name
                 leaf = QTreeWidgetItem([title])
                 leaf.setData(0, Qt.UserRole, str(p))
@@ -170,19 +169,33 @@ class HelpDialog(QDialog):
         # Add directories recursively
         def add_dir(parent: QTreeWidgetItem, directory: Path):
             # Add files in this directory
-            for f in sorted([x for x in directory.iterdir() if x.is_file() and x.suffix.lower() in (".md", ".markdown", ".html", ".htm")], key=lambda x: x.name.lower()):
+            for f in sorted(
+                [
+                    x
+                    for x in directory.iterdir()
+                    if x.is_file()
+                    and x.suffix.lower() in (".md", ".markdown", ".html", ".htm")
+                ],
+                key=lambda x: x.name.lower(),
+            ):
                 title = self._display_title_for(f) or f.name
                 leaf = QTreeWidgetItem([title])
                 leaf.setData(0, Qt.UserRole, str(f))
                 leaf.setToolTip(0, f.name)
                 parent.addChild(leaf)
             # Recurse into subdirectories
-            for d in sorted([x for x in directory.iterdir() if x.is_dir()], key=lambda x: x.name.lower()):
+            for d in sorted(
+                [x for x in directory.iterdir() if x.is_dir()],
+                key=lambda x: x.name.lower(),
+            ):
                 node = QTreeWidgetItem([d.name])
                 parent.addChild(node)
                 add_dir(node, d)
 
-        for d in sorted([x for x in self.help_dir.iterdir() if x.is_dir()], key=lambda x: x.name.lower()):
+        for d in sorted(
+            [x for x in self.help_dir.iterdir() if x.is_dir()],
+            key=lambda x: x.name.lower(),
+        ):
             node = QTreeWidgetItem([d.name])
             self.topics_tree.addTopLevelItem(node)
             add_dir(node, d)
@@ -191,6 +204,7 @@ class HelpDialog(QDialog):
 
     def _filter_topics(self, text: str):
         t = text.lower().strip()
+
         def filter_item(item: QTreeWidgetItem) -> bool:
             # Returns True if item or any child matches
             child_match = False
@@ -246,15 +260,20 @@ class HelpDialog(QDialog):
 
     def _select_list_item(self, path: Path):
         base_path = str(path.resolve())
+
         def walk(item: QTreeWidgetItem):
             data = item.data(0, Qt.UserRole)
-            if data and Path(str(data)).resolve().as_posix() == Path(base_path).as_posix():
+            if (
+                data
+                and Path(str(data)).resolve().as_posix() == Path(base_path).as_posix()
+            ):
                 return item
             for i in range(item.childCount()):
                 res = walk(item.child(i))
                 if res is not None:
                     return res
             return None
+
         for i in range(self.topics_tree.topLevelItemCount()):
             res = walk(self.topics_tree.topLevelItem(i))
             if res is not None:
@@ -267,7 +286,9 @@ class HelpDialog(QDialog):
         self._current_path = path
         # Ensure base URL is the help directory so relative images/links resolve
         if self.help_dir:
-            self.viewer.document().setBaseUrl(QUrl.fromLocalFile(str(self.help_dir) + os.sep))
+            self.viewer.document().setBaseUrl(
+                QUrl.fromLocalFile(str(self.help_dir) + os.sep)
+            )
 
         try:
             if suffix in (".md", ".markdown"):
@@ -276,26 +297,34 @@ class HelpDialog(QDialog):
                 html_rendered = None
                 try:
                     import markdown  # type: ignore
+
                     exts = [
-                        'extra',            # tables, fenced code, etc.
-                        'admonition',
-                        'sane_lists',
-                        'toc',
-                        'codehilite',
+                        "extra",  # tables, fenced code, etc.
+                        "admonition",
+                        "sane_lists",
+                        "toc",
+                        "codehilite",
                     ]
                     # Optional: GitHub task lists if extension is present
                     try:
                         import pymdownx.tasklist  # noqa: F401
-                        exts.append('pymdownx.tasklist')
+
+                        exts.append("pymdownx.tasklist")
                     except Exception:
                         pass
-                    html_rendered = markdown.markdown(text, extensions=exts, output_format='html5')
+                    html_rendered = markdown.markdown(
+                        text, extensions=exts, output_format="html5"
+                    )
                 except Exception:
                     html_rendered = None
 
                 if html_rendered is not None:
                     css = self._load_css_text()
-                    base_href = QUrl.fromLocalFile(str(self.help_dir) + os.sep).toString() if self.help_dir else ''
+                    base_href = (
+                        QUrl.fromLocalFile(str(self.help_dir) + os.sep).toString()
+                        if self.help_dir
+                        else ""
+                    )
                     wrapped = self._wrap_html(html_rendered, base_href, css)
                     self.viewer.setHtml(wrapped)
                 else:
@@ -345,13 +374,17 @@ class HelpDialog(QDialog):
                 html_rendered = None
                 try:
                     import markdown  # type: ignore
-                    exts = ['extra', 'admonition', 'sane_lists', 'toc', 'codehilite']
+
+                    exts = ["extra", "admonition", "sane_lists", "toc", "codehilite"]
                     try:
                         import pymdownx.tasklist  # noqa: F401
-                        exts.append('pymdownx.tasklist')
+
+                        exts.append("pymdownx.tasklist")
                     except Exception:
                         pass
-                    html_rendered = markdown.markdown(text, extensions=exts, output_format='html5')
+                    html_rendered = markdown.markdown(
+                        text, extensions=exts, output_format="html5"
+                    )
                 except Exception:
                     html_rendered = None
 
@@ -360,10 +393,18 @@ class HelpDialog(QDialog):
                     QDesktopServices.openUrl(QUrl.fromLocalFile(str(path)))
                     return
 
-                base_href = QUrl.fromLocalFile(str(self.help_dir) + os.sep).toString() if self.help_dir else ''
+                base_href = (
+                    QUrl.fromLocalFile(str(self.help_dir) + os.sep).toString()
+                    if self.help_dir
+                    else ""
+                )
                 css = self._load_css_text()
-                html_doc = self._wrap_html(html_rendered, base_href, css, title=Path(path).name)
-                fd, tmp_path = tempfile.mkstemp(suffix=".html", prefix="opentiler-help-")
+                html_doc = self._wrap_html(
+                    html_rendered, base_href, css, title=Path(path).name
+                )
+                fd, tmp_path = tempfile.mkstemp(
+                    suffix=".html", prefix="opentiler-help-"
+                )
                 with os.fdopen(fd, "w", encoding="utf-8") as f:
                     f.write(html_doc)
                 self._temp_paths.append(tmp_path)
@@ -398,7 +439,14 @@ class HelpDialog(QDialog):
                     self.viewer.document().print(printer)
         except Exception:
             pass
-    def _wrap_html(self, body_html: str, base_href: str, css_text: str, title: str = "OpenTiler Help") -> str:
+
+    def _wrap_html(
+        self,
+        body_html: str,
+        base_href: str,
+        css_text: str,
+        title: str = "OpenTiler Help",
+    ) -> str:
         return f"""<!DOCTYPE html>
 <html>
 <head>
@@ -419,9 +467,9 @@ class HelpDialog(QDialog):
         # Try help/assets/style/help.css
         try:
             if self.help_dir:
-                css_path = self.help_dir / 'assets' / 'style' / 'help.css'
+                css_path = self.help_dir / "assets" / "style" / "help.css"
                 if css_path.exists():
-                    return css_path.read_text(encoding='utf-8')
+                    return css_path.read_text(encoding="utf-8")
         except Exception:
             pass
         # Fallback minimal CSS
@@ -434,14 +482,14 @@ class HelpDialog(QDialog):
 
     def _display_title_for(self, p: Path) -> Optional[str]:
         try:
-            if p.suffix.lower() in ('.md', '.markdown'):
-                for line in p.read_text(encoding='utf-8', errors='ignore').splitlines():
+            if p.suffix.lower() in (".md", ".markdown"):
+                for line in p.read_text(encoding="utf-8", errors="ignore").splitlines():
                     s = line.strip()
-                    if s.startswith('# '):
+                    if s.startswith("# "):
                         return s[2:].strip()
                 return None
-            if p.suffix.lower() in ('.html', '.htm'):
-                text = p.read_text(encoding='utf-8', errors='ignore')
+            if p.suffix.lower() in (".html", ".htm"):
+                text = p.read_text(encoding="utf-8", errors="ignore")
                 m = re.search(r"<h1[^>]*>(.*?)</h1>", text, re.IGNORECASE | re.DOTALL)
                 if m:
                     # Strip HTML tags from inside h1

@@ -6,21 +6,22 @@ This module provides a comprehensive UI for managing plugins within OpenTiler's
 settings dialog, including plugin discovery, configuration, and status management.
 """
 
-from typing import Dict, List, Any, Optional
-from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QTabWidget,
-    QListWidget, QListWidgetItem, QLabel, QPushButton, QCheckBox,
-    QTextEdit, QGroupBox, QSplitter, QScrollArea, QFrame,
-    QProgressBar, QComboBox, QSpinBox, QLineEdit, QMessageBox,
-    QDialog, QDialogButtonBox, QTableWidget, QTableWidgetItem,
-    QHeaderView, QAbstractItemView
-)
-from PySide6.QtCore import Qt, Signal, QTimer, QThread, pyqtSignal
-from PySide6.QtGui import QIcon, QPixmap, QFont, QAction
+from typing import Any, Dict, List, Optional
 
-from .plugin_manager import PluginManager
+from PySide6.QtCore import Qt, QThread, QTimer, Signal, pyqtSignal
+from PySide6.QtGui import QAction, QFont, QIcon, QPixmap
+from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox,
+                               QDialog, QDialogButtonBox, QFrame, QGridLayout,
+                               QGroupBox, QHBoxLayout, QHeaderView, QLabel,
+                               QLineEdit, QListWidget, QListWidgetItem,
+                               QMessageBox, QProgressBar, QPushButton,
+                               QScrollArea, QSpinBox, QSplitter, QTableWidget,
+                               QTableWidgetItem, QTabWidget, QTextEdit,
+                               QVBoxLayout, QWidget)
+
 from .base_plugin import BasePlugin, PluginInfo
 from .hook_system import HookType, get_hook_manager
+from .plugin_manager import PluginManager
 
 
 class PluginDiscoveryThread(QThread):
@@ -122,7 +123,9 @@ class PluginInfoWidget(QWidget):
 
         layout.addWidget(self.tabs)
 
-    def set_plugin(self, plugin_name: str, plugin: BasePlugin, plugin_manager: PluginManager):
+    def set_plugin(
+        self, plugin_name: str, plugin: BasePlugin, plugin_manager: PluginManager
+    ):
         """Set the plugin to display information for."""
         self.current_plugin = plugin_name
         self.plugin = plugin
@@ -226,14 +229,20 @@ class PluginInfoWidget(QWidget):
             success = self.plugin_manager.enable_plugin(self.current_plugin)
             if not success:
                 self.enable_checkbox.setChecked(False)
-                QMessageBox.warning(self, "Plugin Error",
-                                  f"Failed to enable plugin '{self.current_plugin}'")
+                QMessageBox.warning(
+                    self,
+                    "Plugin Error",
+                    f"Failed to enable plugin '{self.current_plugin}'",
+                )
         else:
             success = self.plugin_manager.disable_plugin(self.current_plugin)
             if not success:
                 self.enable_checkbox.setChecked(True)
-                QMessageBox.warning(self, "Plugin Error",
-                                  f"Failed to disable plugin '{self.current_plugin}'")
+                QMessageBox.warning(
+                    self,
+                    "Plugin Error",
+                    f"Failed to disable plugin '{self.current_plugin}'",
+                )
 
         # Update status
         if self.plugin:
@@ -330,9 +339,13 @@ class PluginManagerWidget(QWidget):
 
             # Set icon based on status
             if plugin.enabled:
-                item.setIcon(self.style().standardIcon(self.style().SP_DialogApplyButton))
+                item.setIcon(
+                    self.style().standardIcon(self.style().SP_DialogApplyButton)
+                )
             else:
-                item.setIcon(self.style().standardIcon(self.style().SP_DialogCancelButton))
+                item.setIcon(
+                    self.style().standardIcon(self.style().SP_DialogCancelButton)
+                )
 
             # Set tooltip with plugin info
             info = plugin.plugin_info
@@ -415,8 +428,9 @@ class PluginManagerWidget(QWidget):
 
     def on_plugin_error(self, plugin_name: str, error_message: str):
         """Handle plugin error signal."""
-        QMessageBox.critical(self, "Plugin Error",
-                           f"Error in plugin '{plugin_name}':\n{error_message}")
+        QMessageBox.critical(
+            self, "Plugin Error", f"Error in plugin '{plugin_name}':\n{error_message}"
+        )
 
 
 def create_plugin_manager_settings_widget(plugin_manager: PluginManager) -> QWidget:

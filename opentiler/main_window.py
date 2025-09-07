@@ -2,44 +2,38 @@
 Main window for OpenTiler application.
 """
 
-from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QMenuBar, QMenu, QToolBar, QStatusBar, QSplitter,
-    QFileDialog, QMessageBox
-)
-from PySide6.QtCore import Qt, QSize, QRect, QRectF, QPoint
-from PySide6.QtGui import QIcon, QKeySequence, QAction, QPainter, QPixmap, QPageSize, QPageLayout, QPen, QColor
-from PySide6.QtWidgets import QApplication
-from PySide6.QtPrintSupport import QPrinter, QPrintDialog, QPrintPreviewDialog
-from PySide6.QtCore import QMarginsF
-import os
 import json
+import os
+import tempfile
 import zipfile
 from pathlib import Path
-import tempfile
 
-from .viewer.viewer import DocumentViewer
-from .viewer.preview_panel import PreviewPanel
-from .dialogs.scaling_dialog import ScalingDialog
-from .dialogs.unit_converter import UnitConverterDialog
-from .dialogs.scale_calculator import ScaleCalculatorDialog
-from .dialogs.settings_dialog import SettingsDialog
-from .dialogs.printer_calibration import PrinterCalibrationDialog
+from PySide6.QtCore import QMarginsF, QPoint, QRect, QRectF, QSize, Qt
+from PySide6.QtGui import (QAction, QColor, QIcon, QKeySequence, QPageLayout,
+                           QPageSize, QPainter, QPen, QPixmap)
+from PySide6.QtPrintSupport import QPrintDialog, QPrinter, QPrintPreviewDialog
+from PySide6.QtWidgets import (QApplication, QFileDialog, QHBoxLayout,
+                               QMainWindow, QMenu, QMenuBar, QMessageBox,
+                               QSplitter, QStatusBar, QToolBar, QVBoxLayout,
+                               QWidget)
+
 from .dialogs.export_dialog import ExportDialog
-from .dialogs.save_as_dialog import SaveAsDialog
 from .dialogs.measure_dialog import MeasureDialog
+from .dialogs.printer_calibration import PrinterCalibrationDialog
+from .dialogs.save_as_dialog import SaveAsDialog
+from .dialogs.scale_calculator import ScaleCalculatorDialog
+from .dialogs.scaling_dialog import ScalingDialog
+from .dialogs.settings_dialog import SettingsDialog
+from .dialogs.unit_converter import UnitConverterDialog
 from .settings.config import Config
-from .utils.helpers import (
-    calculate_tile_grid,
-    get_page_size_mm,
-    mm_to_pixels,
-    load_icon,
-    compute_page_grid_with_gutters,
-    summarize_page_grid,
-    compute_page_size_pixels,
-)
-from .utils.overlays import draw_scale_bar
 from .utils.app_logger import configure_from_config, get_logger
+from .utils.helpers import (calculate_tile_grid,
+                            compute_page_grid_with_gutters,
+                            compute_page_size_pixels, get_page_size_mm,
+                            load_icon, mm_to_pixels, summarize_page_grid)
+from .utils.overlays import draw_scale_bar
+from .viewer.preview_panel import PreviewPanel
+from .viewer.viewer import DocumentViewer
 
 
 class MainWindow(QMainWindow):
@@ -81,9 +75,15 @@ class MainWindow(QMainWindow):
         main_splitter.addWidget(self.document_viewer)
         # Mark project dirty when user selects or drags points; refresh previews on measurement updates
         try:
-            self.document_viewer.point_selected.connect(lambda *_: self._mark_project_dirty())
-            self.document_viewer.points_updated.connect(lambda *_: self._mark_project_dirty())
-            self.document_viewer.measurements_changed.connect(self._refresh_preview_with_measurements)
+            self.document_viewer.point_selected.connect(
+                lambda *_: self._mark_project_dirty()
+            )
+            self.document_viewer.points_updated.connect(
+                lambda *_: self._mark_project_dirty()
+            )
+            self.document_viewer.measurements_changed.connect(
+                self._refresh_preview_with_measurements
+            )
         except Exception:
             pass
 
@@ -117,7 +117,7 @@ class MainWindow(QMainWindow):
             pass
 
         # Logger for main window
-        self.log = get_logger('projects')
+        self.log = get_logger("projects")
 
     def create_menus(self):
         """Create application menus in order: File, Project, Tools, Settings, Help."""
@@ -241,7 +241,6 @@ class MainWindow(QMainWindow):
         about_action.triggered.connect(self.show_about)
         help_menu.addAction(about_action)
 
-
     def create_toolbars(self):
         """Create application toolbars."""
         toolbar = QToolBar("Main Toolbar")
@@ -263,7 +262,9 @@ class MainWindow(QMainWindow):
 
         # 1. Open file action
         open_action = QAction("Open", self)
-        open_action.setIcon(style.standardIcon(style.StandardPixmap.SP_DialogOpenButton))  # Use system icon for Open
+        open_action.setIcon(
+            style.standardIcon(style.StandardPixmap.SP_DialogOpenButton)
+        )  # Use system icon for Open
         open_action.setToolTip("Open document (Ctrl+O)")
         open_action.setShortcut(QKeySequence.Open)
         open_action.triggered.connect(self.open_file)
@@ -273,7 +274,9 @@ class MainWindow(QMainWindow):
 
         # 2. Export action
         export_action = QAction("Export", self)
-        export_action.setIcon(load_icon("export.png", fallback=style.StandardPixmap.SP_DialogSaveButton))
+        export_action.setIcon(
+            load_icon("export.png", fallback=style.StandardPixmap.SP_DialogSaveButton)
+        )
         export_action.setToolTip("Export document as tiles (Ctrl+E)")
         export_action.setShortcut("Ctrl+E")
         export_action.triggered.connect(self.export_document)
@@ -281,7 +284,11 @@ class MainWindow(QMainWindow):
 
         # 3. Print action
         print_action = QAction("Print", self)
-        print_action.setIcon(load_icon("printer.png", fallback=style.StandardPixmap.SP_FileDialogDetailedView))
+        print_action.setIcon(
+            load_icon(
+                "printer.png", fallback=style.StandardPixmap.SP_FileDialogDetailedView
+            )
+        )
         print_action.setToolTip("Print tiles directly (Ctrl+P)")
         print_action.setShortcut("Ctrl+P")
         print_action.triggered.connect(self.print_tiles)
@@ -291,14 +298,22 @@ class MainWindow(QMainWindow):
 
         # 4. Rotate Left action
         rotate_left_action = QAction("Rotate Left", self)
-        rotate_left_action.setIcon(load_icon("rotate-left.png", fallback=style.StandardPixmap.SP_BrowserReload))
+        rotate_left_action.setIcon(
+            load_icon("rotate-left.png", fallback=style.StandardPixmap.SP_BrowserReload)
+        )
         rotate_left_action.setToolTip("Rotate document 90° counterclockwise")
-        rotate_left_action.triggered.connect(self.document_viewer.rotate_counterclockwise)
+        rotate_left_action.triggered.connect(
+            self.document_viewer.rotate_counterclockwise
+        )
         toolbar.addAction(rotate_left_action)
 
         # 5. Rotate Right action
         rotate_right_action = QAction("Rotate Right", self)
-        rotate_right_action.setIcon(load_icon("rotate-right.png", fallback=style.StandardPixmap.SP_BrowserReload))
+        rotate_right_action.setIcon(
+            load_icon(
+                "rotate-right.png", fallback=style.StandardPixmap.SP_BrowserReload
+            )
+        )
         rotate_right_action.setToolTip("Rotate document 90° clockwise")
         rotate_right_action.triggered.connect(self.document_viewer.rotate_clockwise)
         toolbar.addAction(rotate_right_action)
@@ -307,7 +322,11 @@ class MainWindow(QMainWindow):
 
         # 6. Fit to Window action
         fit_action = QAction("Fit to Window", self)
-        fit_action.setIcon(load_icon("fit-to-window.png", fallback=style.StandardPixmap.SP_ComputerIcon))
+        fit_action.setIcon(
+            load_icon(
+                "fit-to-window.png", fallback=style.StandardPixmap.SP_ComputerIcon
+            )
+        )
         fit_action.setToolTip("Fit document to window (Ctrl+0)")
         fit_action.setShortcut("Ctrl+0")
         fit_action.triggered.connect(self.document_viewer.zoom_fit)
@@ -315,7 +334,11 @@ class MainWindow(QMainWindow):
 
         # 7. Zoom In action
         zoom_in_action = QAction("Zoom In", self)
-        zoom_in_action.setIcon(load_icon("zoom-in.png", fallback=style.StandardPixmap.SP_FileDialogDetailedView))
+        zoom_in_action.setIcon(
+            load_icon(
+                "zoom-in.png", fallback=style.StandardPixmap.SP_FileDialogDetailedView
+            )
+        )
         zoom_in_action.setToolTip("Zoom in (+)")
         zoom_in_action.setShortcut(QKeySequence.ZoomIn)
         zoom_in_action.triggered.connect(self.document_viewer.zoom_in)
@@ -323,7 +346,11 @@ class MainWindow(QMainWindow):
 
         # 8. Zoom Out action
         zoom_out_action = QAction("Zoom Out", self)
-        zoom_out_action.setIcon(load_icon("zoom-out.png", fallback=style.StandardPixmap.SP_FileDialogListView))
+        zoom_out_action.setIcon(
+            load_icon(
+                "zoom-out.png", fallback=style.StandardPixmap.SP_FileDialogListView
+            )
+        )
         zoom_out_action.setToolTip("Zoom out (-)")
         zoom_out_action.setShortcut(QKeySequence.ZoomOut)
         zoom_out_action.triggered.connect(self.document_viewer.zoom_out)
@@ -333,7 +360,11 @@ class MainWindow(QMainWindow):
 
         # 9. Settings action (2nd from right end)
         settings_action = QAction("Settings", self)
-        settings_action.setIcon(load_icon("settings.png", fallback=style.StandardPixmap.SP_FileDialogDetailedView))
+        settings_action.setIcon(
+            load_icon(
+                "settings.png", fallback=style.StandardPixmap.SP_FileDialogDetailedView
+            )
+        )
         settings_action.setToolTip("Open application settings (Ctrl+,)")
         settings_action.setShortcut("Ctrl+,")
         settings_action.triggered.connect(self.show_settings)
@@ -341,7 +372,9 @@ class MainWindow(QMainWindow):
 
         # 10. Measure tool action
         measure_action = QAction("Measure", self)
-        measure_action.setIcon(load_icon("measure.png", fallback=style.StandardPixmap.SP_DialogYesButton))
+        measure_action.setIcon(
+            load_icon("measure.png", fallback=style.StandardPixmap.SP_DialogYesButton)
+        )
         measure_action.setToolTip("Measure distance between two points (Ctrl+M)")
         measure_action.setShortcut("Ctrl+M")
         measure_action.triggered.connect(self.show_measure_tool)
@@ -349,8 +382,14 @@ class MainWindow(QMainWindow):
 
         # 11. Scale tool action (rightmost - most used)
         scale_action = QAction("Scale Tool", self)
-        scale_action.setIcon(load_icon("scale-tool.png", fallback=style.StandardPixmap.SP_FileDialogInfoView))
-        scale_action.setToolTip("Open scaling tool to set real-world measurements (Ctrl+S)")
+        scale_action.setIcon(
+            load_icon(
+                "scale-tool.png", fallback=style.StandardPixmap.SP_FileDialogInfoView
+            )
+        )
+        scale_action.setToolTip(
+            "Open scaling tool to set real-world measurements (Ctrl+S)"
+        )
         scale_action.setShortcut("Ctrl+S")
         scale_action.triggered.connect(self.show_scaling_dialog)
         toolbar.addAction(scale_action)
@@ -372,7 +411,9 @@ class MainWindow(QMainWindow):
         reg_action = QAction("Reg Marks", self)
         reg_action.setCheckable(True)
         reg_action.setChecked(self.config.get_reg_marks_display())
-        reg_action.setToolTip("Toggle registration marks in preview (circles with crosshairs at printable corners)")
+        reg_action.setToolTip(
+            "Toggle registration marks in preview (circles with crosshairs at printable corners)"
+        )
         reg_action.toggled.connect(self.toggle_reg_marks_display)
 
         overlays_menu = QMenu("Overlays", self)
@@ -388,7 +429,9 @@ class MainWindow(QMainWindow):
         overlays_menu.addAction(scale_bar_action)
         overlays_menu_action = overlays_menu.menuAction()
         # Use an eye icon if present; fall back to an info-like icon
-        overlays_menu_action.setIcon(load_icon("eye.png", fallback=style.StandardPixmap.SP_FileDialogInfoView))
+        overlays_menu_action.setIcon(
+            load_icon("eye.png", fallback=style.StandardPixmap.SP_FileDialogInfoView)
+        )
         toolbar.addAction(overlays_menu_action)
 
     def toggle_reg_marks_display(self, checked: bool):
@@ -436,7 +479,7 @@ class MainWindow(QMainWindow):
             self,
             "Open Document",
             self.config.get_last_input_dir(),
-            "All Supported (*.pdf *.png *.jpg *.jpeg *.tiff *.svg *.dxf *.FCStd);;PDF Files (*.pdf);;Image Files (*.png *.jpg *.jpeg *.tiff);;SVG Files (*.svg);;DXF Files (*.dxf);;FreeCAD Files (*.FCStd)"
+            "All Supported (*.pdf *.png *.jpg *.jpeg *.tiff *.svg *.dxf *.FCStd);;PDF Files (*.pdf);;Image Files (*.png *.jpg *.jpeg *.tiff);;SVG Files (*.svg);;DXF Files (*.dxf);;FreeCAD Files (*.FCStd)",
         )
 
         if file_path:
@@ -477,7 +520,7 @@ class MainWindow(QMainWindow):
             self.setWindowTitle(f"OpenTiler - {filename}")
         else:
             # Check if we have a current document
-            current_file = getattr(self.document_viewer, 'current_document', None)
+            current_file = getattr(self.document_viewer, "current_document", None)
             if current_file:
                 filename = os.path.basename(current_file)
                 self.setWindowTitle(f"OpenTiler - {filename}")
@@ -488,11 +531,20 @@ class MainWindow(QMainWindow):
         """Export the current document as tiles."""
         # Check if we have a document and page grid
         if not self.document_viewer.current_pixmap:
-            QMessageBox.warning(self, "Export", "No document loaded. Please load a document first.")
+            QMessageBox.warning(
+                self, "Export", "No document loaded. Please load a document first."
+            )
             return
 
-        if not hasattr(self.document_viewer, 'page_grid') or not self.document_viewer.page_grid:
-            QMessageBox.warning(self, "Export", "No tiles generated. Please apply scaling first to generate tiles.")
+        if (
+            not hasattr(self.document_viewer, "page_grid")
+            or not self.document_viewer.page_grid
+        ):
+            QMessageBox.warning(
+                self,
+                "Export",
+                "No tiles generated. Please apply scaling first to generate tiles.",
+            )
             return
 
         # Create and show export dialog
@@ -506,7 +558,7 @@ class MainWindow(QMainWindow):
         self.export_dialog.set_export_data(
             self.document_viewer.current_pixmap,
             self.document_viewer.page_grid,
-            document_info
+            document_info,
         )
 
         # Show dialog
@@ -516,7 +568,9 @@ class MainWindow(QMainWindow):
         """Save the current document in a different CAD format."""
         # Check if we have a document
         if not self.document_viewer.current_pixmap:
-            QMessageBox.warning(self, "Save As", "No document loaded. Please load a document first.")
+            QMessageBox.warning(
+                self, "Save As", "No document loaded. Please load a document first."
+            )
             return
 
         # Create and show save-as dialog
@@ -524,12 +578,11 @@ class MainWindow(QMainWindow):
             self.save_as_dialog = SaveAsDialog(self)
 
         # Get current scale factor
-        scale_factor = getattr(self.document_viewer, 'scale_factor', 1.0)
+        scale_factor = getattr(self.document_viewer, "scale_factor", 1.0)
 
         # Set document data
         self.save_as_dialog.set_document_data(
-            self.document_viewer.current_pixmap,
-            scale_factor
+            self.document_viewer.current_pixmap, scale_factor
         )
 
         # Show dialog
@@ -537,11 +590,13 @@ class MainWindow(QMainWindow):
 
     def print_tiles(self):
         """Print the current document tiles directly to printer."""
-        get_logger('printing').debug("print_tiles() called")
+        get_logger("printing").debug("print_tiles() called")
 
         # Prevent multiple simultaneous print operations
-        if hasattr(self, '_printing_in_progress') and self._printing_in_progress:
-            get_logger('printing').warning("Print already in progress; ignoring new request")
+        if hasattr(self, "_printing_in_progress") and self._printing_in_progress:
+            get_logger("printing").warning(
+                "Print already in progress; ignoring new request"
+            )
             return
 
         # Set the flag immediately to prevent multiple calls
@@ -551,16 +606,27 @@ class MainWindow(QMainWindow):
 
             # Check if we have a document and page grid
             if not self.document_viewer.current_pixmap:
-                QMessageBox.warning(self, "Print", "No document loaded. Please load a document first.")
+                QMessageBox.warning(
+                    self, "Print", "No document loaded. Please load a document first."
+                )
                 self._printing_in_progress = False
                 return
 
-            if not hasattr(self.document_viewer, 'page_grid') or not self.document_viewer.page_grid:
-                QMessageBox.warning(self, "Print", "No tiles generated. Please apply scaling first to generate tiles.")
+            if (
+                not hasattr(self.document_viewer, "page_grid")
+                or not self.document_viewer.page_grid
+            ):
+                QMessageBox.warning(
+                    self,
+                    "Print",
+                    "No tiles generated. Please apply scaling first to generate tiles.",
+                )
                 self._printing_in_progress = False
                 return
 
-            get_logger('printing').info(f"Printing {len(self.document_viewer.page_grid)} tiles")
+            get_logger("printing").info(
+                f"Printing {len(self.document_viewer.page_grid)} tiles"
+            )
 
             # Create printer with modern API
             printer = QPrinter(QPrinter.HighResolution)
@@ -573,12 +639,14 @@ class MainWindow(QMainWindow):
 
             # Apply initial layout before showing dialog
             printer.setPageSize(page_size)
-            printer.setPageLayout(QPageLayout(
-                page_size,
-                orientation,
-                QMarginsF(0, 0, 0, 0),
-                QPageLayout.Millimeter
-            ))
+            printer.setPageLayout(
+                QPageLayout(
+                    page_size,
+                    orientation,
+                    QMarginsF(0, 0, 0, 0),
+                    QPageLayout.Millimeter,
+                )
+            )
 
             # Show print dialog
             print_dialog = QPrintDialog(printer, self)
@@ -586,40 +654,53 @@ class MainWindow(QMainWindow):
 
             # Enable print options
             print_dialog.setOptions(
-                QPrintDialog.PrintToFile |
-                QPrintDialog.PrintSelection |
-                QPrintDialog.PrintPageRange |
-                QPrintDialog.PrintCurrentPage
+                QPrintDialog.PrintToFile
+                | QPrintDialog.PrintSelection
+                | QPrintDialog.PrintPageRange
+                | QPrintDialog.PrintCurrentPage
             )
 
-            get_logger('printing').debug("Showing print dialog")
+            get_logger("printing").debug("Showing print dialog")
             if print_dialog.exec() == QPrintDialog.Accepted:
-                get_logger('printing').debug("Print dialog accepted; starting print")
+                get_logger("printing").debug("Print dialog accepted; starting print")
                 # Do not override user-selected page size/orientation after dialog
                 # Proceed with normal printing (tiles + metadata) using calibrated mapping
                 self._print_tiles_to_printer(printer, show_message=True)
             else:
-                get_logger('printing').info("Print dialog cancelled")
+                get_logger("printing").info("Print dialog cancelled")
                 self._printing_in_progress = False
                 return
 
         except Exception as e:
-            get_logger('printing').error(f"Print setup failed: {str(e)}")
-            QMessageBox.critical(self, "Print Error", f"Failed to setup printing: {str(e)}")
+            get_logger("printing").error(f"Print setup failed: {str(e)}")
+            QMessageBox.critical(
+                self, "Print Error", f"Failed to setup printing: {str(e)}"
+            )
         finally:
             self._printing_in_progress = False
-            get_logger('printing').debug("print_tiles() completed")
+            get_logger("printing").debug("print_tiles() completed")
 
     def print_preview_tiles(self):
         """Open a print preview dialog rendering tiles (including metadata page if enabled)."""
-        get_logger('printing').debug("print_preview_tiles() called")
+        get_logger("printing").debug("print_preview_tiles() called")
 
         # Basic guards
         if not self.document_viewer.current_pixmap:
-            QMessageBox.warning(self, "Print Preview", "No document loaded. Please load a document first.")
+            QMessageBox.warning(
+                self,
+                "Print Preview",
+                "No document loaded. Please load a document first.",
+            )
             return
-        if not hasattr(self.document_viewer, 'page_grid') or not self.document_viewer.page_grid:
-            QMessageBox.warning(self, "Print Preview", "No tiles generated. Please apply scaling first to generate tiles.")
+        if (
+            not hasattr(self.document_viewer, "page_grid")
+            or not self.document_viewer.page_grid
+        ):
+            QMessageBox.warning(
+                self,
+                "Print Preview",
+                "No tiles generated. Please apply scaling first to generate tiles.",
+            )
             return
 
         # Configure printer similarly to print_tiles
@@ -629,17 +710,18 @@ class MainWindow(QMainWindow):
         page_size = QPageSize(page_size_id)
         orientation = self._determine_print_orientation()
         printer.setPageSize(page_size)
-        printer.setPageLayout(QPageLayout(
-            page_size,
-            orientation,
-            QMarginsF(0, 0, 0, 0),
-            QPageLayout.Millimeter
-        ))
+        printer.setPageLayout(
+            QPageLayout(
+                page_size, orientation, QMarginsF(0, 0, 0, 0), QPageLayout.Millimeter
+            )
+        )
 
         # Show preview dialog and render using the same printing pipeline (no success dialog)
         preview = QPrintPreviewDialog(printer, self)
         preview.setWindowTitle("Print Preview")
-        preview.paintRequested.connect(lambda p: self._print_tiles_to_printer(p, show_message=False))
+        preview.paintRequested.connect(
+            lambda p: self._print_tiles_to_printer(p, show_message=False)
+        )
         preview.exec()
 
     def _print_debug_layout_page(self, printer):
@@ -652,7 +734,9 @@ class MainWindow(QMainWindow):
         """
         painter = QPainter()
         if not painter.begin(printer):
-            QMessageBox.critical(self, "Print Error", "Failed to start printing (debug page).")
+            QMessageBox.critical(
+                self, "Print Error", "Failed to start printing (debug page)."
+            )
             return
 
         try:
@@ -662,8 +746,16 @@ class MainWindow(QMainWindow):
             full_mm = layout.fullRect(QPageLayout.Millimeter)
 
             # Derive px/mm from reported printable
-            px_per_mm_x = pr_px_reported.width() / pr_mm_reported.width() if pr_mm_reported.width() > 0 else 0
-            px_per_mm_y = pr_px_reported.height() / pr_mm_reported.height() if pr_mm_reported.height() > 0 else 0
+            px_per_mm_x = (
+                pr_px_reported.width() / pr_mm_reported.width()
+                if pr_mm_reported.width() > 0
+                else 0
+            )
+            px_per_mm_y = (
+                pr_px_reported.height() / pr_mm_reported.height()
+                if pr_mm_reported.height() > 0
+                else 0
+            )
 
             # Apply calibration to define effective printable RECT IN DEVICE COORDS (no viewport trickery)
             ori = layout.orientation()
@@ -704,20 +796,32 @@ class MainWindow(QMainWindow):
             w, h = eff_rect.width(), eff_rect.height()
             if w > 2 and h > 2:
                 # Left
-                painter.fillRect(QRect(eff_rect.left(), eff_rect.top(), 1, h - 1), QColor(0, 160, 0))
+                painter.fillRect(
+                    QRect(eff_rect.left(), eff_rect.top(), 1, h - 1), QColor(0, 160, 0)
+                )
                 # Top
-                painter.fillRect(QRect(eff_rect.left(), eff_rect.top(), w - 1, 1), QColor(0, 160, 0))
+                painter.fillRect(
+                    QRect(eff_rect.left(), eff_rect.top(), w - 1, 1), QColor(0, 160, 0)
+                )
                 # Right (inset by 1px)
-                painter.fillRect(QRect(eff_rect.left() + w - 2, eff_rect.top(), 1, h - 1), QColor(0, 160, 0))
+                painter.fillRect(
+                    QRect(eff_rect.left() + w - 2, eff_rect.top(), 1, h - 1),
+                    QColor(0, 160, 0),
+                )
                 # Bottom (inset by 1px)
-                painter.fillRect(QRect(eff_rect.left(), eff_rect.top() + h - 2, w - 1, 1), QColor(0, 160, 0))
+                painter.fillRect(
+                    QRect(eff_rect.left(), eff_rect.top() + h - 2, w - 1, 1),
+                    QColor(0, 160, 0),
+                )
 
             # Draw inner gutter rectangle (blue) with slight transparency and inset 1px borders
             painter.setOpacity(0.25)
             painter.fillRect(dest_inner, QColor(0, 100, 255, 40))
             painter.setOpacity(1.0)
-            iw = dest_inner.width(); ih = dest_inner.height()
-            ix = dest_inner.x(); iy = dest_inner.y()
+            iw = dest_inner.width()
+            ih = dest_inner.height()
+            ix = dest_inner.x()
+            iy = dest_inner.y()
             if iw > 2 and ih > 2:
                 # Left
                 painter.fillRect(QRect(ix, iy, 1, ih - 1), QColor(0, 100, 255))
@@ -743,32 +847,43 @@ class MainWindow(QMainWindow):
                 # Top
                 painter.fillRect(QRect(ref_x, ref_y, ref_w - 1, 1), Qt.black)
                 # Right (inset)
-                painter.fillRect(QRect(ref_x + ref_w - 2, ref_y, 1, ref_h - 1), Qt.black)
+                painter.fillRect(
+                    QRect(ref_x + ref_w - 2, ref_y, 1, ref_h - 1), Qt.black
+                )
                 # Bottom (inset)
-                painter.fillRect(QRect(ref_x, ref_y + ref_h - 2, ref_w - 1, 1), Qt.black)
+                painter.fillRect(
+                    QRect(ref_x, ref_y + ref_h - 2, ref_w - 1, 1), Qt.black
+                )
 
             # Center crosshair in printable area
             cx = eff_rect.left() + eff_rect.width() // 2
             cy = eff_rect.top() + eff_rect.height() // 2
             painter.setPen(QPen(QColor(120, 120, 120), 1, Qt.DashLine))
-            painter.drawLine(eff_rect.left(), cy, eff_rect.left() + eff_rect.width(), cy)
+            painter.drawLine(
+                eff_rect.left(), cy, eff_rect.left() + eff_rect.width(), cy
+            )
             painter.drawLine(cx, eff_rect.top(), cx, eff_rect.top() + eff_rect.height())
 
             # Add a 10 cm scale bar along the bottom of the EFFECTIVE printable area
             try:
-                from .utils.overlays import draw_scale_bar
                 from .settings.config import config
-                mm_per_px = 1.0 / px_per_mm_x if px_per_mm_x > 0 else (1.0 / (printer.resolution() / 25.4))
+                from .utils.overlays import draw_scale_bar
+
+                mm_per_px = (
+                    1.0 / px_per_mm_x
+                    if px_per_mm_x > 0
+                    else (1.0 / (printer.resolution() / 25.4))
+                )
                 painter.save()
                 painter.translate(eff_rect.left(), eff_rect.top())
                 draw_scale_bar(
                     painter,
                     eff_rect.width(),
                     eff_rect.height(),
-                    0,              # no gutter
+                    0,  # no gutter
                     mm_per_px,
-                    'mm',
-                    'Page-S',
+                    "mm",
+                    "Page-S",
                     0.0,
                     10.0,
                     int(config.get_scale_bar_opacity()),
@@ -781,7 +896,9 @@ class MainWindow(QMainWindow):
 
             # Labels
             painter.setPen(QPen(QColor(0, 0, 0), 1))
-            font = painter.font(); font.setPointSize(10); painter.setFont(font)
+            font = painter.font()
+            font.setPointSize(10)
+            painter.setFont(font)
             fm = painter.fontMetrics()
             label_lines = [
                 f"Full page (mm): {full_mm.width():.2f} x {full_mm.height():.2f}",
@@ -806,7 +923,12 @@ class MainWindow(QMainWindow):
         # Use current orientation preference
         try:
             ori = self._determine_print_orientation()
-            pl = QPageLayout(self._qpagesize_from_name(self.config.get_default_page_size()), ori, QMarginsF(0, 0, 0, 0), QPageLayout.Millimeter)
+            pl = QPageLayout(
+                self._qpagesize_from_name(self.config.get_default_page_size()),
+                ori,
+                QMarginsF(0, 0, 0, 0),
+                QPageLayout.Millimeter,
+            )
             printer.setPageLayout(pl)
         except Exception:
             pass
@@ -836,13 +958,17 @@ class MainWindow(QMainWindow):
                 pl = printer.pageLayout()
                 pr_mm = pl.paintRect(QPageLayout.Millimeter)
                 # Resolve page size in document pixels from printer PRINTABLE mm and document scale
-                scale_factor = getattr(self.document_viewer, 'scale_factor', 1.0) or 1.0
+                scale_factor = getattr(self.document_viewer, "scale_factor", 1.0) or 1.0
                 page_width_px = float(pr_mm.width()) / float(scale_factor)
                 page_height_px = float(pr_mm.height()) / float(scale_factor)
                 gutter_mm = self.config.get_gutter_size_mm()
                 gutter_px = float(gutter_mm) / float(scale_factor)
                 # Calibration reduce steps in document px for this printer orientation
-                ori_name = 'landscape' if pl.orientation() == QPageLayout.Landscape else 'portrait'
+                ori_name = (
+                    "landscape"
+                    if pl.orientation() == QPageLayout.Landscape
+                    else "portrait"
+                )
                 h_mm, v_mm = self.config.get_print_calibration(ori_name)
                 calib_step_x_px = max(0.0, float(h_mm) / float(scale_factor))
                 calib_step_y_px = max(0.0, float(v_mm) / float(scale_factor))
@@ -852,6 +978,7 @@ class MainWindow(QMainWindow):
                 doc_height = source_pixmap.height()
 
                 from .utils.helpers import compute_page_grid_with_gutters
+
                 page_grid = compute_page_grid_with_gutters(
                     doc_width_px=doc_width,
                     doc_height_px=doc_height,
@@ -863,10 +990,12 @@ class MainWindow(QMainWindow):
                 )
             except Exception:
                 # Fallback to existing grid if recompute fails
-                page_grid = getattr(self.document_viewer, 'page_grid', [])
+                page_grid = getattr(self.document_viewer, "page_grid", [])
 
             print(f"DEBUG: Printing {len(page_grid)} tiles")
-            print(f"DEBUG: Source pixmap size: {source_pixmap.width()}x{source_pixmap.height()}")
+            print(
+                f"DEBUG: Source pixmap size: {source_pixmap.width()}x{source_pixmap.height()}"
+            )
 
             # Create painter for printing
             painter = QPainter()
@@ -886,14 +1015,19 @@ class MainWindow(QMainWindow):
             page_layout = printer.pageLayout()
             page_size = page_layout.pageSize()
             page_rect = printable_rect()
-            print(f"DEBUG: Initial print page rect: {page_rect.width()}x{page_rect.height()}")
+            print(
+                f"DEBUG: Initial print page rect: {page_rect.width()}x{page_rect.height()}"
+            )
 
             # Check if metadata page should be included
             from .settings.config import config
+
             include_metadata = config.get_include_metadata_page()
             metadata_position = config.get_metadata_page_position()
 
-            print(f"DEBUG: Include metadata page: {include_metadata}, Position: {metadata_position}")
+            print(
+                f"DEBUG: Include metadata page: {include_metadata}, Position: {metadata_position}"
+            )
 
             # Build ordered page list (metadata + tiles) then honor printer's page range
             ordered_pages: list[object] = []
@@ -910,9 +1044,15 @@ class MainWindow(QMainWindow):
             if prange == QPrinter.PageRange:
                 fp = int(printer.fromPage() or 1)
                 tp = int(printer.toPage() or total_pages_overall)
-                if 1 <= fp <= total_pages_overall and 1 <= tp <= total_pages_overall and tp >= fp:
+                if (
+                    1 <= fp <= total_pages_overall
+                    and 1 <= tp <= total_pages_overall
+                    and tp >= fp
+                ):
                     from_page, to_page = fp, tp
-            print(f"DEBUG: Requested print range: {from_page}-{to_page} (range enum={prange})")
+            print(
+                f"DEBUG: Requested print range: {from_page}-{to_page} (range enum={prange})"
+            )
 
             printed_count = 0
             overall_index = 0
@@ -927,29 +1067,47 @@ class MainWindow(QMainWindow):
 
                 if entry == "metadata":
                     print("DEBUG: Printing metadata page (within range)")
-                    self._print_metadata_page(painter, printer, source_pixmap, page_grid, page_rect)
+                    self._print_metadata_page(
+                        painter, printer, source_pixmap, page_grid, page_rect
+                    )
                     printed_count += 1
                     first_printed = False
                     continue
 
                 i = int(entry)
                 page = page_grid[i]
-                print(f"DEBUG: Printing tile {i+1}/{len(page_grid)} (overall {overall_index})")
+                print(
+                    f"DEBUG: Printing tile {i+1}/{len(page_grid)} (overall {overall_index})"
+                )
 
                 # Create a full tile pixmap including gutters and clip to printable area
                 tile_pixmap = self._create_tile_pixmap(source_pixmap, page)
 
                 if tile_pixmap and not tile_pixmap.isNull():
-                    print(f"DEBUG: Drawing tile to paint rect: {page_rect.width()}x{page_rect.height()}")
+                    print(
+                        f"DEBUG: Drawing tile to paint rect: {page_rect.width()}x{page_rect.height()}"
+                    )
 
                     # Resolve printer-axis px/mm from the reported printable rect
                     # so gutters and calibration map correctly in device space.
                     pl = printer.pageLayout()
                     pr_mm_rect = pl.paintRect(QPageLayout.Millimeter)
                     # Fallback to device DPI if needed
-                    ppmm_fallback = (printer.resolution() / 25.4) if printer.resolution() > 0 else 11.811
-                    px_per_mm_x = page_rect.width() / pr_mm_rect.width() if pr_mm_rect.width() > 0 else ppmm_fallback
-                    px_per_mm_y = page_rect.height() / pr_mm_rect.height() if pr_mm_rect.height() > 0 else ppmm_fallback
+                    ppmm_fallback = (
+                        (printer.resolution() / 25.4)
+                        if printer.resolution() > 0
+                        else 11.811
+                    )
+                    px_per_mm_x = (
+                        page_rect.width() / pr_mm_rect.width()
+                        if pr_mm_rect.width() > 0
+                        else ppmm_fallback
+                    )
+                    px_per_mm_y = (
+                        page_rect.height() / pr_mm_rect.height()
+                        if pr_mm_rect.height() > 0
+                        else ppmm_fallback
+                    )
 
                     # Gutters in device px (axis-specific)
                     gutter_mm = self.config.get_gutter_size_mm()
@@ -958,7 +1116,11 @@ class MainWindow(QMainWindow):
 
                     # Apply printer calibration: reserve a margin on right/bottom only
                     try:
-                        ori_name = 'landscape' if pl.orientation() == QPageLayout.Landscape else 'portrait'
+                        ori_name = (
+                            "landscape"
+                            if pl.orientation() == QPageLayout.Landscape
+                            else "portrait"
+                        )
                         h_mm, v_mm = self.config.get_print_calibration(ori_name)
                         calib_px_x = max(0, int(round(h_mm * px_per_mm_x)))
                         calib_px_y = max(0, int(round(v_mm * px_per_mm_y)))
@@ -967,7 +1129,7 @@ class MainWindow(QMainWindow):
                         calib_px_y = 0
 
                     # Source (inner) rect from tile pixmap
-                    g_tile = int(page.get('gutter', 0) or 0)
+                    g_tile = int(page.get("gutter", 0) or 0)
                     src_inner = QRect(
                         g_tile,
                         g_tile,
@@ -977,9 +1139,13 @@ class MainWindow(QMainWindow):
 
                     # Desired destination size in device px for exact physical scaling:
                     # dest_px = src_px * (mm/px_document) * (px/mm_printer)
-                    doc_mm_per_px = getattr(self.document_viewer, 'scale_factor', 1.0)
-                    desired_w_px = int(round(src_inner.width() * doc_mm_per_px * px_per_mm_x))
-                    desired_h_px = int(round(src_inner.height() * doc_mm_per_px * px_per_mm_y))
+                    doc_mm_per_px = getattr(self.document_viewer, "scale_factor", 1.0)
+                    desired_w_px = int(
+                        round(src_inner.width() * doc_mm_per_px * px_per_mm_x)
+                    )
+                    desired_h_px = int(
+                        round(src_inner.height() * doc_mm_per_px * px_per_mm_y)
+                    )
 
                     # Available inner area after gutters and calibration on the page
                     avail_x = page_rect.x() + g_px_x
@@ -1004,20 +1170,27 @@ class MainWindow(QMainWindow):
                     if self.config.get_gutter_lines_print():
                         painter.save()
                         # Draw 1px filled bars for gutter rectangle inside the clipped printable area
-                        iw = clip_rect.width(); ih = clip_rect.height()
-                        ix = clip_rect.x(); iy = clip_rect.y()
+                        iw = clip_rect.width()
+                        ih = clip_rect.height()
+                        ix = clip_rect.x()
+                        iy = clip_rect.y()
                         painter.setOpacity(1.0)
                         if iw > 2 and ih > 2:
                             painter.fillRect(QRect(ix, iy, 1, ih - 1), Qt.blue)  # Left
                             painter.fillRect(QRect(ix, iy, iw - 1, 1), Qt.blue)  # Top
-                            painter.fillRect(QRect(ix + iw - 2, iy, 1, ih - 1), Qt.blue)  # Right inset
-                            painter.fillRect(QRect(ix, iy + ih - 2, iw - 1, 1), Qt.blue)  # Bottom inset
+                            painter.fillRect(
+                                QRect(ix + iw - 2, iy, 1, ih - 1), Qt.blue
+                            )  # Right inset
+                            painter.fillRect(
+                                QRect(ix, iy + ih - 2, iw - 1, 1), Qt.blue
+                            )  # Bottom inset
                     painter.restore()
 
                     # Re-draw scale bar in printer space to guarantee physical length,
                     # inside the calibrated clip area (prevents truncation or scaling).
                     try:
                         from .utils.overlays import draw_scale_bar
+
                         units = self.config.get_default_units()
                         location = self.config.get_scale_bar_location()
                         opacity = self.config.get_scale_bar_opacity()
@@ -1026,7 +1199,11 @@ class MainWindow(QMainWindow):
                         thickness_mm = self.config.get_scale_bar_thickness_mm()
                         padding_mm = self.config.get_scale_bar_padding_mm()
                         # Use printer px/mm mapping for exact physical sizing (horizontal axis)
-                        mm_per_px_printer = 1.0 / (px_per_mm_x if px_per_mm_x > 0 else (printer.resolution() / 25.4))
+                        mm_per_px_printer = 1.0 / (
+                            px_per_mm_x
+                            if px_per_mm_x > 0
+                            else (printer.resolution() / 25.4)
+                        )
                         # Temporarily translate to clip origin so overlay aligns to calibrated area
                         painter.save()
                         painter.translate(clip_rect.x(), clip_rect.y())
@@ -1052,12 +1229,15 @@ class MainWindow(QMainWindow):
                     try:
                         if self.config.get_reg_marks_print():
                             from .settings.config import config
+
                             diameter_mm = config.get_reg_mark_diameter_mm()
                             cross_mm = config.get_reg_mark_crosshair_mm()
                             radius_x = int(round((diameter_mm * px_per_mm_x) / 2.0))
                             radius_y = int(round((diameter_mm * px_per_mm_y) / 2.0))
                             radius_px = max(1, min(radius_x, radius_y))
-                            cross_len_px = max(1, int(round(cross_mm * min(px_per_mm_x, px_per_mm_y))))
+                            cross_len_px = max(
+                                1, int(round(cross_mm * min(px_per_mm_x, px_per_mm_y)))
+                            )
 
                             # Use the calibrated clip rect as the inner area so right/bottom fall within bounds
                             inner = clip_rect
@@ -1079,15 +1259,26 @@ class MainWindow(QMainWindow):
                                 (right, bottom),
                             ]
                             for cx, cy in centers:
-                                painter.drawEllipse(cx - radius_px, cy - radius_px, radius_px * 2, radius_px * 2)
-                                painter.drawLine(cx - cross_len_px, cy, cx + cross_len_px, cy)
-                                painter.drawLine(cx, cy - cross_len_px, cx, cy + cross_len_px)
+                                painter.drawEllipse(
+                                    cx - radius_px,
+                                    cy - radius_px,
+                                    radius_px * 2,
+                                    radius_px * 2,
+                                )
+                                painter.drawLine(
+                                    cx - cross_len_px, cy, cx + cross_len_px, cy
+                                )
+                                painter.drawLine(
+                                    cx, cy - cross_len_px, cx, cy + cross_len_px
+                                )
                             painter.restore()
                     except Exception:
                         pass
 
                     # Add page information using overall numbering
-                    self._add_print_page_info(painter, page_rect, overall_index, total_pages_overall)
+                    self._add_print_page_info(
+                        painter, page_rect, overall_index, total_pages_overall
+                    )
                     printed_count += 1
                     first_printed = False
                 else:
@@ -1104,71 +1295,85 @@ class MainWindow(QMainWindow):
                 QMessageBox.information(
                     self,
                     "Print Complete",
-                    f"Successfully printed {printed_count} page(s)."
+                    f"Successfully printed {printed_count} page(s).",
                 )
 
         except Exception as e:
-            get_logger('printing').error(f"Print failed: {str(e)}")
+            get_logger("printing").error(f"Print failed: {str(e)}")
             import traceback
+
             traceback.print_exc()
             if painter and painter.isActive():
                 painter.end()
             if show_message:
-                QMessageBox.critical(self, "Print Error", f"Failed to print tiles: {str(e)}")
+                QMessageBox.critical(
+                    self, "Print Error", f"Failed to print tiles: {str(e)}"
+                )
 
     def _qpagesize_from_name(self, name: str):
         """Map config page size string to QPageSize.SizeId."""
         mapping = {
-            'A0': QPageSize.A0,
-            'A1': QPageSize.A1,
-            'A2': QPageSize.A2,
-            'A3': QPageSize.A3,
-            'A4': QPageSize.A4,
-            'Letter': QPageSize.Letter,
-            'Legal': QPageSize.Legal,
-            'Tabloid': QPageSize.Tabloid,
+            "A0": QPageSize.A0,
+            "A1": QPageSize.A1,
+            "A2": QPageSize.A2,
+            "A3": QPageSize.A3,
+            "A4": QPageSize.A4,
+            "Letter": QPageSize.Letter,
+            "Legal": QPageSize.Legal,
+            "Tabloid": QPageSize.Tabloid,
         }
-        return mapping.get((name or 'A4').strip(), QPageSize.A4)
+        return mapping.get((name or "A4").strip(), QPageSize.A4)
 
-    def _print_metadata_page(self, painter, printer, source_pixmap, page_grid, page_rect):
+    def _print_metadata_page(
+        self, painter, printer, source_pixmap, page_grid, page_rect
+    ):
         """Print a metadata summary page."""
         try:
             print("DEBUG: Generating metadata page for printing")
 
             # Import metadata page generator
-            from .utils.metadata_page import MetadataPageGenerator, create_document_info
+            from .utils.metadata_page import (MetadataPageGenerator,
+                                              create_document_info)
 
             # Create metadata page generator
             metadata_generator = MetadataPageGenerator()
 
             # Calculate grid dimensions
             summary = summarize_page_grid(page_grid or [])
-            tiles_x = summary['tiles_x']
-            tiles_y = summary['tiles_y']
+            tiles_x = summary["tiles_x"]
+            tiles_y = summary["tiles_y"]
 
             # Get document information
             document_info = self._get_document_info()
 
             # Add additional info for metadata page
-            document_info['total_tiles'] = summary['total_tiles']
-            document_info['tiles_x'] = tiles_x
-            document_info['tiles_y'] = tiles_y
-            document_info['export_format'] = 'Print'
-            document_info['dpi'] = printer.resolution()
+            document_info["total_tiles"] = summary["total_tiles"]
+            document_info["tiles_x"] = tiles_x
+            document_info["tiles_y"] = tiles_y
+            document_info["export_format"] = "Print"
+            document_info["dpi"] = printer.resolution()
 
             # Add source pixmap and page grid for plan view
-            document_info['source_pixmap'] = source_pixmap
-            document_info['page_grid'] = page_grid
+            document_info["source_pixmap"] = source_pixmap
+            document_info["page_grid"] = page_grid
 
-            print(f"DEBUG: Metadata info - tiles: {tiles_x}x{tiles_y}, total: {len(page_grid)}")
+            print(
+                f"DEBUG: Metadata info - tiles: {tiles_x}x{tiles_y}, total: {len(page_grid)}"
+            )
 
             # Generate metadata page sized exactly to the printable rect
-            metadata_pixmap = metadata_generator.generate_metadata_page(document_info, page_rect.size())
+            metadata_pixmap = metadata_generator.generate_metadata_page(
+                document_info, page_rect.size()
+            )
 
             # Draw metadata page to print
             if metadata_pixmap and not metadata_pixmap.isNull():
-                print(f"DEBUG: Generated metadata page {metadata_pixmap.width()}x{metadata_pixmap.height()}")
-                print(f"DEBUG: Print page size: {page_rect.width()}x{page_rect.height()}")
+                print(
+                    f"DEBUG: Generated metadata page {metadata_pixmap.width()}x{metadata_pixmap.height()}"
+                )
+                print(
+                    f"DEBUG: Print page size: {page_rect.width()}x{page_rect.height()}"
+                )
 
                 # Draw metadata at the printable rect origin
                 painter.drawPixmap(page_rect.x(), page_rect.y(), metadata_pixmap)
@@ -1179,20 +1384,28 @@ class MainWindow(QMainWindow):
         except Exception as e:
             print(f"ERROR: Failed to print metadata page: {str(e)}")
             import traceback
+
             traceback.print_exc()
 
     def _create_tile_pixmap(self, source_pixmap, page):
         """Create a pixmap for a single tile."""
         painter = None
         try:
-            print(f"DEBUG: Creating tile for page: x={page['x']}, y={page['y']}, w={page['width']}, h={page['height']}")
-            print(f"DEBUG: Source pixmap size: {source_pixmap.width()}x{source_pixmap.height()}")
+            print(
+                f"DEBUG: Creating tile for page: x={page['x']}, y={page['y']}, w={page['width']}, h={page['height']}"
+            )
+            print(
+                f"DEBUG: Source pixmap size: {source_pixmap.width()}x{source_pixmap.height()}"
+            )
 
             # Compute standardized tile layout (shared with preview path)
             from .utils.helpers import compute_tile_layout
-            layout = compute_tile_layout(page, source_pixmap.width(), source_pixmap.height())
-            tile_width = int(layout['tile_width'])
-            tile_height = int(layout['tile_height'])
+
+            layout = compute_tile_layout(
+                page, source_pixmap.width(), source_pixmap.height()
+            )
+            tile_width = int(layout["tile_width"])
+            tile_height = int(layout["tile_height"])
             tile_pixmap = QPixmap(tile_width, tile_height)
             tile_pixmap.fill(Qt.white)  # Fill with white background
 
@@ -1207,26 +1420,32 @@ class MainWindow(QMainWindow):
                 return QPixmap()
 
             # Set clipping region to printable area (inside gutters)
-            gutter = int(layout['gutter'])
+            gutter = int(layout["gutter"])
             if gutter > 0:
-                painter.setClipRect(layout['printable_rect'])
+                painter.setClipRect(layout["printable_rect"])
 
             # Copy the area directly from source to tile
-            src_rect = layout['source_rect']
-            dx, dy = layout['dest_pos']
+            src_rect = layout["source_rect"]
+            dx, dy = layout["dest_pos"]
 
-            print(f"DEBUG: Source rect: ({src_rect.x()}, {src_rect.y()}, {src_rect.width()}, {src_rect.height()})")
+            print(
+                f"DEBUG: Source rect: ({src_rect.x()}, {src_rect.y()}, {src_rect.width()}, {src_rect.height()})"
+            )
             print(f"DEBUG: Dest position: ({dx}, {dy})")
 
             if src_rect.width() > 0 and src_rect.height() > 0:
                 source_crop = source_pixmap.copy(src_rect)
                 if not source_crop.isNull():
-                    print(f"DEBUG: Drawing source crop {source_crop.width()}x{source_crop.height()} at ({dx}, {dy})")
+                    print(
+                        f"DEBUG: Drawing source crop {source_crop.width()}x{source_crop.height()} at ({dx}, {dy})"
+                    )
                     painter.drawPixmap(int(dx), int(dy), source_crop)
                 else:
                     print("ERROR: Source crop is null")
             else:
-                print(f"ERROR: Invalid source dimensions: {src_rect.width()}x{src_rect.height()}")
+                print(
+                    f"ERROR: Invalid source dimensions: {src_rect.width()}x{src_rect.height()}"
+                )
 
             # Add gutter lines and page indicators if enabled
             self._add_tile_overlays(painter, tile_pixmap.size(), page)
@@ -1238,6 +1457,7 @@ class MainWindow(QMainWindow):
         except Exception as e:
             print(f"ERROR creating tile pixmap: {str(e)}")
             import traceback
+
             traceback.print_exc()
             # Ensure painter is properly ended even on error
             if painter and painter.isActive():
@@ -1283,28 +1503,31 @@ class MainWindow(QMainWindow):
 
         # Draw gutter lines if enabled
         if config.get_crop_marks_display():
-            gutter = page.get('gutter', 0)
+            gutter = page.get("gutter", 0)
             if gutter > 0:
                 painter.setPen(Qt.blue)
                 painter.setOpacity(0.5)
 
                 # Draw gutter rectangle (drawable area)
                 gutter_rect = QRect(
-                    int(gutter), int(gutter),
+                    int(gutter),
+                    int(gutter),
                     int(tile_size.width() - 2 * gutter),
-                    int(tile_size.height() - 2 * gutter)
+                    int(tile_size.height() - 2 * gutter),
                 )
                 painter.drawRect(gutter_rect)
 
         # Registration marks for print/export if enabled
         if config.get_reg_marks_print():
-            gutter = int(page.get('gutter', 0) or 0)
+            gutter = int(page.get("gutter", 0) or 0)
             if gutter > 0:
                 width = tile_size.width()
                 height = tile_size.height()
                 # Convert mm to px using document scale (mm/px)
-                scale_factor = getattr(self.document_viewer, 'scale_factor', 1.0)
-                px_per_mm = (1.0 / scale_factor) if scale_factor and scale_factor > 0 else 2.0
+                scale_factor = getattr(self.document_viewer, "scale_factor", 1.0)
+                px_per_mm = (
+                    (1.0 / scale_factor) if scale_factor and scale_factor > 0 else 2.0
+                )
                 diameter_mm = config.get_reg_mark_diameter_mm()
                 cross_mm = config.get_reg_mark_crosshair_mm()
                 radius_px = int((diameter_mm * px_per_mm) / 2)
@@ -1312,9 +1535,10 @@ class MainWindow(QMainWindow):
 
                 # Clip to printable area so only quarters render
                 printable_rect = QRect(
-                    gutter, gutter,
+                    gutter,
+                    gutter,
                     max(0, width - 2 * gutter),
-                    max(0, height - 2 * gutter)
+                    max(0, height - 2 * gutter),
                 )
                 painter.save()
                 painter.setClipRect(printable_rect)
@@ -1328,7 +1552,9 @@ class MainWindow(QMainWindow):
                     (width - gutter, height - gutter),
                 ]
                 for cx, cy in centers:
-                    painter.drawEllipse(cx - radius_px, cy - radius_px, radius_px * 2, radius_px * 2)
+                    painter.drawEllipse(
+                        cx - radius_px, cy - radius_px, radius_px * 2, radius_px * 2
+                    )
                     painter.drawLine(cx - cross_len_px, cy, cx + cross_len_px, cy)
                     painter.drawLine(cx, cy - cross_len_px, cx, cy + cross_len_px)
                 painter.restore()
@@ -1336,7 +1562,7 @@ class MainWindow(QMainWindow):
         # Scale bar overlay for print/export if enabled
         if config.get_scale_bar_print():
             try:
-                gutter = int(page.get('gutter', 0) or 0)
+                gutter = int(page.get("gutter", 0) or 0)
                 width = tile_size.width()
                 height = tile_size.height()
                 units = self.config.get_default_units()
@@ -1346,7 +1572,7 @@ class MainWindow(QMainWindow):
                 length_cm = self.config.get_scale_bar_length_cm()
                 thickness_mm = self.config.get_scale_bar_thickness_mm()
                 padding_mm = self.config.get_scale_bar_padding_mm()
-                scale_factor = getattr(self.document_viewer, 'scale_factor', 1.0)
+                scale_factor = getattr(self.document_viewer, "scale_factor", 1.0)
                 draw_scale_bar(
                     painter,
                     width,
@@ -1366,13 +1592,17 @@ class MainWindow(QMainWindow):
 
         # Print all measurement lines/text if enabled
         try:
-            if config.get_scale_line_print() and hasattr(self, 'document_viewer'):
-                measurements = getattr(self.document_viewer, 'measurements', []) or []
+            if config.get_scale_line_print() and hasattr(self, "document_viewer"):
+                measurements = getattr(self.document_viewer, "measurements", []) or []
                 if measurements:
-                    page_x = page['x']; page_y = page['y']
-                    page_doc_w = max(1.0, page['width']); page_doc_h = max(1.0, page['height'])
+                    page_x = page["x"]
+                    page_y = page["y"]
+                    page_doc_w = max(1.0, page["width"])
+                    page_doc_h = max(1.0, page["height"])
                     for m in measurements:
-                        p1 = m.get('p1'); p2 = m.get('p2'); label = m.get('text', '')
+                        p1 = m.get("p1")
+                        p2 = m.get("p2")
+                        label = m.get("text", "")
                         if not (p1 and p2):
                             continue
                         # Convert to tile pixmap coords
@@ -1388,13 +1618,17 @@ class MainWindow(QMainWindow):
                         if config.get_scale_text_print() and label:
                             mid_x = (p1_x + p2_x) / 2
                             mid_y = (p1_y + p2_y) / 2
-                            font = painter.font(); font.setPointSize(10); font.setBold(True)
+                            font = painter.font()
+                            font.setPointSize(10)
+                            font.setBold(True)
                             painter.setFont(font)
-                            text_pen = QPen(QColor(255, 0, 0), 1); painter.setPen(text_pen)
+                            text_pen = QPen(QColor(255, 0, 0), 1)
+                            painter.setPen(text_pen)
                             text_rect = painter.fontMetrics().boundingRect(label)
                             # Prefer centered if there is room
-                            dx = (p2_x - p1_x); dy = (p2_y - p1_y)
-                            dist = max(1.0, (dx*dx + dy*dy) ** 0.5)
+                            dx = p2_x - p1_x
+                            dy = p2_y - p1_y
+                            dist = max(1.0, (dx * dx + dy * dy) ** 0.5)
                             if dist >= (text_rect.width() + 16):
                                 tx = mid_x - text_rect.width() / 2
                                 ty = mid_y - 12
@@ -1402,14 +1636,16 @@ class MainWindow(QMainWindow):
                                 # Offset from p2
                                 # Perpendicular
                                 if dist > 1:
-                                    ux, uy = dx/dist, dy/dist
+                                    ux, uy = dx / dist, dy / dist
                                     px, py = -uy, ux
                                 else:
                                     px, py = 0, -1
                                 tx = p2_x + px * 12 - text_rect.width() / 2
                                 ty = p2_y + py * 12 - text_rect.height() / 2
                             bg_rect = text_rect.adjusted(-3, -2, 3, 2)
-                            bg_rect.moveTopLeft(QPoint(int(tx - 3), int(ty - text_rect.height() - 2)))
+                            bg_rect.moveTopLeft(
+                                QPoint(int(tx - 3), int(ty - text_rect.height() - 2))
+                            )
                             painter.fillRect(bg_rect, QColor(255, 255, 255, 200))
                             painter.drawText(int(tx), int(ty), label)
         except Exception:
@@ -1420,31 +1656,34 @@ class MainWindow(QMainWindow):
             if config.get_datum_line_print():
                 scale_info = self._get_scale_info()
                 if scale_info:
-                    point1 = scale_info.get('point1')
-                    point2 = scale_info.get('point2')
+                    point1 = scale_info.get("point1")
+                    point2 = scale_info.get("point2")
                     if point1 and point2:
-                        page_x = page['x']
-                        page_y = page['y']
-                        page_doc_w = page['width']
-                        page_doc_h = page['height']
+                        page_x = page["x"]
+                        page_y = page["y"]
+                        page_doc_w = page["width"]
+                        page_doc_h = page["height"]
                         p1_x = (point1[0] - page_x) * (tile_size.width() / page_doc_w)
                         p1_y = (point1[1] - page_y) * (tile_size.height() / page_doc_h)
                         p2_x = (point2[0] - page_x) * (tile_size.width() / page_doc_w)
                         p2_y = (point2[1] - page_y) * (tile_size.height() / page_doc_h)
 
-                        datum_pen = QPen(QColor(config.get_datum_line_color()), max(1, config.get_datum_line_width_px()))
+                        datum_pen = QPen(
+                            QColor(config.get_datum_line_color()),
+                            max(1, config.get_datum_line_width_px()),
+                        )
                         style = str(config.get_datum_line_style()).lower()
-                        if style == 'solid':
+                        if style == "solid":
                             datum_pen.setStyle(Qt.SolidLine)
-                        elif style == 'dash':
+                        elif style == "dash":
                             datum_pen.setStyle(Qt.DashLine)
-                        elif style == 'dot':
+                        elif style == "dot":
                             datum_pen.setStyle(Qt.DotLine)
-                        elif style == 'dashdot':
+                        elif style == "dashdot":
                             datum_pen.setStyle(Qt.DashDotLine)
-                        elif style == 'dashdotdot':
+                        elif style == "dashdotdot":
                             datum_pen.setStyle(Qt.DashDotDotLine)
-                        elif style == 'dot-dash-dot':
+                        elif style == "dot-dash-dot":
                             datum_pen.setStyle(Qt.CustomDashLine)
                             datum_pen.setDashPattern([8, 3, 2, 3, 2, 3])
                         painter.setPen(datum_pen)
@@ -1463,10 +1702,14 @@ class MainWindow(QMainWindow):
             self.scaling_dialog.scale_applied.connect(self.document_viewer.set_scale)
             self.scaling_dialog.scale_applied.connect(self.on_scale_applied)
             # Connect point selection from viewer to dialog
-            self.document_viewer.point_selected.connect(self.scaling_dialog.on_point_selected)
+            self.document_viewer.point_selected.connect(
+                self.scaling_dialog.on_point_selected
+            )
             # Connect point dragging updates
             try:
-                self.document_viewer.points_updated.connect(self.scaling_dialog.on_point_moved)
+                self.document_viewer.points_updated.connect(
+                    self.scaling_dialog.on_point_moved
+                )
             except Exception:
                 pass
 
@@ -1491,19 +1734,31 @@ class MainWindow(QMainWindow):
         preview_used_printer_metrics = False
         try:
             # Decide preview orientation: honor explicit setting; for 'auto', use doc aspect
-            if orientation_pref == 'landscape':
+            if orientation_pref == "landscape":
                 preview_orientation = QPageLayout.Landscape
-            elif orientation_pref == 'portrait':
+            elif orientation_pref == "portrait":
                 preview_orientation = QPageLayout.Portrait
             else:  # 'auto'
-                preview_orientation = QPageLayout.Landscape if doc_width >= doc_height else QPageLayout.Portrait
+                preview_orientation = (
+                    QPageLayout.Landscape
+                    if doc_width >= doc_height
+                    else QPageLayout.Portrait
+                )
 
             # Configure a QPrinter to retrieve printable area for the page size/orientation
             from PySide6.QtPrintSupport import QPrinter
+
             qps_id = self._qpagesize_from_name(page_size)
             printer = QPrinter(QPrinter.HighResolution)
             printer.setPageSize(QPageSize(qps_id))
-            printer.setPageLayout(QPageLayout(QPageSize(qps_id), preview_orientation, QMarginsF(0, 0, 0, 0), QPageLayout.Millimeter))
+            printer.setPageLayout(
+                QPageLayout(
+                    QPageSize(qps_id),
+                    preview_orientation,
+                    QMarginsF(0, 0, 0, 0),
+                    QPageLayout.Millimeter,
+                )
+            )
             pr_mm = printer.pageLayout().paintRect(QPageLayout.Millimeter)
             # Convert printable mm to document pixels via scale (mm/px)
             page_width_pixels = float(pr_mm.width()) / float(scale_factor)
@@ -1519,13 +1774,19 @@ class MainWindow(QMainWindow):
 
         # Safety check: prevent too many tiles
         if page_width_pixels < 50 or page_height_pixels < 50:
-            self.status_bar.showMessage(f"Warning: Scale too large - pages would be {page_width_pixels:.0f}x{page_height_pixels:.0f} pixels")
+            self.status_bar.showMessage(
+                f"Warning: Scale too large - pages would be {page_width_pixels:.0f}x{page_height_pixels:.0f} pixels"
+            )
             return
 
         max_tiles = 100  # Reasonable limit
-        estimated_tiles = (doc_width / page_width_pixels) * (doc_height / page_height_pixels)
+        estimated_tiles = (doc_width / page_width_pixels) * (
+            doc_height / page_height_pixels
+        )
         if estimated_tiles > max_tiles:
-            self.status_bar.showMessage(f"Warning: Scale would generate {estimated_tiles:.0f} tiles (limit: {max_tiles})")
+            self.status_bar.showMessage(
+                f"Warning: Scale would generate {estimated_tiles:.0f} tiles (limit: {max_tiles})"
+            )
             return
 
         # Calculate tile grid with gutter support and calibration-aware stepping
@@ -1534,10 +1795,16 @@ class MainWindow(QMainWindow):
 
         # Apply per-orientation calibration to step size so content isn't lost to non-printable right/bottom
         # Determine effective orientation actually used for the grid from resolved pixel dimensions
-        ori_for_grid = 'landscape' if page_width_pixels > page_height_pixels else 'portrait'
+        ori_for_grid = (
+            "landscape" if page_width_pixels > page_height_pixels else "portrait"
+        )
         h_mm, v_mm = self.config.get_print_calibration(ori_for_grid)
-        calib_step_x_px = max(0.0, float(h_mm) / float(scale_factor) if scale_factor > 0 else 0.0)
-        calib_step_y_px = max(0.0, float(v_mm) / float(scale_factor) if scale_factor > 0 else 0.0)
+        calib_step_x_px = max(
+            0.0, float(h_mm) / float(scale_factor) if scale_factor > 0 else 0.0
+        )
+        calib_step_y_px = max(
+            0.0, float(v_mm) / float(scale_factor) if scale_factor > 0 else 0.0
+        )
 
         # Generate page grid (pages can overlap where gutters meet)
         page_grid = compute_page_grid_with_gutters(
@@ -1564,15 +1831,19 @@ class MainWindow(QMainWindow):
             scale_info,
             document_info,
             printer_area=preview_used_printer_metrics,
-            measurements=getattr(self.document_viewer, 'measurements', [])
+            measurements=getattr(self.document_viewer, "measurements", []),
         )
         self.document_viewer.set_page_grid(page_grid, gutter_pixels)
 
         # Update status
-        self.status_bar.showMessage(f"Scale applied: {scale_factor:.6f} - {len(page_grid)} pages generated")
+        self.status_bar.showMessage(
+            f"Scale applied: {scale_factor:.6f} - {len(page_grid)} pages generated"
+        )
         self._mark_project_dirty()
 
-    def _calculate_page_grid_with_gutters(self, doc_width, doc_height, page_width, page_height, gutter_size):
+    def _calculate_page_grid_with_gutters(
+        self, doc_width, doc_height, page_width, page_height, gutter_size
+    ):
         """Deprecated: use utils.helpers.compute_page_grid_with_gutters()."""
         return compute_page_grid_with_gutters(
             doc_width_px=doc_width,
@@ -1595,7 +1866,10 @@ class MainWindow(QMainWindow):
             return QPageLayout.Portrait
         elif orientation_pref == "auto":
             # Auto-determine based on tile content
-            if not hasattr(self.document_viewer, 'page_grid') or not self.document_viewer.page_grid:
+            if (
+                not hasattr(self.document_viewer, "page_grid")
+                or not self.document_viewer.page_grid
+            ):
                 return QPageLayout.Portrait  # Default
 
             page_grid = self.document_viewer.page_grid
@@ -1605,8 +1879,8 @@ class MainWindow(QMainWindow):
             valid_tiles = 0
 
             for page in page_grid:
-                width = page.get('width', 0)
-                height = page.get('height', 0)
+                width = page.get("width", 0)
+                height = page.get("height", 0)
                 if width > 0 and height > 0:
                     aspect_ratio = width / height
                     total_aspect_ratio += aspect_ratio
@@ -1627,16 +1901,19 @@ class MainWindow(QMainWindow):
 
     def _get_scale_info(self):
         """Get scale information from the document viewer for preview display."""
-        if not hasattr(self.document_viewer, 'selected_points') or not self.document_viewer.selected_points:
+        if (
+            not hasattr(self.document_viewer, "selected_points")
+            or not self.document_viewer.selected_points
+        ):
             return None
 
         if len(self.document_viewer.selected_points) < 2:
             return None
 
         return {
-            'point1': self.document_viewer.selected_points[0],
-            'point2': self.document_viewer.selected_points[1],
-            'measurement_text': getattr(self.document_viewer, 'measurement_text', '')
+            "point1": self.document_viewer.selected_points[0],
+            "point2": self.document_viewer.selected_points[1],
+            "measurement_text": getattr(self.document_viewer, "measurement_text", ""),
         }
 
     def _get_document_info(self):
@@ -1644,34 +1921,38 @@ class MainWindow(QMainWindow):
         document_info = {}
 
         # Get current document file path
-        current_file = getattr(self.document_viewer, 'current_document', '')
+        current_file = getattr(self.document_viewer, "current_document", "")
         if current_file:
-            document_info['document_name'] = os.path.splitext(os.path.basename(current_file))[0]
-            document_info['original_file'] = current_file
+            document_info["document_name"] = os.path.splitext(
+                os.path.basename(current_file)
+            )[0]
+            document_info["original_file"] = current_file
         else:
-            document_info['document_name'] = 'Untitled Document'
-            document_info['original_file'] = ''
+            document_info["document_name"] = "Untitled Document"
+            document_info["original_file"] = ""
 
         # Project name (if any)
-        if getattr(self, 'current_project_path', None):
-            document_info['project_name'] = os.path.splitext(os.path.basename(self.current_project_path))[0]
+        if getattr(self, "current_project_path", None):
+            document_info["project_name"] = os.path.splitext(
+                os.path.basename(self.current_project_path)
+            )[0]
         else:
-            document_info['project_name'] = ''
+            document_info["project_name"] = ""
 
         # Get scale information
-        scale_factor = getattr(self.document_viewer, 'scale_factor', 1.0)
-        document_info['scale_factor'] = scale_factor
+        scale_factor = getattr(self.document_viewer, "scale_factor", 1.0)
+        document_info["scale_factor"] = scale_factor
 
         # Get units from config
-        document_info['units'] = self.config.get_default_units()
+        document_info["units"] = self.config.get_default_units()
 
         # Get page settings
-        document_info['page_size'] = self.config.get_default_page_size()
-        document_info['page_orientation'] = self.config.get_page_orientation()
-        document_info['gutter_size'] = self.config.get_gutter_size_mm()
+        document_info["page_size"] = self.config.get_default_page_size()
+        document_info["page_orientation"] = self.config.get_page_orientation()
+        document_info["gutter_size"] = self.config.get_gutter_size_mm()
 
         # Get output directory from config
-        document_info['output_dir'] = self.config.get_last_output_dir()
+        document_info["output_dir"] = self.config.get_last_output_dir()
 
         return document_info
 
@@ -1691,8 +1972,12 @@ class MainWindow(QMainWindow):
             self.measure_dialog = MeasureDialog(self)
             # Hook point selection signals
             try:
-                self.document_viewer.point_selected.connect(self.measure_dialog.on_point_selected)
-                self.document_viewer.points_updated.connect(self.measure_dialog.on_point_moved)
+                self.document_viewer.point_selected.connect(
+                    self.measure_dialog.on_point_selected
+                )
+                self.document_viewer.points_updated.connect(
+                    self.measure_dialog.on_point_moved
+                )
             except Exception:
                 pass
         # Enable selection and show
@@ -1742,8 +2027,12 @@ class MainWindow(QMainWindow):
 
         try:
             pl = printer.pageLayout()
-            pr_px = pl.paintRectPixels(printer.resolution())  # reported printable in pixels
-            pr_mm = pl.paintRect(QPageLayout.Millimeter)      # reported printable in millimeters
+            pr_px = pl.paintRectPixels(
+                printer.resolution()
+            )  # reported printable in pixels
+            pr_mm = pl.paintRect(
+                QPageLayout.Millimeter
+            )  # reported printable in millimeters
 
             # Map logical coords to reported printable area (no calibration)
             painter.setViewport(pr_px)
@@ -1758,7 +2047,9 @@ class MainWindow(QMainWindow):
             painter.setPen(Qt.black)
 
             # Title block
-            title_font = painter.font(); title_font.setBold(True); title_font.setPointSize(24)
+            title_font = painter.font()
+            title_font.setBold(True)
+            title_font.setPointSize(24)
             painter.setFont(title_font)
             tfm = painter.fontMetrics()
             title = "OpenTiler Calibration Test Page"
@@ -1768,10 +2059,14 @@ class MainWindow(QMainWindow):
 
             # Orientation subtitle + brief instructions near top
             painter.setPen(Qt.black)
-            sub_font = painter.font(); sub_font.setBold(False); sub_font.setPointSize(12)
+            sub_font = painter.font()
+            sub_font.setBold(False)
+            sub_font.setPointSize(12)
             painter.setFont(sub_font)
             sfm = painter.fontMetrics()
-            ori_title = 'Landscape' if pl.orientation() == QPageLayout.Landscape else 'Portrait'
+            ori_title = (
+                "Landscape" if pl.orientation() == QPageLayout.Landscape else "Portrait"
+            )
             subtitle = f"Orientation: {ori_title}"
             # Draw subtitle aligned left within printable area
             sub_y = top_margin_px + tfm.height() + sfm.ascent() + 4
@@ -1803,9 +2098,13 @@ class MainWindow(QMainWindow):
                 # Place panel fully below subtitle: leave at least one full line + 3 mm gap
                 panel_y = sub_y + line_h + int(round(3.0 * px_per_mm_y))
                 # Background for clarity
-                painter.fillRect(QRect(panel_x, panel_y - sfm.ascent(), panel_w, panel_h), Qt.white)
+                painter.fillRect(
+                    QRect(panel_x, panel_y - sfm.ascent(), panel_w, panel_h), Qt.white
+                )
                 painter.setPen(Qt.black)
-                painter.drawRect(QRect(panel_x, panel_y - sfm.ascent(), panel_w, panel_h))
+                painter.drawRect(
+                    QRect(panel_x, panel_y - sfm.ascent(), panel_w, panel_h)
+                )
                 # Draw lines centered in the panel
                 draw_y = panel_y
                 for s in instr_lines:
@@ -1829,8 +2128,12 @@ class MainWindow(QMainWindow):
                 painter.fillRect(QRect(0, h - 2, w - 1, 1), Qt.black)
 
             # 10 mm inner box
-            inset_x = int(round(10.0 * px_per_mm_x)); inset_y = int(round(10.0 * px_per_mm_y))
-            ix = inset_x; iy = inset_y; iw = max(0, w - 2 * inset_x); ih = max(0, h - 2 * inset_y)
+            inset_x = int(round(10.0 * px_per_mm_x))
+            inset_y = int(round(10.0 * px_per_mm_y))
+            ix = inset_x
+            iy = inset_y
+            iw = max(0, w - 2 * inset_x)
+            ih = max(0, h - 2 * inset_y)
             if iw > 2 and ih > 2:
                 painter.fillRect(QRect(ix, iy, 1, ih - 1), Qt.black)
                 painter.fillRect(QRect(ix, iy, iw - 1, 1), Qt.black)
@@ -1840,20 +2143,25 @@ class MainWindow(QMainWindow):
             # Add a 10 cm scale bar at the bottom of the printable area (Page-S),
             # matching the style/logic used on tile pages.
             try:
-                from .utils.overlays import draw_scale_bar
                 from .settings.config import config
+                from .utils.overlays import draw_scale_bar
+
                 # mm/px derived from printer mapping; use X axis for consistent horizontal bar
-                mm_per_px = 1.0 / px_per_mm_x if px_per_mm_x > 0 else (1.0 / (printer.resolution() / 25.4))
+                mm_per_px = (
+                    1.0 / px_per_mm_x
+                    if px_per_mm_x > 0
+                    else (1.0 / (printer.resolution() / 25.4))
+                )
                 draw_scale_bar(
                     painter,
                     w,  # treat printable area as the whole tile surface for placement
                     h,
                     0,  # no gutters on the debug page
                     mm_per_px,
-                    'mm',            # force metric scale (10 cm)
-                    'Page-S',        # bottom of printable area
-                    0.0,             # length_in (unused for metric)
-                    10.0,            # 10 cm scale
+                    "mm",  # force metric scale (10 cm)
+                    "Page-S",  # bottom of printable area
+                    0.0,  # length_in (unused for metric)
+                    10.0,  # 10 cm scale
                     int(config.get_scale_bar_opacity()),
                     float(config.get_scale_bar_thickness_mm()),
                     float(config.get_scale_bar_padding_mm()),
@@ -1868,7 +2176,9 @@ class MainWindow(QMainWindow):
             painter.setPen(QPen(Qt.black, 0))
             tick_long = int(round(6.0 * px_per_mm_y))
             tick_short = int(round(3.0 * px_per_mm_y))
-            ladder_font = painter.font(); ladder_font.setBold(True); ladder_font.setPointSize(18)
+            ladder_font = painter.font()
+            ladder_font.setBold(True)
+            ladder_font.setPointSize(18)
             painter.setFont(ladder_font)
             ladder_fm = painter.fontMetrics()
             label_pad = 4
@@ -1886,19 +2196,35 @@ class MainWindow(QMainWindow):
                 lh = ladder_fm.height()
                 # Step up each subsequent label to avoid overlap
                 step_dy = idx * (lh + max(6, int(round(2.0 * px_per_mm_y))))
-                by = max(0, cy - tick_long - lh - max(8, int(round(3.0 * px_per_mm_y))) - step_dy)
+                by = max(
+                    0,
+                    cy
+                    - tick_long
+                    - lh
+                    - max(8, int(round(3.0 * px_per_mm_y)))
+                    - step_dy,
+                )
                 bx = max(0, x - lw - (label_pad + 2) - int(round(2.0 * px_per_mm_x)))
                 # Background box
-                painter.fillRect(QRect(bx, by, lw + label_pad + 2, lh + label_pad // 2), Qt.white)
+                painter.fillRect(
+                    QRect(bx, by, lw + label_pad + 2, lh + label_pad // 2), Qt.white
+                )
                 painter.setPen(Qt.black)
                 painter.drawText(bx + label_pad // 2, by + ladder_fm.ascent(), label)
                 # Leader line from tick top to label box right edge
-                painter.drawLine(x, cy - tick_long, bx + lw + label_pad + 2, by + ladder_fm.ascent())
+                painter.drawLine(
+                    x, cy - tick_long, bx + lw + label_pad + 2, by + ladder_fm.ascent()
+                )
             # Mapping note for right ladder (smaller font)
-            painter.setFont(sub_font); sfm = painter.fontMetrics()
+            painter.setFont(sub_font)
+            sfm = painter.fontMetrics()
             right_note = f"Right ladder → {section_name} → Horizontal (right)"
             rnw = sfm.horizontalAdvance(right_note)
-            painter.drawText(max(0, base_x - int(round(40 * px_per_mm_x)) - rnw), max(sfm.height() + 2, cy - max(40, 3 * tick_long)), right_note)
+            painter.drawText(
+                max(0, base_x - int(round(40 * px_per_mm_x)) - rnw),
+                max(sfm.height() + 2, cy - max(40, 3 * tick_long)),
+                right_note,
+            )
 
             # Bottom-edge vertical ladder (ticks every 1 mm from bottom, at mid-width)
             # Bottom ladder ticks (0..30 mm from bottom), baseline slightly inset to avoid clipping
@@ -1907,7 +2233,8 @@ class MainWindow(QMainWindow):
                 tick = tick_long if mm % 5 == 0 else tick_short
                 painter.drawLine(cx - tick, y, cx + tick, y)
             # Stair-step labels for 30,25,20,15,10,5,0 (start near right, step rightward)
-            painter.setFont(ladder_font); ladder_fm = painter.fontMetrics()
+            painter.setFont(ladder_font)
+            ladder_fm = painter.fontMetrics()
             for idx, mm in enumerate(stair_vals):
                 y = h - 3 - int(round(mm * px_per_mm_y))
                 label = f"{mm}"
@@ -1916,13 +2243,16 @@ class MainWindow(QMainWindow):
                 step_dx = idx * int(round(8.0 * px_per_mm_x))
                 bx = min(w - lw - (label_pad + 2), cx + tick_long + 6 + step_dx)
                 by = max(0, y - lh - (label_pad // 2))
-                painter.fillRect(QRect(bx, by, lw + label_pad + 2, lh + label_pad // 2), Qt.white)
+                painter.fillRect(
+                    QRect(bx, by, lw + label_pad + 2, lh + label_pad // 2), Qt.white
+                )
                 painter.setPen(Qt.black)
                 painter.drawText(bx + label_pad // 2, y - 4, label)
                 # Leader line from tick end to label box left edge
                 painter.drawLine(cx + tick_long, y, bx, y)
             # Mapping note for bottom ladder — position ABOVE the ladder, left-justified to the centerline
-            painter.setFont(sub_font); sfm = painter.fontMetrics()
+            painter.setFont(sub_font)
+            sfm = painter.fontMetrics()
             bottom_note = f"Bottom ladder → {section_name} → Vertical (bottom)"
             top_y = h - 3 - int(round(ladder_mm * px_per_mm_y))
             # Use a larger safety gap (≈8 mm) to avoid overlapping ladder ticks
@@ -1944,9 +2274,11 @@ class MainWindow(QMainWindow):
         self.document_viewer.refresh_display()
 
         # If we have a scale applied, regenerate the page grid with new settings
-        if (hasattr(self.document_viewer, 'scale_factor') and
-            self.document_viewer.scale_factor != 1.0 and
-            self.document_viewer.current_pixmap):
+        if (
+            hasattr(self.document_viewer, "scale_factor")
+            and self.document_viewer.scale_factor != 1.0
+            and self.document_viewer.current_pixmap
+        ):
 
             # Regenerate page grid with current scale and new settings
             self.on_scale_applied(self.document_viewer.scale_factor)
@@ -1958,11 +2290,13 @@ class MainWindow(QMainWindow):
         """Redraw thumbnails to include current measurements without recalculating the grid."""
         try:
             viewer = self.document_viewer
-            if not getattr(viewer, 'current_pixmap', None) or not getattr(viewer, 'page_grid', None):
+            if not getattr(viewer, "current_pixmap", None) or not getattr(
+                viewer, "page_grid", None
+            ):
                 return
             pixmap = viewer.current_pixmap
             page_grid = viewer.page_grid
-            scale_factor = getattr(viewer, 'scale_factor', 1.0)
+            scale_factor = getattr(viewer, "scale_factor", 1.0)
             scale_info = self._get_scale_info()
             document_info = self._get_document_info()
             self.preview_panel.update_preview(
@@ -1972,7 +2306,7 @@ class MainWindow(QMainWindow):
                 scale_info,
                 document_info,
                 printer_area=False,
-                measurements=getattr(viewer, 'measurements', [])
+                measurements=getattr(viewer, "measurements", []),
             )
         except Exception:
             pass
@@ -2018,146 +2352,219 @@ class MainWindow(QMainWindow):
         c = self.config
         return {
             # General / page
-            'default_units': c.get_default_units(),
-            'default_dpi': c.get_default_dpi(),
-            'default_page_size': c.get_default_page_size(),
-            'page_orientation': c.get_page_orientation(),
-            'gutter_size_mm': c.get_gutter_size_mm(),
+            "default_units": c.get_default_units(),
+            "default_dpi": c.get_default_dpi(),
+            "default_page_size": c.get_default_page_size(),
+            "page_orientation": c.get_page_orientation(),
+            "gutter_size_mm": c.get_gutter_size_mm(),
             # Overlays
-            'gutter_lines_display': c.get_gutter_lines_display(),
-            'gutter_lines_print': c.get_gutter_lines_print(),
-            'crop_marks_display': c.get_crop_marks_display(),
-            'crop_marks_print': c.get_crop_marks_print(),
-            'reg_marks_display': c.get_reg_marks_display(),
-            'reg_marks_print': c.get_reg_marks_print(),
-            'reg_mark_diameter_mm': c.get_reg_mark_diameter_mm(),
-            'reg_mark_crosshair_mm': c.get_reg_mark_crosshair_mm(),
+            "gutter_lines_display": c.get_gutter_lines_display(),
+            "gutter_lines_print": c.get_gutter_lines_print(),
+            "crop_marks_display": c.get_crop_marks_display(),
+            "crop_marks_print": c.get_crop_marks_print(),
+            "reg_marks_display": c.get_reg_marks_display(),
+            "reg_marks_print": c.get_reg_marks_print(),
+            "reg_mark_diameter_mm": c.get_reg_mark_diameter_mm(),
+            "reg_mark_crosshair_mm": c.get_reg_mark_crosshair_mm(),
             # Scale bar
-            'scale_bar_display': c.get_scale_bar_display(),
-            'scale_bar_print': c.get_scale_bar_print(),
-            'scale_bar_location': c.get_scale_bar_location(),
-            'scale_bar_opacity': c.get_scale_bar_opacity(),
-            'scale_bar_length_in': c.get_scale_bar_length_in(),
-            'scale_bar_length_cm': c.get_scale_bar_length_cm(),
-            'scale_bar_thickness_mm': c.get_scale_bar_thickness_mm(),
-            'scale_bar_padding_mm': c.get_scale_bar_padding_mm(),
+            "scale_bar_display": c.get_scale_bar_display(),
+            "scale_bar_print": c.get_scale_bar_print(),
+            "scale_bar_location": c.get_scale_bar_location(),
+            "scale_bar_opacity": c.get_scale_bar_opacity(),
+            "scale_bar_length_in": c.get_scale_bar_length_in(),
+            "scale_bar_length_cm": c.get_scale_bar_length_cm(),
+            "scale_bar_thickness_mm": c.get_scale_bar_thickness_mm(),
+            "scale_bar_padding_mm": c.get_scale_bar_padding_mm(),
             # Page indicator
-            'page_indicator_display': c.get_page_indicator_display(),
-            'page_indicator_print': c.get_page_indicator_print(),
-            'page_indicator_position': c.get_page_indicator_position(),
-            'page_indicator_font_size': c.get_page_indicator_font_size(),
-            'page_indicator_font_color': c.get_page_indicator_font_color(),
-            'page_indicator_font_style': c.get_page_indicator_font_style(),
-            'page_indicator_alpha': c.get_page_indicator_alpha(),
+            "page_indicator_display": c.get_page_indicator_display(),
+            "page_indicator_print": c.get_page_indicator_print(),
+            "page_indicator_position": c.get_page_indicator_position(),
+            "page_indicator_font_size": c.get_page_indicator_font_size(),
+            "page_indicator_font_color": c.get_page_indicator_font_color(),
+            "page_indicator_font_style": c.get_page_indicator_font_style(),
+            "page_indicator_alpha": c.get_page_indicator_alpha(),
             # Scale line/text
-            'scale_line_display': c.get_scale_line_display(),
-            'scale_line_print': c.get_scale_line_print(),
-            'scale_text_display': c.get_scale_text_display(),
-            'scale_text_print': c.get_scale_text_print(),
+            "scale_line_display": c.get_scale_line_display(),
+            "scale_line_print": c.get_scale_line_print(),
+            "scale_text_display": c.get_scale_text_display(),
+            "scale_text_print": c.get_scale_text_print(),
             # Datum line
-            'datum_line_display': c.get_datum_line_display(),
-            'datum_line_print': c.get_datum_line_print(),
-            'datum_line_color': c.get_datum_line_color(),
-            'datum_line_style': c.get_datum_line_style(),
-            'datum_line_width_px': c.get_datum_line_width_px(),
+            "datum_line_display": c.get_datum_line_display(),
+            "datum_line_print": c.get_datum_line_print(),
+            "datum_line_color": c.get_datum_line_color(),
+            "datum_line_style": c.get_datum_line_style(),
+            "datum_line_width_px": c.get_datum_line_width_px(),
             # Metadata page
-            'include_metadata_page': c.get_include_metadata_page(),
-            'metadata_page_position': c.get_metadata_page_position(),
+            "include_metadata_page": c.get_include_metadata_page(),
+            "metadata_page_position": c.get_metadata_page_position(),
         }
 
     def _apply_config_snapshot(self, snap: dict):
         c = self.config
         try:
             # Apply with defaults if missing
-            c.set_default_units(snap.get('default_units', c.get_default_units()))
-            c.set_default_dpi(snap.get('default_dpi', c.get_default_dpi()))
-            c.set_default_page_size(snap.get('default_page_size', c.get_default_page_size()))
-            c.set_page_orientation(snap.get('page_orientation', c.get_page_orientation()))
-            c.set_gutter_size_mm(snap.get('gutter_size_mm', c.get_gutter_size_mm()))
+            c.set_default_units(snap.get("default_units", c.get_default_units()))
+            c.set_default_dpi(snap.get("default_dpi", c.get_default_dpi()))
+            c.set_default_page_size(
+                snap.get("default_page_size", c.get_default_page_size())
+            )
+            c.set_page_orientation(
+                snap.get("page_orientation", c.get_page_orientation())
+            )
+            c.set_gutter_size_mm(snap.get("gutter_size_mm", c.get_gutter_size_mm()))
 
-            c.set_gutter_lines_display(snap.get('gutter_lines_display', c.get_gutter_lines_display()))
-            c.set_gutter_lines_print(snap.get('gutter_lines_print', c.get_gutter_lines_print()))
-            c.set_crop_marks_display(snap.get('crop_marks_display', c.get_crop_marks_display()))
-            c.set_crop_marks_print(snap.get('crop_marks_print', c.get_crop_marks_print()))
-            c.set_reg_marks_display(snap.get('reg_marks_display', c.get_reg_marks_display()))
-            c.set_reg_marks_print(snap.get('reg_marks_print', c.get_reg_marks_print()))
-            c.set_reg_mark_diameter_mm(snap.get('reg_mark_diameter_mm', c.get_reg_mark_diameter_mm()))
-            c.set_reg_mark_crosshair_mm(snap.get('reg_mark_crosshair_mm', c.get_reg_mark_crosshair_mm()))
+            c.set_gutter_lines_display(
+                snap.get("gutter_lines_display", c.get_gutter_lines_display())
+            )
+            c.set_gutter_lines_print(
+                snap.get("gutter_lines_print", c.get_gutter_lines_print())
+            )
+            c.set_crop_marks_display(
+                snap.get("crop_marks_display", c.get_crop_marks_display())
+            )
+            c.set_crop_marks_print(
+                snap.get("crop_marks_print", c.get_crop_marks_print())
+            )
+            c.set_reg_marks_display(
+                snap.get("reg_marks_display", c.get_reg_marks_display())
+            )
+            c.set_reg_marks_print(snap.get("reg_marks_print", c.get_reg_marks_print()))
+            c.set_reg_mark_diameter_mm(
+                snap.get("reg_mark_diameter_mm", c.get_reg_mark_diameter_mm())
+            )
+            c.set_reg_mark_crosshair_mm(
+                snap.get("reg_mark_crosshair_mm", c.get_reg_mark_crosshair_mm())
+            )
 
-            c.set_scale_bar_display(snap.get('scale_bar_display', c.get_scale_bar_display()))
-            c.set_scale_bar_print(snap.get('scale_bar_print', c.get_scale_bar_print()))
-            c.set_scale_bar_location(snap.get('scale_bar_location', c.get_scale_bar_location()))
-            c.set_scale_bar_opacity(snap.get('scale_bar_opacity', c.get_scale_bar_opacity()))
-            c.set_scale_bar_length_in(snap.get('scale_bar_length_in', c.get_scale_bar_length_in()))
-            c.set_scale_bar_length_cm(snap.get('scale_bar_length_cm', c.get_scale_bar_length_cm()))
-            c.set_scale_bar_thickness_mm(snap.get('scale_bar_thickness_mm', c.get_scale_bar_thickness_mm()))
-            c.set_scale_bar_padding_mm(snap.get('scale_bar_padding_mm', c.get_scale_bar_padding_mm()))
+            c.set_scale_bar_display(
+                snap.get("scale_bar_display", c.get_scale_bar_display())
+            )
+            c.set_scale_bar_print(snap.get("scale_bar_print", c.get_scale_bar_print()))
+            c.set_scale_bar_location(
+                snap.get("scale_bar_location", c.get_scale_bar_location())
+            )
+            c.set_scale_bar_opacity(
+                snap.get("scale_bar_opacity", c.get_scale_bar_opacity())
+            )
+            c.set_scale_bar_length_in(
+                snap.get("scale_bar_length_in", c.get_scale_bar_length_in())
+            )
+            c.set_scale_bar_length_cm(
+                snap.get("scale_bar_length_cm", c.get_scale_bar_length_cm())
+            )
+            c.set_scale_bar_thickness_mm(
+                snap.get("scale_bar_thickness_mm", c.get_scale_bar_thickness_mm())
+            )
+            c.set_scale_bar_padding_mm(
+                snap.get("scale_bar_padding_mm", c.get_scale_bar_padding_mm())
+            )
 
-            c.set_page_indicator_display(snap.get('page_indicator_display', c.get_page_indicator_display()))
-            c.set_page_indicator_print(snap.get('page_indicator_print', c.get_page_indicator_print()))
-            c.set_page_indicator_position(snap.get('page_indicator_position', c.get_page_indicator_position()))
-            c.set_page_indicator_font_size(snap.get('page_indicator_font_size', c.get_page_indicator_font_size()))
-            c.set_page_indicator_font_color(snap.get('page_indicator_font_color', c.get_page_indicator_font_color()))
-            c.set_page_indicator_font_style(snap.get('page_indicator_font_style', c.get_page_indicator_font_style()))
-            c.set_page_indicator_alpha(snap.get('page_indicator_alpha', c.get_page_indicator_alpha()))
+            c.set_page_indicator_display(
+                snap.get("page_indicator_display", c.get_page_indicator_display())
+            )
+            c.set_page_indicator_print(
+                snap.get("page_indicator_print", c.get_page_indicator_print())
+            )
+            c.set_page_indicator_position(
+                snap.get("page_indicator_position", c.get_page_indicator_position())
+            )
+            c.set_page_indicator_font_size(
+                snap.get("page_indicator_font_size", c.get_page_indicator_font_size())
+            )
+            c.set_page_indicator_font_color(
+                snap.get("page_indicator_font_color", c.get_page_indicator_font_color())
+            )
+            c.set_page_indicator_font_style(
+                snap.get("page_indicator_font_style", c.get_page_indicator_font_style())
+            )
+            c.set_page_indicator_alpha(
+                snap.get("page_indicator_alpha", c.get_page_indicator_alpha())
+            )
 
-            c.set_scale_line_display(snap.get('scale_line_display', c.get_scale_line_display()))
-            c.set_scale_line_print(snap.get('scale_line_print', c.get_scale_line_print()))
-            c.set_scale_text_display(snap.get('scale_text_display', c.get_scale_text_display()))
-            c.set_scale_text_print(snap.get('scale_text_print', c.get_scale_text_print()))
+            c.set_scale_line_display(
+                snap.get("scale_line_display", c.get_scale_line_display())
+            )
+            c.set_scale_line_print(
+                snap.get("scale_line_print", c.get_scale_line_print())
+            )
+            c.set_scale_text_display(
+                snap.get("scale_text_display", c.get_scale_text_display())
+            )
+            c.set_scale_text_print(
+                snap.get("scale_text_print", c.get_scale_text_print())
+            )
 
             # Datum line
-            c.set_datum_line_display(snap.get('datum_line_display', c.get_datum_line_display()))
-            c.set_datum_line_print(snap.get('datum_line_print', c.get_datum_line_print()))
-            c.set_datum_line_color(snap.get('datum_line_color', c.get_datum_line_color()))
-            c.set_datum_line_style(snap.get('datum_line_style', c.get_datum_line_style()))
-            c.set_datum_line_width_px(snap.get('datum_line_width_px', c.get_datum_line_width_px()))
+            c.set_datum_line_display(
+                snap.get("datum_line_display", c.get_datum_line_display())
+            )
+            c.set_datum_line_print(
+                snap.get("datum_line_print", c.get_datum_line_print())
+            )
+            c.set_datum_line_color(
+                snap.get("datum_line_color", c.get_datum_line_color())
+            )
+            c.set_datum_line_style(
+                snap.get("datum_line_style", c.get_datum_line_style())
+            )
+            c.set_datum_line_width_px(
+                snap.get("datum_line_width_px", c.get_datum_line_width_px())
+            )
 
-            c.set_include_metadata_page(snap.get('include_metadata_page', c.get_include_metadata_page()))
-            c.set_metadata_page_position(snap.get('metadata_page_position', c.get_metadata_page_position()))
+            c.set_include_metadata_page(
+                snap.get("include_metadata_page", c.get_include_metadata_page())
+            )
+            c.set_metadata_page_position(
+                snap.get("metadata_page_position", c.get_metadata_page_position())
+            )
         except Exception:
             pass
 
     def _gather_project_state(self):
         viewer = self.document_viewer
         state = {
-            'version': 1,
-            'document_path': getattr(viewer, 'current_document', '') or '',
-            'document_name': os.path.basename(getattr(viewer, 'current_document', '') or '') or 'Untitled',
-            'viewer': {
-                'scale_factor': getattr(viewer, 'scale_factor', 1.0),
-                'selected_points': getattr(viewer, 'selected_points', []),
-                'measurement_text': getattr(viewer, 'measurement_text', ''),
-                'measurements': getattr(viewer, 'measurements', []),
-                'selected_measure_index': getattr(viewer, 'selected_measure_index', None),
-                'rotation': getattr(viewer, 'rotation', 0),
-                'zoom_factor': getattr(viewer, 'zoom_factor', 1.0),
+            "version": 1,
+            "document_path": getattr(viewer, "current_document", "") or "",
+            "document_name": os.path.basename(
+                getattr(viewer, "current_document", "") or ""
+            )
+            or "Untitled",
+            "viewer": {
+                "scale_factor": getattr(viewer, "scale_factor", 1.0),
+                "selected_points": getattr(viewer, "selected_points", []),
+                "measurement_text": getattr(viewer, "measurement_text", ""),
+                "measurements": getattr(viewer, "measurements", []),
+                "selected_measure_index": getattr(
+                    viewer, "selected_measure_index", None
+                ),
+                "rotation": getattr(viewer, "rotation", 0),
+                "zoom_factor": getattr(viewer, "zoom_factor", 1.0),
             },
-            'config': self._snapshot_config(),
+            "config": self._snapshot_config(),
         }
         return state
 
     def _apply_project_state(self, state: dict, original_path: str | None = None):
         # Apply config first
-        self._apply_config_snapshot(state.get('config', {}))
+        self._apply_config_snapshot(state.get("config", {}))
 
-        doc_path = original_path or state.get('document_path')
+        doc_path = original_path or state.get("document_path")
         if doc_path and os.path.exists(doc_path):
             self.load_document(doc_path)
         # Apply viewer state
         viewer = self.document_viewer
-        vstate = state.get('viewer', {})
-        viewer.set_scale(vstate.get('scale_factor', 1.0))
-        pts = vstate.get('selected_points') or []
+        vstate = state.get("viewer", {})
+        viewer.set_scale(vstate.get("scale_factor", 1.0))
+        pts = vstate.get("selected_points") or []
         viewer.selected_points = pts
-        viewer.set_measurement_text(vstate.get('measurement_text', ''))
+        viewer.set_measurement_text(vstate.get("measurement_text", ""))
         try:
-            viewer.measurements = vstate.get('measurements', []) or []
-            viewer.selected_measure_index = vstate.get('selected_measure_index', None)
+            viewer.measurements = vstate.get("measurements", []) or []
+            viewer.selected_measure_index = vstate.get("selected_measure_index", None)
         except Exception:
             pass
-        viewer.rotation = vstate.get('rotation', 0)
-        viewer.zoom_factor = vstate.get('zoom_factor', 1.0)
+        viewer.rotation = vstate.get("rotation", 0)
+        viewer.zoom_factor = vstate.get("zoom_factor", 1.0)
 
         # Regenerate tiling based on scale
         if viewer.scale_factor and viewer.current_pixmap:
@@ -2177,7 +2584,9 @@ class MainWindow(QMainWindow):
             self.update_recent_projects_menu()
             return True
         except Exception as e:
-            QMessageBox.critical(self, "Save Project", f"Failed to save project: {str(e)}")
+            QMessageBox.critical(
+                self, "Save Project", f"Failed to save project: {str(e)}"
+            )
             return False
 
     def save_project_as(self):
@@ -2186,14 +2595,18 @@ class MainWindow(QMainWindow):
             self,
             "Save Project As",
             self.config.get_last_output_dir(),
-            "OpenTiler Project (*.otprj);;Legacy: JSON Project (*.otproj);;Legacy: Zipped Project (*.otprjz)"
+            "OpenTiler Project (*.otprj);;Legacy: JSON Project (*.otproj);;Legacy: Zipped Project (*.otprjz)",
         )
         if not path:
             return False
         # Ensure extension based on storage mode if user didn't specify
-        if not (path.endswith('.otproj') or path.endswith('.otprjz') or path.endswith('.otprj')):
+        if not (
+            path.endswith(".otproj")
+            or path.endswith(".otprjz")
+            or path.endswith(".otprj")
+        ):
             # Default to modern single-asset project
-            path += '.otprj'
+            path += ".otprj"
         try:
             self._save_project_to_path(path)
             self.current_project_path = path
@@ -2204,37 +2617,39 @@ class MainWindow(QMainWindow):
             self.update_recent_projects_menu()
             return True
         except Exception as e:
-            QMessageBox.critical(self, "Save Project", f"Failed to save project: {str(e)}")
+            QMessageBox.critical(
+                self, "Save Project", f"Failed to save project: {str(e)}"
+            )
             return False
 
     def _save_project_to_path(self, path: str):
         state = self._gather_project_state()
         # Decide embed by extension (modern .otprj and legacy .otprjz both zip+embed)
-        if path.endswith('.otprjz') or path.endswith('.otprj'):
+        if path.endswith(".otprjz") or path.endswith(".otprj"):
             # Embed original file if available
-            original_path = state.get('document_path')
-            with zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED) as zf:
-                zf.writestr('project.json', json.dumps(state, indent=2))
+            original_path = state.get("document_path")
+            with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as zf:
+                zf.writestr("project.json", json.dumps(state, indent=2))
                 if original_path and os.path.exists(original_path):
                     arcname = f"original/{os.path.basename(original_path)}"
                     zf.write(original_path, arcname)
         else:
             # Legacy: Plain JSON project
-            with open(path, 'w', encoding='utf-8') as f:
+            with open(path, "w", encoding="utf-8") as f:
                 json.dump(state, f, indent=2)
             # Optional sidecar compressed original based on setting
             mode = self.config.get_project_original_storage()
-            if mode == 'sidecar':
-                self._write_sidecar_original(state.get('document_path'), path)
+            if mode == "sidecar":
+                self._write_sidecar_original(state.get("document_path"), path)
 
     def _write_sidecar_original(self, original_path: str | None, project_path: str):
         if not original_path or not os.path.exists(original_path):
             return
         base, _ = os.path.splitext(project_path)
-        sidecar = base + '.dat'
+        sidecar = base + ".dat"
         # Zip the single original file into the sidecar
         try:
-            with zipfile.ZipFile(sidecar, 'w', zipfile.ZIP_DEFLATED) as zf:
+            with zipfile.ZipFile(sidecar, "w", zipfile.ZIP_DEFLATED) as zf:
                 zf.write(original_path, os.path.basename(original_path))
         except Exception:
             pass
@@ -2247,7 +2662,7 @@ class MainWindow(QMainWindow):
             self,
             "Open Project",
             self.config.get_last_input_dir(),
-            "OpenTiler Project (*.otprj *.otprjz *.otproj)"
+            "OpenTiler Project (*.otprj *.otprjz *.otproj)",
         )
         if not path:
             return
@@ -2256,19 +2671,25 @@ class MainWindow(QMainWindow):
     def _open_project_path(self, path: str):
         """Open a project from a given path (no file dialog)."""
         try:
-            if path.endswith('.otprjz') or path.endswith('.otprj'):
-                with zipfile.ZipFile(path, 'r') as zf:
-                    with zf.open('project.json') as jf:
-                        state = json.loads(jf.read().decode('utf-8'))
+            if path.endswith(".otprjz") or path.endswith(".otprj"):
+                with zipfile.ZipFile(path, "r") as zf:
+                    with zf.open("project.json") as jf:
+                        state = json.loads(jf.read().decode("utf-8"))
                     # Extract original to cache folder next to project
-                    original_members = [m for m in zf.namelist() if m.startswith('original/') and not m.endswith('/')]
+                    original_members = [
+                        m
+                        for m in zf.namelist()
+                        if m.startswith("original/") and not m.endswith("/")
+                    ]
                     extracted_path = None
                     if original_members:
-                        cache_dir = os.path.join(os.path.dirname(path), '.opentiler_cache')
+                        cache_dir = os.path.join(
+                            os.path.dirname(path), ".opentiler_cache"
+                        )
                         os.makedirs(cache_dir, exist_ok=True)
                         member = original_members[0]
                         out_path = os.path.join(cache_dir, os.path.basename(member))
-                        with zf.open(member) as src, open(out_path, 'wb') as dst:
+                        with zf.open(member) as src, open(out_path, "wb") as dst:
                             dst.write(src.read())
                         extracted_path = out_path
                 # If no embedded original, attempt to use referenced path or relink
@@ -2278,23 +2699,29 @@ class MainWindow(QMainWindow):
                 self.current_project_path = path
                 self._apply_project_state(state, extracted_path)
             else:
-                with open(path, 'r', encoding='utf-8') as f:
+                with open(path, "r", encoding="utf-8") as f:
                     state = json.load(f)
                 # Try sidecar first
                 base, _ = os.path.splitext(path)
-                sidecar = base + '.dat'
+                sidecar = base + ".dat"
                 extracted_path = None
                 if os.path.exists(sidecar):
                     try:
-                        with zipfile.ZipFile(sidecar, 'r') as zf:
+                        with zipfile.ZipFile(sidecar, "r") as zf:
                             # Extract first file entry
-                            members = [m for m in zf.namelist() if not m.endswith('/')]
+                            members = [m for m in zf.namelist() if not m.endswith("/")]
                             if members:
-                                cache_dir = os.path.join(os.path.dirname(path), '.opentiler_cache')
+                                cache_dir = os.path.join(
+                                    os.path.dirname(path), ".opentiler_cache"
+                                )
                                 os.makedirs(cache_dir, exist_ok=True)
                                 member = members[0]
-                                out_path = os.path.join(cache_dir, os.path.basename(member))
-                                with zf.open(member) as src, open(out_path, 'wb') as dst:
+                                out_path = os.path.join(
+                                    cache_dir, os.path.basename(member)
+                                )
+                                with zf.open(member) as src, open(
+                                    out_path, "wb"
+                                ) as dst:
                                     dst.write(src.read())
                                 extracted_path = out_path
                     except Exception:
@@ -2310,11 +2737,13 @@ class MainWindow(QMainWindow):
             self.config.add_recent_project(path)
             self.update_recent_projects_menu()
         except Exception as e:
-            QMessageBox.critical(self, "Open Project", f"Failed to open project: {str(e)}")
+            QMessageBox.critical(
+                self, "Open Project", f"Failed to open project: {str(e)}"
+            )
 
     def _maybe_relink_original(self, state: dict):
         """If original file is missing, prompt user to relink. Returns chosen path or None."""
-        orig = state.get('document_path')
+        orig = state.get("document_path")
         if orig and os.path.exists(orig):
             return orig
         # Prompt user to locate the original file
@@ -2326,12 +2755,18 @@ class MainWindow(QMainWindow):
             QMessageBox.Yes,
         )
         if reply == QMessageBox.Yes:
-            start_dir = os.path.dirname(orig) if orig else self.config.get_last_input_dir()
-            file_path, _ = QFileDialog.getOpenFileName(self, "Locate Original Document", start_dir,
-                "All Supported (*.pdf *.png *.jpg *.jpeg *.tiff *.svg *.dxf *.FCStd);;All Files (*)")
+            start_dir = (
+                os.path.dirname(orig) if orig else self.config.get_last_input_dir()
+            )
+            file_path, _ = QFileDialog.getOpenFileName(
+                self,
+                "Locate Original Document",
+                start_dir,
+                "All Supported (*.pdf *.png *.jpg *.jpeg *.tiff *.svg *.dxf *.FCStd);;All Files (*)",
+            )
             if file_path:
                 # Update state so further saves reference the new path
-                state['document_path'] = file_path
+                state["document_path"] = file_path
                 return file_path
         return None
 
@@ -2381,7 +2816,9 @@ class MainWindow(QMainWindow):
                 action = QAction(action_text, self)
                 action.setToolTip(file_path)  # Show full path in tooltip
                 action.setData(file_path)  # Store full path in action data
-                action.triggered.connect(lambda checked, path=file_path: self.load_document(path))
+                action.triggered.connect(
+                    lambda checked, path=file_path: self.load_document(path)
+                )
                 self.recent_menu.addAction(action)
 
                 # Add keyboard shortcut for first 9 files
@@ -2397,7 +2834,10 @@ class MainWindow(QMainWindow):
 
     def update_recent_projects_menu(self):
         """Update the recent projects submenu under Project menu."""
-        if not hasattr(self, 'recent_projects_menu') or self.recent_projects_menu is None:
+        if (
+            not hasattr(self, "recent_projects_menu")
+            or self.recent_projects_menu is None
+        ):
             return
         self.recent_projects_menu.clear()
 
@@ -2413,7 +2853,9 @@ class MainWindow(QMainWindow):
                 act = QAction(action_text, self)
                 act.setToolTip(path)
                 act.setData(path)
-                act.triggered.connect(lambda checked, p=path: self._open_project_path(p))
+                act.triggered.connect(
+                    lambda checked, p=path: self._open_project_path(p)
+                )
                 self.recent_projects_menu.addAction(act)
             self.recent_projects_menu.addSeparator()
             clear_action = QAction("&Clear Recent Projects", self)
@@ -2439,13 +2881,14 @@ class MainWindow(QMainWindow):
             "License: MIT License with Attribution Requirement\n"
             "Copyright: © 2025 Randall Morgan\n\n"
             "Contributors:\n"
-            "Get your name listed here by adding features, fixing bugs, or creating a useful plugin."
+            "Get your name listed here by adding features, fixing bugs, or creating a useful plugin.",
         )
 
     def show_help(self, topic: str = ""):
         """Open the Help dialog optionally at a given topic (relative filename)."""
         try:
             from .dialogs.help_dialog import HelpDialog
+
             if not hasattr(self, "_help_dialog") or self._help_dialog is None:
                 self._help_dialog = HelpDialog(self, start_topic=topic or None)
             else:

@@ -2,13 +2,11 @@
 Unit converter dialog for OpenTiler.
 """
 
-from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
-    QLabel, QLineEdit, QPushButton, QComboBox,
-    QGroupBox
-)
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QDoubleValidator
+from PySide6.QtWidgets import (QComboBox, QDialog, QFormLayout, QGroupBox,
+                               QHBoxLayout, QLabel, QLineEdit, QPushButton,
+                               QVBoxLayout)
 
 
 class UnitConverterDialog(QDialog):
@@ -48,7 +46,9 @@ class UnitConverterDialog(QDialog):
         output_layout = QHBoxLayout()
         self.output_value = QLineEdit()
         self.output_value.setReadOnly(True)
-        self.output_value.setStyleSheet("background-color: #e8e8e8; color: #333; border: 1px solid #ccc;")
+        self.output_value.setStyleSheet(
+            "background-color: #e8e8e8; color: #333; border: 1px solid #ccc;"
+        )
         output_layout.addWidget(self.output_value)
 
         self.output_units = QComboBox()
@@ -65,18 +65,17 @@ class UnitConverterDialog(QDialog):
         reference_group = QGroupBox("Reference")
         reference_layout = QVBoxLayout()
 
-        reference_text = QLabel(
-            "1 inch = 25.4 mm\n"
-            "1 mm = 0.0393701 inches"
-        )
-        reference_text.setStyleSheet("""
+        reference_text = QLabel("1 inch = 25.4 mm\n" "1 mm = 0.0393701 inches")
+        reference_text.setStyleSheet(
+            """
             font-family: monospace;
             background-color: #e8e8e8;
             color: #333;
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 3px;
-        """)
+        """
+        )
         reference_layout.addWidget(reference_text)
 
         reference_group.setLayout(reference_layout)

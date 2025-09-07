@@ -6,9 +6,11 @@ Installation script for OpenTiler - Professional Document Scaling and Tiling App
 Supports Windows 7/10/11, macOS, Ubuntu/Debian, and Arch Linux
 """
 
-import sys
 import os
-from setuptools import setup, find_packages
+import sys
+
+from setuptools import find_packages, setup
+
 
 # Read long description from README
 def get_long_description():
@@ -19,41 +21,48 @@ def get_long_description():
     except FileNotFoundError:
         return "OpenTiler - Professional Document Scaling and Tiling Application"
 
+
 # Core requirements (always needed)
 CORE_REQUIREMENTS = [
-    'PySide6>=6.5.0',
-    'Pillow>=9.0.0',
-    'PyMuPDF>=1.23.0',
+    "PySide6>=6.5.0",
+    "Pillow>=9.0.0",
+    "PyMuPDF>=1.23.0",
 ]
 
 # Optional requirements for enhanced functionality
 OPTIONAL_REQUIREMENTS = {
-    'cad': ['ezdxf>=1.0.0'],
-    'raw': ['rawpy>=0.18.0', 'numpy>=1.21.0'],
-    'automation': ['mss>=9.0.0', 'pywinctl>=0.0.50'],
-    'all': ['ezdxf>=1.0.0', 'rawpy>=0.18.0', 'numpy>=1.21.0', 'mss>=9.0.0', 'pywinctl>=0.0.50'],
-    'dev': [
-        'pytest>=7.0.0',
-        'pytest-cov>=4.0.0',
-        'black>=22.0.0',
-        'flake8>=5.0.0',
-        'isort>=5.0.0',
-        'mypy>=1.0.0',
-        'bandit>=1.7.0',
-        'safety>=2.0.0',
-        'pyinstaller>=5.0.0',
+    "cad": ["ezdxf>=1.0.0"],
+    "raw": ["rawpy>=0.18.0", "numpy>=1.21.0"],
+    "automation": ["mss>=9.0.0", "pywinctl>=0.0.50"],
+    "all": [
+        "ezdxf>=1.0.0",
+        "rawpy>=0.18.0",
+        "numpy>=1.21.0",
+        "mss>=9.0.0",
+        "pywinctl>=0.0.50",
     ],
-    'docs': [
-        'sphinx>=5.0.0',
-        'sphinx-rtd-theme>=1.0.0',
-    ]
+    "dev": [
+        "pytest>=7.0.0",
+        "pytest-cov>=4.0.0",
+        "black>=22.0.0",
+        "flake8>=5.0.0",
+        "isort>=5.0.0",
+        "mypy>=1.0.0",
+        "bandit>=1.7.0",
+        "safety>=2.0.0",
+        "pyinstaller>=5.0.0",
+    ],
+    "docs": [
+        "sphinx>=5.0.0",
+        "sphinx-rtd-theme>=1.0.0",
+    ],
 }
 
 # All optional requirements combined
 ALL_OPTIONAL = []
 for deps in OPTIONAL_REQUIREMENTS.values():
     ALL_OPTIONAL.extend(deps)
-OPTIONAL_REQUIREMENTS['all'] = ALL_OPTIONAL
+OPTIONAL_REQUIREMENTS["all"] = ALL_OPTIONAL
 
 setup(
     name="opentiler",
@@ -65,28 +74,25 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/Monotoba/OpenTiler",
     license="MIT",
-
     # Package configuration
     packages=find_packages(),
     include_package_data=True,
     package_data={
-        'opentiler': [
-            'assets/*',
-            'assets/icons/*',
-            'docs/*',
-            'docs/images/*',
-            'help/*',
-            'help/assets/*',
-            'help/assets/style/*',
-            'help/assets/img/*',
+        "opentiler": [
+            "assets/*",
+            "assets/icons/*",
+            "docs/*",
+            "docs/images/*",
+            "help/*",
+            "help/assets/*",
+            "help/assets/style/*",
+            "help/assets/img/*",
         ],
     },
-
     # Requirements
     install_requires=CORE_REQUIREMENTS,
     extras_require=OPTIONAL_REQUIREMENTS,
     python_requires=">=3.8",
-
     # Entry points
     entry_points={
         "console_scripts": [
@@ -96,7 +102,6 @@ setup(
             "opentiler-gui=main:main",
         ],
     },
-
     # Classification
     classifiers=[
         "Development Status :: 5 - Production/Stable",
@@ -126,21 +131,30 @@ setup(
         "Environment :: Win32 (MS Windows)",
         "Environment :: MacOS X",
     ],
-
     # Keywords
     keywords=[
-        "pdf", "tiling", "scaling", "printing", "documents", "plans",
-        "architectural", "engineering", "cad", "measurement", "conversion",
-        "qt", "pyside6", "gui", "desktop"
+        "pdf",
+        "tiling",
+        "scaling",
+        "printing",
+        "documents",
+        "plans",
+        "architectural",
+        "engineering",
+        "cad",
+        "measurement",
+        "conversion",
+        "qt",
+        "pyside6",
+        "gui",
+        "desktop",
     ],
-
     # Project URLs
     project_urls={
         "Documentation": "https://github.com/Monotoba/OpenTiler/docs",
         "Source": "https://github.com/Monotoba/OpenTiler",
         "Tracker": "https://github.com/Monotoba/OpenTiler/issues",
     },
-
     # Additional metadata
     zip_safe=False,
     platforms=["any"],

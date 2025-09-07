@@ -2,11 +2,12 @@
 Main application entry point for OpenTiler.
 """
 
-import sys
 import argparse
+import sys
 from pathlib import Path
-from PySide6.QtWidgets import QApplication
+
 from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication
 
 from .main_window import MainWindow
 
@@ -14,11 +15,17 @@ from .main_window import MainWindow
 def main():
     """Main application entry point."""
     # Parse command line arguments
-    parser = argparse.ArgumentParser(description="OpenTiler - Architectural Drawing Tiler")
-    parser.add_argument('document', nargs='?', help='Document file to load')
-    parser.add_argument('--automation-mode', action='store_true', help='Enable automation mode')
-    parser.add_argument('--enable-plugins', action='store_true', help='Enable plugin system')
-    parser.add_argument('--plugin', action='append', help='Load specific plugin')
+    parser = argparse.ArgumentParser(
+        description="OpenTiler - Architectural Drawing Tiler"
+    )
+    parser.add_argument("document", nargs="?", help="Document file to load")
+    parser.add_argument(
+        "--automation-mode", action="store_true", help="Enable automation mode"
+    )
+    parser.add_argument(
+        "--enable-plugins", action="store_true", help="Enable plugin system"
+    )
+    parser.add_argument("--plugin", action="append", help="Load specific plugin")
 
     args = parser.parse_args()
 
@@ -39,22 +46,24 @@ def main():
         try:
             # Import and initialize plugin system
             sys.path.insert(0, str(Path(__file__).parent.parent))
-            from plugins.plugin_manager import PluginManager
             from plugins.builtin.automation_plugin import AutomationPlugin
+            from plugins.plugin_manager import PluginManager
 
             # Create plugin manager
             plugin_manager = PluginManager(main_window)
             main_window.plugin_manager = plugin_manager
 
             # Load automation plugin if requested
-            if args.automation_mode or (args.plugin and 'automation' in args.plugin):
+            if args.automation_mode or (args.plugin and "automation" in args.plugin):
                 automation_plugin = AutomationPlugin(main_window)
                 plugin_manager.plugins["automation"] = automation_plugin
 
                 # Initialize and enable automation plugin
                 if plugin_manager.initialize_plugin("automation"):
                     if plugin_manager.enable_plugin("automation"):
-                        print("✅ Automation plugin enabled - server running on port 8888")
+                        print(
+                            "✅ Automation plugin enabled - server running on port 8888"
+                        )
                     else:
                         print("❌ Failed to enable automation plugin")
                 else:
@@ -63,7 +72,7 @@ def main():
             # Load other specified plugins
             if args.plugin:
                 for plugin_name in args.plugin:
-                    if plugin_name != 'automation':  # Already handled above
+                    if plugin_name != "automation":  # Already handled above
                         if plugin_manager.load_plugin(plugin_name):
                             plugin_manager.initialize_plugin(plugin_name)
                             plugin_manager.enable_plugin(plugin_name)
@@ -88,6 +97,7 @@ def main():
 
             # Use QTimer to load document after window is shown
             from PySide6.QtCore import QTimer
+
             QTimer.singleShot(1000, load_document)
         else:
             print(f"❌ Document not found: {args.document}")

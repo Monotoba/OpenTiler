@@ -3,17 +3,19 @@ PDF exporter for OpenTiler.
 """
 
 import os
-from typing import List, Tuple, Optional
-from PySide6.QtCore import QRect, Qt, QMarginsF
-from PySide6.QtGui import QPixmap, QPainter, QPdfWriter, QPageSize, QPageLayout, QPen, QColor
-from ..utils.overlays import draw_scale_bar
-from PySide6.QtWidgets import QMessageBox
-from ..utils.app_logger import get_logger
+from typing import List, Optional, Tuple
 
-from .base_exporter import BaseExporter
-from ..utils.metadata_page import MetadataPageGenerator, create_document_info
-from ..utils.helpers import summarize_page_grid
+from PySide6.QtCore import QMarginsF, QRect, Qt
+from PySide6.QtGui import (QColor, QPageLayout, QPageSize, QPainter,
+                           QPdfWriter, QPen, QPixmap)
+from PySide6.QtWidgets import QMessageBox
+
 from ..settings.config import config
+from ..utils.app_logger import get_logger
+from ..utils.helpers import summarize_page_grid
+from ..utils.metadata_page import MetadataPageGenerator, create_document_info
+from ..utils.overlays import draw_scale_bar
+from .base_exporter import BaseExporter
 
 
 class PDFExporter(BaseExporter):
@@ -24,14 +26,16 @@ class PDFExporter(BaseExporter):
 
     def get_supported_formats(self) -> List[str]:
         """Get list of supported file formats."""
-        return ['.pdf']
+        return [".pdf"]
 
-    def export(self,
-               source_pixmap: QPixmap,
-               page_grid: List[dict],
-               output_path: str,
-               page_size: str = "A4",
-               **kwargs) -> bool:
+    def export(
+        self,
+        source_pixmap: QPixmap,
+        page_grid: List[dict],
+        output_path: str,
+        page_size: str = "A4",
+        **kwargs,
+    ) -> bool:
         """
         Export tiled document as multi-page PDF or composite single-page PDF.
 
@@ -46,25 +50,33 @@ class PDFExporter(BaseExporter):
             True if export successful, False otherwise
         """
         # Check if composite export is requested
-        if kwargs.get('composite', False):
-            return self._export_composite_pdf(source_pixmap, page_grid, output_path, page_size, **kwargs)
+        if kwargs.get("composite", False):
+            return self._export_composite_pdf(
+                source_pixmap, page_grid, output_path, page_size, **kwargs
+            )
         else:
-            return self._export_multipage_pdf(source_pixmap, page_grid, output_path, page_size, **kwargs)
+            return self._export_multipage_pdf(
+                source_pixmap, page_grid, output_path, page_size, **kwargs
+            )
 
-    def _export_multipage_pdf(self,
-                              source_pixmap: QPixmap,
-                              page_grid: List[dict],
-                              output_path: str,
-                              page_size: str = "A4",
-                              **kwargs) -> bool:
+    def _export_multipage_pdf(
+        self,
+        source_pixmap: QPixmap,
+        page_grid: List[dict],
+        output_path: str,
+        page_size: str = "A4",
+        **kwargs,
+    ) -> bool:
         """Export as multi-page PDF (original functionality)."""
         try:
-            log = get_logger('export')
+            log = get_logger("export")
             log.info("Starting multi-page PDF export")
             log.debug(f"Output path: {output_path}")
             log.debug(f"Page size: {page_size}")
             log.debug(f"Page grid count: {len(page_grid)}")
-            log.debug(f"Source pixmap: {source_pixmap.width()}x{source_pixmap.height()}")
+            log.debug(
+                f"Source pixmap: {source_pixmap.width()}x{source_pixmap.height()}"
+            )
             # Ensure output directory exists
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
@@ -88,20 +100,24 @@ class PDFExporter(BaseExporter):
             orientation = self._determine_optimal_orientation(page_grid, page_size_obj)
 
             # Set page layout with determined orientation
-            pdf_writer.setPageLayout(QPageLayout(
-                page_size_obj,
-                orientation,
-                QMarginsF(0, 0, 0, 0),  # Use 0mm margins; gutters are handled in content
-                QPageLayout.Millimeter
-            ))
+            pdf_writer.setPageLayout(
+                QPageLayout(
+                    page_size_obj,
+                    orientation,
+                    QMarginsF(
+                        0, 0, 0, 0
+                    ),  # Use 0mm margins; gutters are handled in content
+                    QPageLayout.Millimeter,
+                )
+            )
 
             # Set resolution (300 DPI for high quality)
             pdf_writer.setResolution(300)
 
             # Add metadata
             self.add_default_metadata()
-            pdf_writer.setTitle(self.metadata.get('title', 'OpenTiler Export'))
-            pdf_writer.setCreator(self.metadata.get('application', 'OpenTiler'))
+            pdf_writer.setTitle(self.metadata.get("title", "OpenTiler Export"))
+            pdf_writer.setCreator(self.metadata.get("application", "OpenTiler"))
 
             # Create painter
             painter = QPainter(pdf_writer)
@@ -115,20 +131,26 @@ class PDFExporter(BaseExporter):
             # Add metadata page at the beginning if configured
             if include_metadata and metadata_position == "first":
                 # NOTE: Metadata page must always be Portrait regardless of tile orientation
-                pdf_writer.setPageLayout(QPageLayout(
-                    page_size_obj,
-                    QPageLayout.Portrait,
-                    QMarginsF(0, 0, 0, 0),
-                    QPageLayout.Millimeter
-                ))
-                self._add_metadata_page(painter, pdf_writer, source_pixmap, page_grid, **kwargs)
+                pdf_writer.setPageLayout(
+                    QPageLayout(
+                        page_size_obj,
+                        QPageLayout.Portrait,
+                        QMarginsF(0, 0, 0, 0),
+                        QPageLayout.Millimeter,
+                    )
+                )
+                self._add_metadata_page(
+                    painter, pdf_writer, source_pixmap, page_grid, **kwargs
+                )
                 # Restore tile orientation for subsequent pages
-                pdf_writer.setPageLayout(QPageLayout(
-                    page_size_obj,
-                    orientation,
-                    QMarginsF(0, 0, 0, 0),
-                    QPageLayout.Millimeter
-                ))
+                pdf_writer.setPageLayout(
+                    QPageLayout(
+                        page_size_obj,
+                        orientation,
+                        QMarginsF(0, 0, 0, 0),
+                        QPageLayout.Millimeter,
+                    )
+                )
                 page_count += 1
 
             # Export each tile page
@@ -137,7 +159,9 @@ class PDFExporter(BaseExporter):
                     pdf_writer.newPage()
 
                 # Create page pixmap
-                page_pixmap = self._create_page_pixmap(source_pixmap, page, kwargs.get('scale_factor', 1.0))
+                page_pixmap = self._create_page_pixmap(
+                    source_pixmap, page, kwargs.get("scale_factor", 1.0)
+                )
 
                 # Draw page to PDF
                 if page_pixmap and not page_pixmap.isNull():
@@ -152,13 +176,17 @@ class PDFExporter(BaseExporter):
             if include_metadata and metadata_position == "last":
                 pdf_writer.newPage()
                 # NOTE: Metadata page must always be Portrait regardless of tile orientation
-                pdf_writer.setPageLayout(QPageLayout(
-                    page_size_obj,
-                    QPageLayout.Portrait,
-                    QMarginsF(0, 0, 0, 0),
-                    QPageLayout.Millimeter
-                ))
-                self._add_metadata_page(painter, pdf_writer, source_pixmap, page_grid, **kwargs)
+                pdf_writer.setPageLayout(
+                    QPageLayout(
+                        page_size_obj,
+                        QPageLayout.Portrait,
+                        QMarginsF(0, 0, 0, 0),
+                        QPageLayout.Millimeter,
+                    )
+                )
+                self._add_metadata_page(
+                    painter, pdf_writer, source_pixmap, page_grid, **kwargs
+                )
 
             painter.end()
             log.info("Multi-page PDF export completed successfully")
@@ -166,20 +194,25 @@ class PDFExporter(BaseExporter):
 
         except Exception as e:
             import traceback
+
             error_details = traceback.format_exc()
             log.error(f"Multi-page PDF export error: {str(e)}")
             log.debug(f"Full traceback: {error_details}")
             return False
 
-    def _create_page_pixmap(self, source_pixmap: QPixmap, page: dict, scale_factor: float = 1.0) -> QPixmap:
+    def _create_page_pixmap(
+        self, source_pixmap: QPixmap, page: dict, scale_factor: float = 1.0
+    ) -> QPixmap:
         """Create a pixmap for a single page using unified layout calculations."""
         from ..utils.helpers import compute_tile_layout
 
         # Compute standardized tile layout
-        layout = compute_tile_layout(page, source_pixmap.width(), source_pixmap.height())
-        width = int(layout['tile_width'])
-        height = int(layout['tile_height'])
-        gutter = int(layout['gutter'])
+        layout = compute_tile_layout(
+            page, source_pixmap.width(), source_pixmap.height()
+        )
+        width = int(layout["tile_width"])
+        height = int(layout["tile_height"])
+        gutter = int(layout["gutter"])
 
         # Create blank page pixmap
         page_pixmap = QPixmap(width, height)
@@ -190,26 +223,29 @@ class PDFExporter(BaseExporter):
 
         # Set clipping region to printable area (inside gutters)
         if gutter > 0:
-            painter.setClipRect(layout['printable_rect'])
+            painter.setClipRect(layout["printable_rect"])
 
         # Copy intersecting area from source
-        src_rect = layout['source_rect']
+        src_rect = layout["source_rect"]
         if src_rect.width() > 0 and src_rect.height() > 0:
             source_crop = source_pixmap.copy(src_rect)
-            dx, dy = layout['dest_pos']
+            dx, dy = layout["dest_pos"]
             painter.drawPixmap(int(dx), int(dy), source_crop)
 
         # Registration marks at printable corners (for export)
         try:
             from ..settings.config import config
+
             if gutter > 0 and config.get_reg_marks_print():
-                px_per_mm = (1.0 / scale_factor) if scale_factor and scale_factor > 0 else 2.0
+                px_per_mm = (
+                    (1.0 / scale_factor) if scale_factor and scale_factor > 0 else 2.0
+                )
                 diameter_mm = config.get_reg_mark_diameter_mm()
                 cross_mm = config.get_reg_mark_crosshair_mm()
                 radius_px = int((diameter_mm * px_per_mm) / 2)
                 cross_len_px = int(cross_mm * px_per_mm)
 
-                painter.setClipRect(layout['printable_rect'])
+                painter.setClipRect(layout["printable_rect"])
                 painter.setPen(QPen(QColor(0, 0, 0), 1))
                 centers = [
                     (int(gutter), int(gutter)),
@@ -218,7 +254,9 @@ class PDFExporter(BaseExporter):
                     (int(width - gutter), int(height - gutter)),
                 ]
                 for cx, cy in centers:
-                    painter.drawEllipse(cx - radius_px, cy - radius_px, radius_px * 2, radius_px * 2)
+                    painter.drawEllipse(
+                        cx - radius_px, cy - radius_px, radius_px * 2, radius_px * 2
+                    )
                     painter.drawLine(cx - cross_len_px, cy, cx + cross_len_px, cy)
                     painter.drawLine(cx, cy - cross_len_px, cx, cy + cross_len_px)
             # Scale bar overlay
@@ -253,8 +291,14 @@ class PDFExporter(BaseExporter):
         painter.end()
         return page_pixmap
 
-    def _add_metadata_page(self, painter: QPainter, pdf_writer: QPdfWriter,
-                          source_pixmap: QPixmap, page_grid: List[dict], **kwargs):
+    def _add_metadata_page(
+        self,
+        painter: QPainter,
+        pdf_writer: QPdfWriter,
+        source_pixmap: QPixmap,
+        page_grid: List[dict],
+        **kwargs,
+    ):
         """Add a metadata summary page to the PDF."""
         try:
             # Create metadata page generator
@@ -262,16 +306,18 @@ class PDFExporter(BaseExporter):
 
             # Calculate grid dimensions (counts only)
             summary = summarize_page_grid(page_grid or [])
-            tiles_x = summary['tiles_x']
-            tiles_y = summary['tiles_y']
+            tiles_x = summary["tiles_x"]
+            tiles_y = summary["tiles_y"]
 
             # Get document information from metadata or kwargs
-            document_name = kwargs.get('document_name', self.metadata.get('title', 'Untitled Document'))
-            original_file = kwargs.get('original_file', '')
-            scale_factor = kwargs.get('scale_factor', 1.0)
-            units = kwargs.get('units', 'mm')
-            page_size = kwargs.get('page_size', 'A4')
-            gutter_size = kwargs.get('gutter_size', 10.0)
+            document_name = kwargs.get(
+                "document_name", self.metadata.get("title", "Untitled Document")
+            )
+            original_file = kwargs.get("original_file", "")
+            scale_factor = kwargs.get("scale_factor", 1.0)
+            units = kwargs.get("units", "mm")
+            page_size = kwargs.get("page_size", "A4")
+            gutter_size = kwargs.get("gutter_size", 10.0)
 
             # Create document info
             doc_info = create_document_info(
@@ -284,31 +330,31 @@ class PDFExporter(BaseExporter):
                 tiles_x=tiles_x,
                 tiles_y=tiles_y,
                 page_size=page_size,
-                page_orientation=kwargs.get('page_orientation', 'auto'),
+                page_orientation=kwargs.get("page_orientation", "auto"),
                 gutter_size=gutter_size,
-                export_format='PDF',
+                export_format="PDF",
                 dpi=300,
-                output_dir=kwargs.get('output_dir', ''),
+                output_dir=kwargs.get("output_dir", ""),
             )
 
             # Add source pixmap and page grid for plan view
-            doc_info['source_pixmap'] = source_pixmap
-            doc_info['page_grid'] = page_grid
+            doc_info["source_pixmap"] = source_pixmap
+            doc_info["page_grid"] = page_grid
             # Include project name if provided; else fall back to document name
-            doc_info['project_name'] = kwargs.get('project_name', document_name)
+            doc_info["project_name"] = kwargs.get("project_name", document_name)
 
             # Generate metadata page sized to the printable rect
             page_layout = pdf_writer.pageLayout()
             pdf_rect = page_layout.paintRectPixels(pdf_writer.resolution())
-            metadata_pixmap = metadata_generator.generate_metadata_page(doc_info, pdf_rect.size())
+            metadata_pixmap = metadata_generator.generate_metadata_page(
+                doc_info, pdf_rect.size()
+            )
 
             # Draw metadata page to PDF
             if metadata_pixmap and not metadata_pixmap.isNull():
                 # Scale to fit PDF page
                 scaled_metadata = metadata_pixmap.scaled(
-                    pdf_rect.size(),
-                    Qt.KeepAspectRatio,
-                    Qt.SmoothTransformation
+                    pdf_rect.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation
                 )
 
                 # Center on printable page area
@@ -320,12 +366,14 @@ class PDFExporter(BaseExporter):
             print(f"Error adding metadata page: {str(e)}")
             # Continue without metadata page if there's an error
 
-    def _export_composite_pdf(self,
-                             source_pixmap: QPixmap,
-                             page_grid: List[dict],
-                             output_path: str,
-                             page_size: str = "A4",
-                             **kwargs) -> bool:
+    def _export_composite_pdf(
+        self,
+        source_pixmap: QPixmap,
+        page_grid: List[dict],
+        output_path: str,
+        page_size: str = "A4",
+        **kwargs,
+    ) -> bool:
         """Export as single-page composite PDF showing all tiles."""
         try:
             # Ensure output directory exists
@@ -334,8 +382,8 @@ class PDFExporter(BaseExporter):
             # Calculate composite image size
             max_x = max_y = 0
             for page in page_grid:
-                page_right = page['x'] + page['width']
-                page_bottom = page['y'] + page['height']
+                page_right = page["x"] + page["width"]
+                page_bottom = page["y"] + page["height"]
                 max_x = max(max_x, page_right)
                 max_y = max(max_y, page_bottom)
 
@@ -347,9 +395,11 @@ class PDFExporter(BaseExporter):
 
             # Draw each page
             for page in page_grid:
-                page_pixmap = self._create_page_pixmap(source_pixmap, page, kwargs.get('scale_factor', 1.0))
+                page_pixmap = self._create_page_pixmap(
+                    source_pixmap, page, kwargs.get("scale_factor", 1.0)
+                )
                 if page_pixmap and not page_pixmap.isNull():
-                    painter.drawPixmap(int(page['x']), int(page['y']), page_pixmap)
+                    painter.drawPixmap(int(page["x"]), int(page["y"]), page_pixmap)
 
             painter.end()
 
@@ -362,29 +412,41 @@ class PDFExporter(BaseExporter):
 
             if page_size == "A4":
                 page_size_obj = QPageSize(QPageSize.A4)
-                orientation = QPageLayout.Landscape if aspect_ratio > 1.414 else QPageLayout.Portrait
+                orientation = (
+                    QPageLayout.Landscape
+                    if aspect_ratio > 1.414
+                    else QPageLayout.Portrait
+                )
             elif page_size == "A3":
                 page_size_obj = QPageSize(QPageSize.A3)
-                orientation = QPageLayout.Landscape if aspect_ratio > 1.414 else QPageLayout.Portrait
+                orientation = (
+                    QPageLayout.Landscape
+                    if aspect_ratio > 1.414
+                    else QPageLayout.Portrait
+                )
             else:
                 page_size_obj = QPageSize(QPageSize.A4)  # Default
                 orientation = QPageLayout.Portrait
 
             pdf_writer.setPageSize(page_size_obj)
-            pdf_writer.setPageLayout(QPageLayout(
-                page_size_obj,
-                orientation,
-                QMarginsF(10, 10, 10, 10),  # 10mm margins on all sides
-                QPageLayout.Millimeter
-            ))
+            pdf_writer.setPageLayout(
+                QPageLayout(
+                    page_size_obj,
+                    orientation,
+                    QMarginsF(10, 10, 10, 10),  # 10mm margins on all sides
+                    QPageLayout.Millimeter,
+                )
+            )
 
             # Set resolution (300 DPI for high quality)
             pdf_writer.setResolution(300)
 
             # Add metadata
             self.add_default_metadata()
-            pdf_writer.setTitle(self.metadata.get('title', 'OpenTiler Composite Export'))
-            pdf_writer.setCreator(self.metadata.get('application', 'OpenTiler'))
+            pdf_writer.setTitle(
+                self.metadata.get("title", "OpenTiler Composite Export")
+            )
+            pdf_writer.setCreator(self.metadata.get("application", "OpenTiler"))
 
             # Create painter for PDF
             pdf_painter = QPainter(pdf_writer)
@@ -393,9 +455,7 @@ class PDFExporter(BaseExporter):
             page_layout = pdf_writer.pageLayout()
             pdf_rect = page_layout.paintRectPixels(pdf_writer.resolution())
             scaled_composite = composite.scaled(
-                pdf_rect.size(),
-                Qt.KeepAspectRatio,
-                Qt.SmoothTransformation
+                pdf_rect.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation
             )
 
             # Center the composite in the printable area
@@ -412,7 +472,9 @@ class PDFExporter(BaseExporter):
             print(f"Composite PDF export error: {str(e)}")
             return False
 
-    def _determine_optimal_orientation(self, page_grid: List[dict], page_size_obj: QPageSize) -> QPageLayout.Orientation:
+    def _determine_optimal_orientation(
+        self, page_grid: List[dict], page_size_obj: QPageSize
+    ) -> QPageLayout.Orientation:
         """
         Determine the optimal page orientation for tiles based on their content.
 
@@ -442,8 +504,8 @@ class PDFExporter(BaseExporter):
             valid_tiles = 0
 
             for page in page_grid:
-                width = page.get('width', 0)
-                height = page.get('height', 0)
+                width = page.get("width", 0)
+                height = page.get("height", 0)
                 if width > 0 and height > 0:
                     aspect_ratio = width / height
                     total_aspect_ratio += aspect_ratio

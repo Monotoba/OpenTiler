@@ -11,14 +11,14 @@ Usage:
     python automation_client.py --sequence documentation_full
 """
 
+import argparse
+import json
+import logging
+import socket
 import sys
 import time
-import socket
-import json
-import argparse
-import logging
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
 
 
 class OpenTilerAutomationClient:

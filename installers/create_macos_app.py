@@ -9,13 +9,14 @@ Usage:
     python create_macos_app.py
 """
 
-import sys
 import os
-import subprocess
+import plistlib
 import shutil
+import subprocess
+import sys
 import tempfile
 from pathlib import Path
-import plistlib
+
 
 def check_macos():
     """Check if we're running on macOS."""
@@ -25,25 +26,30 @@ def check_macos():
         return False
     return True
 
+
 def install_dependencies():
     """Install required build dependencies."""
     print("📦 Installing build dependencies...")
-    
+
     dependencies = ["py2app", "pyinstaller", "dmgbuild"]
-    
+
     for dep in dependencies:
         try:
-            subprocess.run([sys.executable, "-m", "pip", "install", dep], 
-                         check=True, capture_output=True)
+            subprocess.run(
+                [sys.executable, "-m", "pip", "install", dep],
+                check=True,
+                capture_output=True,
+            )
             print(f"  ✅ Installed {dep}")
         except subprocess.CalledProcessError:
             print(f"  ❌ Failed to install {dep}")
             return False
     return True
 
+
 def create_py2app_setup():
     """Create setup.py for py2app."""
-    
+
     setup_content = '''#!/usr/bin/env python3
 """
 py2app setup script for OpenTiler macOS application
@@ -149,33 +155,34 @@ if __name__ == '__main__':
         setup_requires=['py2app'],
     )
 '''
-    
+
     setup_file = Path("setup_py2app.py")
-    with open(setup_file, 'w') as f:
+    with open(setup_file, "w") as f:
         f.write(setup_content)
-    
+
     return setup_file
+
 
 def build_app_with_py2app():
     """Build macOS app using py2app."""
     print("🏗️ Building macOS application with py2app...")
-    
+
     # Create setup script
     setup_file = create_py2app_setup()
-    
+
     try:
         # Clean previous builds
-        for dir_name in ['build', 'dist']:
+        for dir_name in ["build", "dist"]:
             if Path(dir_name).exists():
                 shutil.rmtree(dir_name)
-        
+
         # Build the app
         cmd = [sys.executable, str(setup_file), "py2app"]
         result = subprocess.run(cmd, capture_output=True, text=True)
-        
+
         if result.returncode == 0:
             print("  ✅ macOS application built successfully!")
-            
+
             app_path = Path("dist/OpenTiler.app")
             if app_path.exists():
                 print(f"  📱 Application: {app_path}")
@@ -186,7 +193,7 @@ def build_app_with_py2app():
         else:
             print(f"  ❌ Build failed: {result.stderr}")
             return None
-            
+
     except Exception as e:
         print(f"  ❌ Build error: {e}")
         return None
@@ -195,45 +202,63 @@ def build_app_with_py2app():
         if setup_file.exists():
             setup_file.unlink()
 
+
 def build_app_with_pyinstaller():
     """Build macOS app using PyInstaller."""
     print("🏗️ Building macOS application with PyInstaller...")
-    
+
     cmd = [
-        sys.executable, "-m", "PyInstaller",
-        "--name", "OpenTiler",
+        sys.executable,
+        "-m",
+        "PyInstaller",
+        "--name",
+        "OpenTiler",
         "--onedir",
         "--windowed",
         "--clean",
         "--noconfirm",
-        
         # Add data files
-        "--add-data", "opentiler/assets:opentiler/assets",
-        "--add-data", "docs:docs",
-        "--add-data", "README.md:.",
-        "--add-data", "LICENSE:.",
-        
+        "--add-data",
+        "opentiler/assets:opentiler/assets",
+        "--add-data",
+        "docs:docs",
+        "--add-data",
+        "README.md:.",
+        "--add-data",
+        "LICENSE:.",
         # Hidden imports
-        "--hidden-import", "PySide6.QtCore",
-        "--hidden-import", "PySide6.QtGui",
-        "--hidden-import", "PySide6.QtWidgets", 
-        "--hidden-import", "PySide6.QtPrintSupport",
-        "--hidden-import", "opentiler",
-        "--hidden-import", "opentiler.viewer",
-        "--hidden-import", "opentiler.dialogs",
-        "--hidden-import", "opentiler.exporter",
-        "--hidden-import", "opentiler.settings",
-        "--hidden-import", "opentiler.utils",
-        "--hidden-import", "opentiler.formats",
-        
+        "--hidden-import",
+        "PySide6.QtCore",
+        "--hidden-import",
+        "PySide6.QtGui",
+        "--hidden-import",
+        "PySide6.QtWidgets",
+        "--hidden-import",
+        "PySide6.QtPrintSupport",
+        "--hidden-import",
+        "opentiler",
+        "--hidden-import",
+        "opentiler.viewer",
+        "--hidden-import",
+        "opentiler.dialogs",
+        "--hidden-import",
+        "opentiler.exporter",
+        "--hidden-import",
+        "opentiler.settings",
+        "--hidden-import",
+        "opentiler.utils",
+        "--hidden-import",
+        "opentiler.formats",
         # Exclude unnecessary modules
-        "--exclude-module", "tkinter",
-        "--exclude-module", "matplotlib",
-        "--exclude-module", "scipy",
-        
-        "main.py"
+        "--exclude-module",
+        "tkinter",
+        "--exclude-module",
+        "matplotlib",
+        "--exclude-module",
+        "scipy",
+        "main.py",
     ]
-    
+
     # Add icon if available
     icon_path = Path("opentiler/assets/app_icon.icns")
     if icon_path.exists():
@@ -241,13 +266,13 @@ def build_app_with_pyinstaller():
         print(f"  ✅ Using icon: {icon_path}")
     else:
         print("  ℹ️  No app icon found (opentiler/assets/app_icon.icns)")
-    
+
     try:
         result = subprocess.run(cmd, capture_output=True, text=True)
-        
+
         if result.returncode == 0:
             print("  ✅ PyInstaller build successful!")
-            
+
             app_path = Path("dist/OpenTiler.app")
             if app_path.exists():
                 print(f"  📱 Application: {app_path}")
@@ -258,77 +283,84 @@ def build_app_with_pyinstaller():
         else:
             print(f"  ❌ PyInstaller build failed: {result.stderr}")
             return None
-            
+
     except Exception as e:
         print(f"  ❌ PyInstaller build error: {e}")
         return None
 
+
 def create_dmg(app_path):
     """Create DMG installer."""
     print("📦 Creating DMG installer...")
-    
+
     if not app_path or not app_path.exists():
         print("  ❌ No application found to package")
         return None
-    
+
     dmg_path = Path("dist/OpenTiler-1.0.0.dmg")
-    
+
     try:
         # Create temporary directory for DMG contents
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
-            
+
             # Copy app to temp directory
             app_dest = temp_path / "OpenTiler.app"
             shutil.copytree(app_path, app_dest)
-            
+
             # Create Applications symlink
             applications_link = temp_path / "Applications"
             applications_link.symlink_to("/Applications")
-            
+
             # Copy documentation
             docs_dir = temp_path / "Documentation"
             docs_dir.mkdir()
-            
+
             for doc in ["README.md", "LICENSE"]:
                 if Path(doc).exists():
                     shutil.copy2(doc, docs_dir)
-            
+
             user_manual = Path("docs/user/USER_MANUAL.md")
             if user_manual.exists():
                 shutil.copy2(user_manual, docs_dir / "User Manual.md")
-            
+
             # Create DMG using hdiutil
             cmd = [
-                "hdiutil", "create",
-                "-volname", "OpenTiler",
-                "-srcfolder", str(temp_path),
-                "-ov", "-format", "UDZO",
-                str(dmg_path)
+                "hdiutil",
+                "create",
+                "-volname",
+                "OpenTiler",
+                "-srcfolder",
+                str(temp_path),
+                "-ov",
+                "-format",
+                "UDZO",
+                str(dmg_path),
             ]
-            
+
             result = subprocess.run(cmd, capture_output=True, text=True)
-            
+
             if result.returncode == 0:
                 print(f"  ✅ DMG created: {dmg_path}")
-                
+
                 # Get DMG size
                 size_mb = dmg_path.stat().st_size / (1024 * 1024)
                 print(f"  📏 Size: {size_mb:.1f} MB")
-                
+
                 return dmg_path
             else:
                 print(f"  ❌ DMG creation failed: {result.stderr}")
                 return None
-                
+
     except Exception as e:
         print(f"  ❌ DMG creation error: {e}")
         return None
 
+
 def create_installer_script():
     """Create installation script for macOS."""
-    
-    script_content = '''#!/bin/bash
+
+    script_content = """#!/bin/bash
 # OpenTiler macOS Installation Script
 
 echo "OpenTiler macOS Installation"
@@ -407,53 +439,56 @@ echo "- Spotlight search"
 echo "- Launchpad"
 echo
 echo "To uninstall, simply drag OpenTiler.app to the Trash"
-'''
-    
+"""
+
     script_path = Path("dist/install_opentiler_macos.sh")
-    with open(script_path, 'w') as f:
+    with open(script_path, "w") as f:
         f.write(script_content)
-    
+
     # Make executable
     script_path.chmod(0o755)
-    
+
     print(f"📝 Installation script created: {script_path}")
     return script_path
+
 
 def main():
     """Main function."""
     print("OpenTiler macOS Application Builder")
     print("===================================")
     print()
-    
+
     # Check if main.py exists
     if not Path("main.py").exists():
-        print("❌ main.py not found. Please run this script from the OpenTiler project root.")
+        print(
+            "❌ main.py not found. Please run this script from the OpenTiler project root."
+        )
         return 1
-    
+
     # Check macOS
     is_macos = check_macos()
-    
+
     # Install dependencies
     if not install_dependencies():
         print("❌ Failed to install dependencies")
         return 1
-    
+
     # Try py2app first, fallback to PyInstaller
     app_path = build_app_with_py2app()
     if not app_path:
         print("🔄 py2app failed, trying PyInstaller...")
         app_path = build_app_with_pyinstaller()
-    
+
     if not app_path:
         print("❌ Both build methods failed")
         return 1
-    
+
     # Create DMG
     dmg_path = create_dmg(app_path)
-    
+
     # Create installer script
     script_path = create_installer_script()
-    
+
     print()
     print("🎉 macOS build completed successfully!")
     print()
@@ -469,8 +504,9 @@ def main():
     print("   1. Share .dmg file (recommended)")
     print("   2. Share .app bundle directly")
     print("   3. Use installation script for automated deployment")
-    
+
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())

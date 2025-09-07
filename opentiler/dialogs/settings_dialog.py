@@ -2,15 +2,15 @@
 Settings dialog for OpenTiler application.
 """
 
-from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QTabWidget, QWidget,
-    QLabel, QSpinBox, QDoubleSpinBox, QComboBox, QCheckBox,
-    QPushButton, QColorDialog, QSlider, QGroupBox, QFormLayout,
-    QDialogButtonBox, QLineEdit, QFileDialog
-)
+import os
+
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor
-import os
+from PySide6.QtWidgets import (QCheckBox, QColorDialog, QComboBox, QDialog,
+                               QDialogButtonBox, QDoubleSpinBox, QFileDialog,
+                               QFormLayout, QGroupBox, QHBoxLayout, QLabel,
+                               QLineEdit, QPushButton, QSlider, QSpinBox,
+                               QTabWidget, QVBoxLayout, QWidget)
 
 from ..settings.config import config
 
@@ -67,12 +67,16 @@ class SettingsDialog(QDialog):
         # Default units
         self.units_combo = QComboBox()
         self.units_combo.addItems(["mm", "inches"])
-        self.units_combo.setToolTip("Default measurement units used in scaling, gutters, and metadata.")
+        self.units_combo.setToolTip(
+            "Default measurement units used in scaling, gutters, and metadata."
+        )
         layout.addRow("Default Units:", self.units_combo)
 
         # Default DPI
         self.dpi_combo = QComboBox()
-        self.dpi_combo.setToolTip("Default DPI used for export/printing where applicable (e.g., PDF rendering).")
+        self.dpi_combo.setToolTip(
+            "Default DPI used for export/printing where applicable (e.g., PDF rendering)."
+        )
         available_dpi = config.get_available_dpi_options()
         for dpi in available_dpi:
             self.dpi_combo.addItem(f"{dpi} DPI", dpi)
@@ -80,8 +84,12 @@ class SettingsDialog(QDialog):
 
         # Default page size
         self.page_size_combo = QComboBox()
-        self.page_size_combo.addItems(["A4", "A3", "A2", "A1", "A0", "Letter", "Legal", "Tabloid"])
-        self.page_size_combo.setToolTip("Default target page size used when tiling documents.")
+        self.page_size_combo.addItems(
+            ["A4", "A3", "A2", "A1", "A0", "Letter", "Legal", "Tabloid"]
+        )
+        self.page_size_combo.setToolTip(
+            "Default target page size used when tiling documents."
+        )
         layout.addRow("Default Page Size:", self.page_size_combo)
 
         # Max recent files
@@ -95,19 +103,25 @@ class SettingsDialog(QDialog):
         self.max_recent_projects_spin = QSpinBox()
         self.max_recent_projects_spin.setRange(1, 50)
         self.max_recent_projects_spin.setSuffix(" projects")
-        self.max_recent_projects_spin.setToolTip("How many recent projects to list in the Project menu.")
+        self.max_recent_projects_spin.setToolTip(
+            "How many recent projects to list in the Project menu."
+        )
         layout.addRow("Max Recent Projects:", self.max_recent_projects_spin)
 
         # Open last project on startup
         self.open_last_project_check = QCheckBox("Open last project on start up.")
-        self.open_last_project_check.setToolTip("Load the most recently opened project automatically when the app starts.")
+        self.open_last_project_check.setToolTip(
+            "Load the most recently opened project automatically when the app starts."
+        )
         layout.addRow(self.open_last_project_check)
 
         # Default input directory
         input_dir_layout = QHBoxLayout()
         self.input_dir_edit = QLineEdit()
         self.input_dir_edit.setPlaceholderText("Enter path or use Browse button...")
-        self.input_dir_edit.setToolTip("Enter directory path manually or use Browse button")
+        self.input_dir_edit.setToolTip(
+            "Enter directory path manually or use Browse button"
+        )
         input_dir_layout.addWidget(self.input_dir_edit)
 
         input_dir_button = QPushButton("Browse...")
@@ -120,7 +134,9 @@ class SettingsDialog(QDialog):
         output_dir_layout = QHBoxLayout()
         self.output_dir_edit = QLineEdit()
         self.output_dir_edit.setPlaceholderText("Enter path or use Browse button...")
-        self.output_dir_edit.setToolTip("Enter directory path manually or use Browse button")
+        self.output_dir_edit.setToolTip(
+            "Enter directory path manually or use Browse button"
+        )
         output_dir_layout.addWidget(self.output_dir_edit)
 
         output_dir_button = QPushButton("Browse...")
@@ -168,11 +184,15 @@ class SettingsDialog(QDialog):
         gutter_layout = QFormLayout()
 
         self.gutter_display_check = QCheckBox("Show on screen")
-        self.gutter_display_check.setToolTip("Show a blue outline indicating the printable area (inside the gutter) in the preview.")
+        self.gutter_display_check.setToolTip(
+            "Show a blue outline indicating the printable area (inside the gutter) in the preview."
+        )
         gutter_layout.addRow(self.gutter_display_check)
 
         self.gutter_print_check = QCheckBox("Include when printing")
-        self.gutter_print_check.setToolTip("Include the blue gutter outline when printing/exporting (if enabled).")
+        self.gutter_print_check.setToolTip(
+            "Include the blue gutter outline when printing/exporting (if enabled)."
+        )
         gutter_layout.addRow(self.gutter_print_check)
 
         gutter_group.setLayout(gutter_layout)
@@ -183,11 +203,15 @@ class SettingsDialog(QDialog):
         crop_layout = QFormLayout()
 
         self.crop_display_check = QCheckBox("Show on screen")
-        self.crop_display_check.setToolTip("Draw crop marks at gutter intersections in the preview.")
+        self.crop_display_check.setToolTip(
+            "Draw crop marks at gutter intersections in the preview."
+        )
         crop_layout.addRow(self.crop_display_check)
 
         self.crop_print_check = QCheckBox("Include when printing")
-        self.crop_print_check.setToolTip("Include crop marks at gutter intersections in printed/exported output.")
+        self.crop_print_check.setToolTip(
+            "Include crop marks at gutter intersections in printed/exported output."
+        )
         crop_layout.addRow(self.crop_print_check)
 
         crop_group.setLayout(crop_layout)
@@ -198,11 +222,15 @@ class SettingsDialog(QDialog):
         reg_layout = QFormLayout()
 
         self.reg_display_check = QCheckBox("Show on screen")
-        self.reg_display_check.setToolTip("Display registration marks at printable-area corners in the preview.")
+        self.reg_display_check.setToolTip(
+            "Display registration marks at printable-area corners in the preview."
+        )
         reg_layout.addRow(self.reg_display_check)
 
         self.reg_print_check = QCheckBox("Include when printing")
-        self.reg_print_check.setToolTip("Include registration marks on exported/printed tiles.")
+        self.reg_print_check.setToolTip(
+            "Include registration marks on exported/printed tiles."
+        )
         reg_layout.addRow(self.reg_print_check)
 
         self.reg_diameter_spin = QDoubleSpinBox()
@@ -227,24 +255,34 @@ class SettingsDialog(QDialog):
         scale_layout = QFormLayout()
 
         self.scale_line_display_check = QCheckBox("Show scale line on screen")
-        self.scale_line_display_check.setToolTip("Draw the red measured scale line on pages that contain it in the preview.")
+        self.scale_line_display_check.setToolTip(
+            "Draw the red measured scale line on pages that contain it in the preview."
+        )
         scale_layout.addRow(self.scale_line_display_check)
 
         self.scale_line_print_check = QCheckBox("Include scale line when printing")
-        self.scale_line_print_check.setToolTip("Include the red measured scale line when printing/exporting.")
+        self.scale_line_print_check.setToolTip(
+            "Include the red measured scale line when printing/exporting."
+        )
         scale_layout.addRow(self.scale_line_print_check)
 
         self.scale_text_display_check = QCheckBox("Show scale text on screen")
-        self.scale_text_display_check.setToolTip("Show the measured distance (text) alongside the scale line in the preview.")
+        self.scale_text_display_check.setToolTip(
+            "Show the measured distance (text) alongside the scale line in the preview."
+        )
         scale_layout.addRow(self.scale_text_display_check)
 
         self.scale_text_print_check = QCheckBox("Include scale text when printing")
-        self.scale_text_print_check.setToolTip("Include the measured distance text when printing/exporting.")
+        self.scale_text_print_check.setToolTip(
+            "Include the measured distance text when printing/exporting."
+        )
         scale_layout.addRow(self.scale_text_print_check)
 
         # Convenience: single switch to print both line and text
         self.measure_print_check = QCheckBox("Print measurements (line + text)")
-        self.measure_print_check.setToolTip("Convenience toggle to include both the measured line and its distance text when printing/exporting.")
+        self.measure_print_check.setToolTip(
+            "Convenience toggle to include both the measured line and its distance text when printing/exporting."
+        )
         scale_layout.addRow(self.measure_print_check)
 
         scale_group.setLayout(scale_layout)
@@ -255,15 +293,21 @@ class SettingsDialog(QDialog):
         datum_layout = QFormLayout()
 
         self.datum_display_check = QCheckBox("Show datum line on screen")
-        self.datum_display_check.setToolTip("Draw a line between the two selected scale points during preview.")
+        self.datum_display_check.setToolTip(
+            "Draw a line between the two selected scale points during preview."
+        )
         datum_layout.addRow(self.datum_display_check)
 
         self.datum_print_check = QCheckBox("Include datum line when printing")
-        self.datum_print_check.setToolTip("Include the datum line on printed/exported tiles.")
+        self.datum_print_check.setToolTip(
+            "Include the datum line on printed/exported tiles."
+        )
         datum_layout.addRow(self.datum_print_check)
 
         self.datum_style_combo = QComboBox()
-        self.datum_style_combo.addItems(["solid", "dash", "dot", "dashdot", "dashdotdot", "dot-dash-dot"]) 
+        self.datum_style_combo.addItems(
+            ["solid", "dash", "dot", "dashdot", "dashdotdot", "dot-dash-dot"]
+        )
         datum_layout.addRow("Line Style:", self.datum_style_combo)
 
         self.datum_width_spin = QSpinBox()
@@ -284,17 +328,35 @@ class SettingsDialog(QDialog):
         bar_layout = QFormLayout()
 
         self.scale_bar_display_check = QCheckBox("Show on screen")
-        self.scale_bar_display_check.setToolTip("Show the alternating light/dark scale bar overlay in the selected location.")
+        self.scale_bar_display_check.setToolTip(
+            "Show the alternating light/dark scale bar overlay in the selected location."
+        )
         bar_layout.addRow(self.scale_bar_display_check)
 
         self.scale_bar_print_check = QCheckBox("Include when printing")
-        self.scale_bar_print_check.setToolTip("Include the scale bar in exported/printed output.")
+        self.scale_bar_print_check.setToolTip(
+            "Include the scale bar in exported/printed output."
+        )
         bar_layout.addRow(self.scale_bar_print_check)
 
         self.scale_bar_location_combo = QComboBox()
         locations = [
-            "Page-N", "Page-NE", "Page-E", "Page-SE", "Page-S", "Page-SW", "Page-W", "Page-NW",
-            "Gutter-N", "Gutter-NE", "Gutter-E", "Gutter-SE", "Gutter-S", "Gutter-SW", "Gutter-W", "Gutter-NW",
+            "Page-N",
+            "Page-NE",
+            "Page-E",
+            "Page-SE",
+            "Page-S",
+            "Page-SW",
+            "Page-W",
+            "Page-NW",
+            "Gutter-N",
+            "Gutter-NE",
+            "Gutter-E",
+            "Gutter-SE",
+            "Gutter-S",
+            "Gutter-SW",
+            "Gutter-W",
+            "Gutter-NW",
         ]
         self.scale_bar_location_combo.addItems(locations)
         bar_layout.addRow("Location:", self.scale_bar_location_combo)
@@ -309,7 +371,9 @@ class SettingsDialog(QDialog):
         self.scale_bar_opacity_slider = QSlider(Qt.Horizontal)
         self.scale_bar_opacity_slider.setRange(0, 100)
         self.scale_bar_opacity_value = QLabel("60%")
-        self.scale_bar_opacity_slider.valueChanged.connect(lambda v: self.scale_bar_opacity_value.setText(f"{v}%"))
+        self.scale_bar_opacity_slider.valueChanged.connect(
+            lambda v: self.scale_bar_opacity_value.setText(f"{v}%")
+        )
         bar_layout.addRow("Opacity:", self.scale_bar_opacity_slider)
         bar_layout.addRow("", self.scale_bar_opacity_value)
 
@@ -330,11 +394,15 @@ class SettingsDialog(QDialog):
         display_layout = QFormLayout()
 
         self.indicator_display_check = QCheckBox("Show on screen")
-        self.indicator_display_check.setToolTip("Display page indicator labels (e.g., P1) over each tile in the preview.")
+        self.indicator_display_check.setToolTip(
+            "Display page indicator labels (e.g., P1) over each tile in the preview."
+        )
         display_layout.addRow(self.indicator_display_check)
 
         self.indicator_print_check = QCheckBox("Include when printing")
-        self.indicator_print_check.setToolTip("Include page indicator labels when printing/exporting.")
+        self.indicator_print_check.setToolTip(
+            "Include page indicator labels when printing/exporting."
+        )
         display_layout.addRow(self.indicator_print_check)
 
         display_group.setLayout(display_layout)
@@ -346,10 +414,12 @@ class SettingsDialog(QDialog):
 
         # Position
         self.position_combo = QComboBox()
-        self.position_combo.addItems([
-            "upper-left", "upper-right", "bottom-left", "bottom-right", "center-page"
-        ])
-        self.position_combo.setToolTip("Where to place the page indicator label within the printable area.")
+        self.position_combo.addItems(
+            ["upper-left", "upper-right", "bottom-left", "bottom-right", "center-page"]
+        )
+        self.position_combo.setToolTip(
+            "Where to place the page indicator label within the printable area."
+        )
         style_layout.addRow("Position:", self.position_combo)
 
         # Font size
@@ -370,7 +440,9 @@ class SettingsDialog(QDialog):
         self.color_button = QPushButton()
         self.color_button.setFixedSize(50, 30)
         self.color_button.clicked.connect(self.choose_color)
-        self.color_button.setToolTip("Choose the font color for the page indicator label.")
+        self.color_button.setToolTip(
+            "Choose the font color for the page indicator label."
+        )
         color_layout.addWidget(self.color_button)
         color_layout.addStretch()
         style_layout.addRow("Font Color:", color_layout)
@@ -380,8 +452,12 @@ class SettingsDialog(QDialog):
         self.alpha_slider = QSlider(Qt.Horizontal)
         self.alpha_slider.setRange(0, 255)
         self.alpha_label = QLabel("255")
-        self.alpha_slider.valueChanged.connect(lambda v: self.alpha_label.setText(str(v)))
-        self.alpha_slider.setToolTip("Opacity of the page indicator label (0 = transparent, 255 = opaque).")
+        self.alpha_slider.valueChanged.connect(
+            lambda v: self.alpha_label.setText(str(v))
+        )
+        self.alpha_slider.setToolTip(
+            "Opacity of the page indicator label (0 = transparent, 255 = opaque)."
+        )
         alpha_layout.addWidget(self.alpha_slider)
         alpha_layout.addWidget(self.alpha_label)
         style_layout.addRow("Opacity:", alpha_layout)
@@ -403,13 +479,17 @@ class SettingsDialog(QDialog):
         metadata_layout = QFormLayout()
 
         self.metadata_include_check = QCheckBox("Include metadata page in tile exports")
-        self.metadata_include_check.setToolTip("Add a summary page with scale, DPI, timestamp, and document information")
+        self.metadata_include_check.setToolTip(
+            "Add a summary page with scale, DPI, timestamp, and document information"
+        )
         metadata_layout.addRow(self.metadata_include_check)
 
         # Position
         self.metadata_position_combo = QComboBox()
         self.metadata_position_combo.addItems(["first", "last"])
-        self.metadata_position_combo.setToolTip("Position of metadata page in the exported tile set")
+        self.metadata_position_combo.setToolTip(
+            "Position of metadata page in the exported tile set"
+        )
         metadata_layout.addRow("Position:", self.metadata_position_combo)
 
         metadata_group.setLayout(metadata_layout)
@@ -425,11 +505,13 @@ class SettingsDialog(QDialog):
         layout = QFormLayout()
 
         self.project_storage_combo = QComboBox()
-        self.project_storage_combo.addItems([
-            "reference",  # .otproj references original on disk
-            "sidecar",    # .otproj + <name>.dat holds compressed original
-            "embedded",   # .otprjz embeds original
-        ])
+        self.project_storage_combo.addItems(
+            [
+                "reference",  # .otproj references original on disk
+                "sidecar",  # .otproj + <name>.dat holds compressed original
+                "embedded",  # .otprjz embeds original
+            ]
+        )
         self.project_storage_combo.setToolTip(
             "How to store the original file with a project: reference only, compressed sidecar, or embedded in a zip project."
         )
@@ -445,12 +527,16 @@ class SettingsDialog(QDialog):
 
         # Enable logging
         self.logging_enabled_check = QCheckBox("Enable logging")
-        self.logging_enabled_check.setToolTip("Turn on application logging. Errors are always allowed; other levels honor per-component toggles.")
+        self.logging_enabled_check.setToolTip(
+            "Turn on application logging. Errors are always allowed; other levels honor per-component toggles."
+        )
         layout.addRow(self.logging_enabled_check)
 
         # Level
         self.logging_level_combo = QComboBox()
-        self.logging_level_combo.addItems(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"])
+        self.logging_level_combo.addItems(
+            ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+        )
         self.logging_level_combo.setToolTip("Minimum log level to emit.")
         layout.addRow("Log Level:", self.logging_level_combo)
 
@@ -505,7 +591,9 @@ class SettingsDialog(QDialog):
         self.page_size_combo.setCurrentText(config.get_default_page_size())
         self.max_recent_spin.setValue(config.get_max_recent_files())
         self.max_recent_projects_spin.setValue(config.get_max_recent_projects())
-        self.open_last_project_check.setChecked(config.get_open_last_project_on_startup())
+        self.open_last_project_check.setChecked(
+            config.get_open_last_project_on_startup()
+        )
 
         # Tiling settings
         self.gutter_size_spin.setValue(config.get_gutter_size_mm())
@@ -534,7 +622,9 @@ class SettingsDialog(QDialog):
         self.scale_text_display_check.setChecked(config.get_scale_text_display())
         self.scale_text_print_check.setChecked(config.get_scale_text_print())
         # Measurement convenience reflects both line+text print enabled
-        self.measure_print_check.setChecked(bool(config.get_scale_line_print() and config.get_scale_text_print()))
+        self.measure_print_check.setChecked(
+            bool(config.get_scale_line_print() and config.get_scale_text_print())
+        )
 
         # Page indicator settings
         self.indicator_display_check.setChecked(config.get_page_indicator_display())
@@ -565,13 +655,23 @@ class SettingsDialog(QDialog):
         # Logging settings
         self.logging_enabled_check.setChecked(config.get_logging_enabled())
         self.logging_level_combo.setCurrentText(config.get_logging_level())
-        self.log_printing_check.setChecked(config.get_logging_component_enabled('printing'))
-        self.log_projects_check.setChecked(config.get_logging_component_enabled('projects'))
-        self.log_preview_check.setChecked(config.get_logging_component_enabled('preview'))
-        self.log_viewer_check.setChecked(config.get_logging_component_enabled('viewer'))
-        self.log_export_check.setChecked(config.get_logging_component_enabled('export'))
-        self.log_metadata_check.setChecked(config.get_logging_component_enabled('metadata'))
-        self.log_settings_check.setChecked(config.get_logging_component_enabled('settings'))
+        self.log_printing_check.setChecked(
+            config.get_logging_component_enabled("printing")
+        )
+        self.log_projects_check.setChecked(
+            config.get_logging_component_enabled("projects")
+        )
+        self.log_preview_check.setChecked(
+            config.get_logging_component_enabled("preview")
+        )
+        self.log_viewer_check.setChecked(config.get_logging_component_enabled("viewer"))
+        self.log_export_check.setChecked(config.get_logging_component_enabled("export"))
+        self.log_metadata_check.setChecked(
+            config.get_logging_component_enabled("metadata")
+        )
+        self.log_settings_check.setChecked(
+            config.get_logging_component_enabled("settings")
+        )
 
         # Datum line settings
         self.datum_display_check.setChecked(config.get_datum_line_display())
@@ -601,7 +701,9 @@ class SettingsDialog(QDialog):
         config.set_default_page_size(self.page_size_combo.currentText())
         config.set_max_recent_files(self.max_recent_spin.value())
         config.set_max_recent_projects(self.max_recent_projects_spin.value())
-        config.set_open_last_project_on_startup(self.open_last_project_check.isChecked())
+        config.set_open_last_project_on_startup(
+            self.open_last_project_check.isChecked()
+        )
 
         # Tiling settings
         config.set_gutter_size_mm(self.gutter_size_spin.value())
@@ -624,7 +726,7 @@ class SettingsDialog(QDialog):
 
         # Save length according to units
         units = config.get_default_units()
-        if units == 'inches':
+        if units == "inches":
             # Slider step = 0.5 inch; store as inches
             half_in = self.scale_bar_length_slider.value() / 2.0
             config.set_scale_bar_length_in(half_in)
@@ -636,13 +738,27 @@ class SettingsDialog(QDialog):
         # Logging settings
         config.set_logging_enabled(self.logging_enabled_check.isChecked())
         config.set_logging_level(self.logging_level_combo.currentText())
-        config.set_logging_component_enabled('printing', self.log_printing_check.isChecked())
-        config.set_logging_component_enabled('projects', self.log_projects_check.isChecked())
-        config.set_logging_component_enabled('preview', self.log_preview_check.isChecked())
-        config.set_logging_component_enabled('viewer', self.log_viewer_check.isChecked())
-        config.set_logging_component_enabled('export', self.log_export_check.isChecked())
-        config.set_logging_component_enabled('metadata', self.log_metadata_check.isChecked())
-        config.set_logging_component_enabled('settings', self.log_settings_check.isChecked())
+        config.set_logging_component_enabled(
+            "printing", self.log_printing_check.isChecked()
+        )
+        config.set_logging_component_enabled(
+            "projects", self.log_projects_check.isChecked()
+        )
+        config.set_logging_component_enabled(
+            "preview", self.log_preview_check.isChecked()
+        )
+        config.set_logging_component_enabled(
+            "viewer", self.log_viewer_check.isChecked()
+        )
+        config.set_logging_component_enabled(
+            "export", self.log_export_check.isChecked()
+        )
+        config.set_logging_component_enabled(
+            "metadata", self.log_metadata_check.isChecked()
+        )
+        config.set_logging_component_enabled(
+            "settings", self.log_settings_check.isChecked()
+        )
 
         # Project settings
         config.set_project_original_storage(self.project_storage_combo.currentText())
@@ -655,7 +771,7 @@ class SettingsDialog(QDialog):
         config.set_datum_line_color(self.datum_color.name())
 
         # Measurement print convenience: if toggled, set both underlying options
-        if hasattr(self, 'measure_print_check'):
+        if hasattr(self, "measure_print_check"):
             want = bool(self.measure_print_check.isChecked())
             config.set_scale_line_print(want)
             config.set_scale_text_print(want)
@@ -667,13 +783,15 @@ class SettingsDialog(QDialog):
             self.update_datum_color_button()
 
     def update_datum_color_button(self):
-        if hasattr(self, 'datum_color') and self.datum_color:
-            self.datum_color_button.setStyleSheet(f"background-color: {self.datum_color.name()}; border: 1px solid #888;")
+        if hasattr(self, "datum_color") and self.datum_color:
+            self.datum_color_button.setStyleSheet(
+                f"background-color: {self.datum_color.name()}; border: 1px solid #888;"
+            )
 
     def _configure_scale_bar_length_slider(self):
         """Configure the scale bar length slider according to current units."""
         units = config.get_default_units()
-        if units == 'inches':
+        if units == "inches":
             # Range 1–24 inches, step 0.5; encode as halves
             self.scale_bar_length_slider.setRange(2, 48)
             self.scale_bar_length_slider.setSingleStep(1)
@@ -699,9 +817,7 @@ class SettingsDialog(QDialog):
         """Browse for default input directory."""
         current_dir = self.input_dir_edit.text() or os.path.expanduser("~")
         directory = QFileDialog.getExistingDirectory(
-            self,
-            "Select Default Input Directory",
-            current_dir
+            self, "Select Default Input Directory", current_dir
         )
         if directory:
             self.input_dir_edit.setText(directory)
@@ -710,9 +826,7 @@ class SettingsDialog(QDialog):
         """Browse for default output directory."""
         current_dir = self.output_dir_edit.text() or os.path.expanduser("~")
         directory = QFileDialog.getExistingDirectory(
-            self,
-            "Select Default Output Directory",
-            current_dir
+            self, "Select Default Output Directory", current_dir
         )
         if directory:
             self.output_dir_edit.setText(directory)

@@ -2,12 +2,12 @@
 Floating page viewer dialog for inspecting individual tiles.
 """
 
-from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QScrollArea, QFrame, QSizePolicy
-)
-from PySide6.QtCore import Qt, QPoint, QRect
-from PySide6.QtGui import QPixmap, QPainter, QCursor, QKeySequence, QShortcut, QPen, QColor, QFont
+from PySide6.QtCore import QPoint, QRect, Qt
+from PySide6.QtGui import (QColor, QCursor, QFont, QKeySequence, QPainter,
+                           QPen, QPixmap, QShortcut)
+from PySide6.QtWidgets import (QDialog, QFrame, QHBoxLayout, QLabel,
+                               QPushButton, QScrollArea, QSizePolicy,
+                               QVBoxLayout)
 
 from ..viewer.viewer import PanScrollArea
 
@@ -66,7 +66,8 @@ class PageViewerDialog(QDialog):
 
         toolbar_widget = QFrame()
         toolbar_widget.setLayout(toolbar_layout)
-        toolbar_widget.setStyleSheet("""
+        toolbar_widget.setStyleSheet(
+            """
             QFrame {
                 background-color: #2b2b2b;
                 padding: 5px;
@@ -91,7 +92,8 @@ class PageViewerDialog(QDialog):
                 color: white;
                 font-weight: bold;
             }
-        """)
+        """
+        )
         layout.addWidget(toolbar_widget)
 
         # Create custom scroll area with panning support
@@ -105,7 +107,9 @@ class PageViewerDialog(QDialog):
         # Create image label
         self.image_label = QLabel()
         self.image_label.setAlignment(Qt.AlignCenter)
-        self.image_label.setStyleSheet("border: 1px solid gray; background-color: white;")
+        self.image_label.setStyleSheet(
+            "border: 1px solid gray; background-color: white;"
+        )
         self.image_label.setText("No page loaded")
         self.image_label.setMinimumSize(400, 300)
         self.image_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -132,7 +136,14 @@ class PageViewerDialog(QDialog):
         zoom_100_shortcut = QShortcut(QKeySequence("Ctrl+1"), self)
         zoom_100_shortcut.activated.connect(self.zoom_100)
 
-    def show_page(self, page_pixmap, page_number, page_info=None, scale_info=None, measurements=None):
+    def show_page(
+        self,
+        page_pixmap,
+        page_number,
+        page_info=None,
+        scale_info=None,
+        measurements=None,
+    ):
         """Show a specific page in the viewer."""
         self.current_page_pixmap = page_pixmap.copy()
         self.page_info = page_info
@@ -146,9 +157,9 @@ class PageViewerDialog(QDialog):
         else:
             title = f"Page {page_number}"
 
-        if page_info and page_info.get('type') != 'metadata':
+        if page_info and page_info.get("type") != "metadata":
             title += f" - {page_info.get('width', 0):.0f}x{page_info.get('height', 0):.0f} pixels"
-        elif page_info and page_info.get('type') == 'metadata':
+        elif page_info and page_info.get("type") == "metadata":
             title += f" - {page_info.get('width', 0):.0f}x{page_info.get('height', 0):.0f} pixels"
 
         self.title_label.setText(title)
@@ -183,7 +194,7 @@ class PageViewerDialog(QDialog):
             return pixmap
 
         # Skip scale overlay for metadata pages
-        if self.page_info.get('type') == 'metadata':
+        if self.page_info.get("type") == "metadata":
             return pixmap
 
         # Import config here to avoid circular imports
@@ -194,24 +205,28 @@ class PageViewerDialog(QDialog):
             return pixmap
 
         # Extract scale information
-        point1 = self.scale_info.get('point1')
-        point2 = self.scale_info.get('point2')
-        measurement_text = self.scale_info.get('measurement_text', '')
+        point1 = self.scale_info.get("point1")
+        point2 = self.scale_info.get("point2")
+        measurement_text = self.scale_info.get("measurement_text", "")
 
         if not (point1 and point2):
             return pixmap
 
         # Get page boundaries in document coordinates
-        page_x = self.page_info['x']
-        page_y = self.page_info['y']
-        page_doc_width = self.page_info['width']
-        page_doc_height = self.page_info['height']
+        page_x = self.page_info["x"]
+        page_y = self.page_info["y"]
+        page_doc_width = self.page_info["width"]
+        page_doc_height = self.page_info["height"]
 
         # Check if either scaling point is within this page
-        p1_in_page = (page_x <= point1[0] <= page_x + page_doc_width and
-                      page_y <= point1[1] <= page_y + page_doc_height)
-        p2_in_page = (page_x <= point2[0] <= page_x + page_doc_width and
-                      page_y <= point2[1] <= page_y + page_doc_height)
+        p1_in_page = (
+            page_x <= point1[0] <= page_x + page_doc_width
+            and page_y <= point1[1] <= page_y + page_doc_height
+        )
+        p2_in_page = (
+            page_x <= point2[0] <= page_x + page_doc_width
+            and page_y <= point2[1] <= page_y + page_doc_height
+        )
 
         # Check if the line crosses this page (simple bounding box check)
         line_left = min(point1[0], point2[0])
@@ -222,8 +237,12 @@ class PageViewerDialog(QDialog):
         page_right = page_x + page_doc_width
         page_bottom = page_y + page_doc_height
 
-        line_crosses_page = not (line_right < page_x or line_left > page_right or
-                               line_bottom < page_y or line_top > page_bottom)
+        line_crosses_page = not (
+            line_right < page_x
+            or line_left > page_right
+            or line_bottom < page_y
+            or line_top > page_bottom
+        )
 
         if not (p1_in_page or p2_in_page or line_crosses_page):
             return pixmap
@@ -259,19 +278,22 @@ class PageViewerDialog(QDialog):
 
         # Draw datum line
         if config.get_datum_line_display():
-            datum_pen = QPen(QColor(config.get_datum_line_color()), max(1, config.get_datum_line_width_px()+1))
+            datum_pen = QPen(
+                QColor(config.get_datum_line_color()),
+                max(1, config.get_datum_line_width_px() + 1),
+            )
             style = str(config.get_datum_line_style()).lower()
-            if style == 'solid':
+            if style == "solid":
                 datum_pen.setStyle(Qt.SolidLine)
-            elif style == 'dash':
+            elif style == "dash":
                 datum_pen.setStyle(Qt.DashLine)
-            elif style == 'dot':
+            elif style == "dot":
                 datum_pen.setStyle(Qt.DotLine)
-            elif style == 'dashdot':
+            elif style == "dashdot":
                 datum_pen.setStyle(Qt.DashDotLine)
-            elif style == 'dashdotdot':
+            elif style == "dashdotdot":
                 datum_pen.setStyle(Qt.DashDotDotLine)
-            elif style == 'dot-dash-dot':
+            elif style == "dot-dash-dot":
                 datum_pen.setStyle(Qt.CustomDashLine)
                 datum_pen.setDashPattern([10, 4, 2, 4, 2, 4])
             painter.setPen(datum_pen)
@@ -309,8 +331,12 @@ class PageViewerDialog(QDialog):
 
                 # Draw background rectangle for better visibility
                 bg_rect = text_rect.adjusted(-5, -2, 5, 2)
-                bg_rect.moveTopLeft(QPoint(int(text_x - 5), int(text_y - text_rect.height() - 2)))
-                painter.fillRect(bg_rect, QColor(255, 255, 255, 200))  # Semi-transparent white
+                bg_rect.moveTopLeft(
+                    QPoint(int(text_x - 5), int(text_y - text_rect.height() - 2))
+                )
+                painter.fillRect(
+                    bg_rect, QColor(255, 255, 255, 200)
+                )  # Semi-transparent white
 
                 # Draw the measurement text
                 painter.drawText(int(text_x), int(text_y), measurement_text)
@@ -321,23 +347,32 @@ class PageViewerDialog(QDialog):
     def _add_measurements_overlay(self, pixmap):
         """Draw all measurement overlays that intersect this page."""
         try:
-            if not getattr(self, 'measurements', None) or not self.page_info:
+            if not getattr(self, "measurements", None) or not self.page_info:
                 return pixmap
             # Skip for metadata pages
-            if self.page_info.get('type') == 'metadata':
+            if self.page_info.get("type") == "metadata":
                 return pixmap
-            page_x = self.page_info['x']; page_y = self.page_info['y']
-            page_w = self.page_info['width']; page_h = self.page_info['height']
+            page_x = self.page_info["x"]
+            page_y = self.page_info["y"]
+            page_w = self.page_info["width"]
+            page_h = self.page_info["height"]
             result = QPixmap(pixmap)
             painter = QPainter(result)
             for m in self.measurements:
-                p1 = m.get('p1'); p2 = m.get('p2'); label = m.get('text', '')
+                p1 = m.get("p1")
+                p2 = m.get("p2")
+                label = m.get("text", "")
                 if not (p1 and p2):
                     continue
                 # bbox intersect
                 minx, maxx = min(p1[0], p2[0]), max(p1[0], p2[0])
                 miny, maxy = min(p1[1], p2[1]), max(p1[1], p2[1])
-                if maxx < page_x or minx > page_x + page_w or maxy < page_y or miny > page_y + page_h:
+                if (
+                    maxx < page_x
+                    or minx > page_x + page_w
+                    or maxy < page_y
+                    or miny > page_y + page_h
+                ):
                     continue
                 # Map to page pixmap coords
                 sx = pixmap.width() / page_w
@@ -359,23 +394,28 @@ class PageViewerDialog(QDialog):
                 painter.drawEllipse(int(p2x - 4), int(p2y - 4), 8, 8)
                 # Label
                 if label:
-                    font = painter.font(); font.setPointSize(14); font.setBold(True)
+                    font = painter.font()
+                    font.setPointSize(14)
+                    font.setBold(True)
                     painter.setFont(font)
                     painter.setPen(QPen(QColor(255, 0, 0), 1))
-                    midx = (p1x + p2x) / 2; midy = (p1y + p2y) / 2
-                    dx = (p2x - p1x); dy = (p2y - p1y); dist = max(1.0, (dx*dx + dy*dy) ** 0.5)
+                    midx = (p1x + p2x) / 2
+                    midy = (p1y + p2y) / 2
+                    dx = p2x - p1x
+                    dy = p2y - p1y
+                    dist = max(1.0, (dx * dx + dy * dy) ** 0.5)
                     if dist > 1:
-                        ux, uy = dx/dist, dy/dist
+                        ux, uy = dx / dist, dy / dist
                         px, py = -uy, ux
                     else:
                         px, py = 0, -1
                     text_rect = painter.fontMetrics().boundingRect(label)
                     if dist >= (text_rect.width() + 18):
-                        tx = midx - text_rect.width()/2 + px*14
-                        ty = midy + py*14
+                        tx = midx - text_rect.width() / 2 + px * 14
+                        ty = midy + py * 14
                     else:
-                        tx = p2x - text_rect.width()/2 + px*14
-                        ty = p2y + py*14 - text_rect.height()/2
+                        tx = p2x - text_rect.width() / 2 + px * 14
+                        ty = p2y + py * 14 - text_rect.height() / 2
                     bg = text_rect.adjusted(-5, -3, 5, 3)
                     bg.moveTopLeft(QPoint(int(tx - 5), int(ty - 3)))
                     painter.fillRect(bg, QColor(255, 255, 255, 200))
@@ -433,7 +473,15 @@ class PageViewerDialog(QDialog):
 class ClickablePageThumbnail(QLabel):
     """A clickable page thumbnail that opens in the page viewer."""
 
-    def __init__(self, page_pixmap, page_number, page_info, parent=None, scale_info=None, measurements=None):
+    def __init__(
+        self,
+        page_pixmap,
+        page_number,
+        page_info,
+        parent=None,
+        scale_info=None,
+        measurements=None,
+    ):
         super().__init__(parent)
         self.page_pixmap = page_pixmap
         self.page_number = page_number
@@ -480,6 +528,12 @@ class ClickablePageThumbnail(QLabel):
         if not self.page_viewer:
             self.page_viewer = PageViewerDialog(self.parent())
 
-        self.page_viewer.show_page(self.page_pixmap, self.page_number, self.page_info, self.scale_info, self.measurements)
+        self.page_viewer.show_page(
+            self.page_pixmap,
+            self.page_number,
+            self.page_info,
+            self.scale_info,
+            self.measurements,
+        )
         self.page_viewer.raise_()
         self.page_viewer.activateWindow()

@@ -14,12 +14,12 @@ Usage:
     python build_installer.py --all
 """
 
-import sys
+import argparse
 import os
 import platform
-import subprocess
 import shutil
-import argparse
+import subprocess
+import sys
 from pathlib import Path
 
 # Project information
@@ -29,14 +29,15 @@ PROJECT_AUTHOR = "Randall Morgan"
 PROJECT_DESCRIPTION = "Professional Document Scaling and Tiling Application"
 PROJECT_URL = "https://github.com/Monotoba/OpenTiler"
 
+
 class InstallerBuilder:
     """Build platform-specific installers for OpenTiler."""
-    
+
     def __init__(self):
         self.project_root = Path(__file__).parent
         self.build_dir = self.project_root / "build"
         self.dist_dir = self.project_root / "dist"
-        
+
     def clean_build_dirs(self):
         """Clean previous build directories."""
         print("🧹 Cleaning build directories...")
@@ -44,11 +45,11 @@ class InstallerBuilder:
             if dir_path.exists():
                 shutil.rmtree(dir_path)
             dir_path.mkdir(exist_ok=True)
-    
+
     def install_build_dependencies(self, platform_name):
         """Install platform-specific build dependencies."""
         print(f"📦 Installing build dependencies for {platform_name}...")
-        
+
         if platform_name == "windows":
             deps = ["cx_Freeze", "pyinstaller"]
         elif platform_name == "macos":
@@ -57,35 +58,44 @@ class InstallerBuilder:
             deps = ["pyinstaller"]
         else:
             deps = []
-            
+
         for dep in deps:
             try:
-                subprocess.run([sys.executable, "-m", "pip", "install", dep], 
-                             check=True, capture_output=True)
+                subprocess.run(
+                    [sys.executable, "-m", "pip", "install", dep],
+                    check=True,
+                    capture_output=True,
+                )
                 print(f"  ✅ Installed {dep}")
             except subprocess.CalledProcessError as e:
                 print(f"  ❌ Failed to install {dep}: {e}")
                 return False
         return True
-    
+
     def build_windows_msi(self):
         """Build Windows MSI installer using cx_Freeze."""
         print("🏗️ Building Windows MSI installer...")
-        
+
         # Create cx_Freeze setup script
         setup_script = self.create_cx_freeze_setup()
-        
+
         try:
             # Build the MSI
             cmd = [
-                sys.executable, setup_script, 
-                "build", "--build-exe", str(self.build_dir / "exe"),
-                "bdist_msi", "--dist-dir", str(self.dist_dir)
+                sys.executable,
+                setup_script,
+                "build",
+                "--build-exe",
+                str(self.build_dir / "exe"),
+                "bdist_msi",
+                "--dist-dir",
+                str(self.dist_dir),
             ]
-            
-            result = subprocess.run(cmd, cwd=self.project_root, 
-                                  capture_output=True, text=True)
-            
+
+            result = subprocess.run(
+                cmd, cwd=self.project_root, capture_output=True, text=True
+            )
+
             if result.returncode == 0:
                 print("  ✅ MSI installer created successfully!")
                 msi_files = list(self.dist_dir.glob("*.msi"))
@@ -95,11 +105,11 @@ class InstallerBuilder:
             else:
                 print(f"  ❌ MSI build failed: {result.stderr}")
                 return False
-                
+
         except Exception as e:
             print(f"  ❌ MSI build error: {e}")
             return False
-    
+
     def create_cx_freeze_setup(self):
         """Create cx_Freeze setup script for Windows MSI."""
         setup_content = f'''#!/usr/bin/env python3
@@ -162,47 +172,51 @@ setup(
     executables=executables,
 )
 '''
-        
+
         setup_file = self.project_root / "setup_cx_freeze.py"
-        with open(setup_file, 'w') as f:
+        with open(setup_file, "w") as f:
             f.write(setup_content)
-        
+
         return str(setup_file)
-    
+
     def build_pyinstaller_exe(self):
         """Build standalone executable using PyInstaller."""
         print("🏗️ Building PyInstaller executable...")
-        
+
         spec_content = self.create_pyinstaller_spec()
         spec_file = self.project_root / "opentiler.spec"
-        
-        with open(spec_file, 'w') as f:
+
+        with open(spec_file, "w") as f:
             f.write(spec_content)
-        
+
         try:
             cmd = [
-                sys.executable, "-m", "PyInstaller",
-                "--clean", "--noconfirm",
-                str(spec_file)
+                sys.executable,
+                "-m",
+                "PyInstaller",
+                "--clean",
+                "--noconfirm",
+                str(spec_file),
             ]
-            
-            result = subprocess.run(cmd, cwd=self.project_root,
-                                  capture_output=True, text=True)
-            
+
+            result = subprocess.run(
+                cmd, cwd=self.project_root, capture_output=True, text=True
+            )
+
             if result.returncode == 0:
                 print("  ✅ PyInstaller executable created successfully!")
                 return True
             else:
                 print(f"  ❌ PyInstaller build failed: {result.stderr}")
                 return False
-                
+
         except Exception as e:
             print(f"  ❌ PyInstaller build error: {e}")
             return False
-    
+
     def create_pyinstaller_spec(self):
         """Create PyInstaller spec file."""
-        return f'''# -*- mode: python ; coding: utf-8 -*-
+        return f"""# -*- mode: python ; coding: utf-8 -*-
 
 block_cipher = None
 
@@ -270,31 +284,42 @@ coll = COLLECT(
     upx_exclude=[],
     name='{PROJECT_NAME}',
 )
-'''
+"""
+
 
 def main():
     """Main installer builder function."""
     parser = argparse.ArgumentParser(description="Build OpenTiler installers")
-    parser.add_argument("--platform", choices=["windows", "macos", "linux", "all"],
-                       default="windows", help="Target platform")
-    parser.add_argument("--method", choices=["cx_freeze", "pyinstaller"],
-                       default="cx_freeze", help="Build method for Windows")
-    parser.add_argument("--clean", action="store_true", help="Clean build directories first")
-    
+    parser.add_argument(
+        "--platform",
+        choices=["windows", "macos", "linux", "all"],
+        default="windows",
+        help="Target platform",
+    )
+    parser.add_argument(
+        "--method",
+        choices=["cx_freeze", "pyinstaller"],
+        default="cx_freeze",
+        help="Build method for Windows",
+    )
+    parser.add_argument(
+        "--clean", action="store_true", help="Clean build directories first"
+    )
+
     args = parser.parse_args()
-    
+
     builder = InstallerBuilder()
-    
+
     if args.clean:
         builder.clean_build_dirs()
-    
+
     print(f"🚀 Building OpenTiler installer for {args.platform}...")
-    
+
     if args.platform in ["windows", "all"]:
         if not builder.install_build_dependencies("windows"):
             print("❌ Failed to install Windows build dependencies")
             return 1
-            
+
         if args.method == "cx_freeze":
             if not builder.build_windows_msi():
                 print("❌ Windows MSI build failed")
@@ -303,9 +328,10 @@ def main():
             if not builder.build_pyinstaller_exe():
                 print("❌ PyInstaller build failed")
                 return 1
-    
+
     print("🎉 Installer build completed successfully!")
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())

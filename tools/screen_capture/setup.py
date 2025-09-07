@@ -3,17 +3,20 @@
 Setup script for Cross-Platform Screen Capture Tool
 """
 
-from setuptools import setup, find_packages
 from pathlib import Path
+
+from setuptools import find_packages, setup
 
 # Read the README file
 this_directory = Path(__file__).parent
-long_description = (this_directory / "README.md").read_text(encoding='utf-8')
+long_description = (this_directory / "README.md").read_text(encoding="utf-8")
 
 # Read requirements
 requirements = []
-with open('requirements.txt') as f:
-    requirements = [line.strip() for line in f if line.strip() and not line.startswith('#')]
+with open("requirements.txt") as f:
+    requirements = [
+        line.strip() for line in f if line.strip() and not line.startswith("#")
+    ]
 
 setup(
     name="screen-capture-tool",

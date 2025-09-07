@@ -7,17 +7,19 @@ This module defines the base plugin interface that all OpenTiler plugins must im
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Dict, Any, Optional, List
-from PySide6.QtCore import QObject, Signal
-from PySide6.QtWidgets import QWidget, QMenu
-from PySide6.QtGui import QAction
+from typing import Any, Dict, List, Optional
 
-from .hook_system import HookHandler, HookType, HookContext, get_hook_manager
+from PySide6.QtCore import QObject, Signal
+from PySide6.QtGui import QAction
+from PySide6.QtWidgets import QMenu, QWidget
+
+from .hook_system import HookContext, HookHandler, HookType, get_hook_manager
 
 
 @dataclass
 class PluginInfo:
     """Plugin metadata information."""
+
     name: str
     version: str
     description: str
@@ -175,12 +177,12 @@ class BasePlugin(QObject):
             - 'transformations': Access to transformation data
         """
         return {
-            'plan_view': False,
-            'tile_preview': False,
-            'document_data': False,
-            'metadata': False,
-            'measurements': False,
-            'transformations': False
+            "plan_view": False,
+            "tile_preview": False,
+            "document_data": False,
+            "metadata": False,
+            "measurements": False,
+            "transformations": False,
         }
 
     def handle_document_loaded(self, document_path: str) -> None:
@@ -270,9 +272,11 @@ class PluginException(Exception):
 
 class PluginLoadError(PluginException):
     """Exception raised when plugin fails to load."""
+
     pass
 
 
 class PluginInitError(PluginException):
     """Exception raised when plugin fails to initialize."""
+
     pass

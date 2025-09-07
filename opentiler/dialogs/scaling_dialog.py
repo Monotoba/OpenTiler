@@ -2,13 +2,11 @@
 Scaling dialog for OpenTiler.
 """
 
-from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
-    QLabel, QLineEdit, QPushButton, QComboBox,
-    QGroupBox, QMessageBox, QApplication
-)
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QDoubleValidator
+from PySide6.QtWidgets import (QApplication, QComboBox, QDialog, QFormLayout,
+                               QGroupBox, QHBoxLayout, QLabel, QLineEdit,
+                               QMessageBox, QPushButton, QVBoxLayout)
 
 
 class ScalingDialog(QDialog):
@@ -136,7 +134,7 @@ class ScalingDialog(QDialog):
         if self.point1 and self.point2:
             dx = self.point2[0] - self.point1[0]
             dy = self.point2[1] - self.point1[1]
-            distance = (dx**2 + dy**2)**0.5
+            distance = (dx**2 + dy**2) ** 0.5
             self.distance_label.setText(f"{distance:.1f} pixels")
             self.update_scale_preview()
         else:
@@ -153,7 +151,7 @@ class ScalingDialog(QDialog):
             # Calculate pixel distance
             dx = self.point2[0] - self.point1[0]
             dy = self.point2[1] - self.point1[1]
-            pixel_distance = (dx**2 + dy**2)**0.5
+            pixel_distance = (dx**2 + dy**2) ** 0.5
 
             # Get real-world distance
             real_distance = float(self.distance_input.text())
@@ -176,14 +174,14 @@ class ScalingDialog(QDialog):
 
                 # Update measurement text in viewer
                 measurement_text = f"{real_distance} {units}"
-                if hasattr(self.parent(), 'document_viewer'):
+                if hasattr(self.parent(), "document_viewer"):
                     self.parent().document_viewer.set_measurement_text(measurement_text)
             else:
                 self.scale_preview_label.setText("Scale: Invalid values")
                 self.apply_button.setEnabled(False)
                 self.copy_scale_button.setEnabled(False)
                 # Clear measurement text from viewer
-                if hasattr(self.parent(), 'document_viewer'):
+                if hasattr(self.parent(), "document_viewer"):
                     self.parent().document_viewer.set_measurement_text("")
 
         except ValueError:
@@ -191,20 +189,22 @@ class ScalingDialog(QDialog):
             self.apply_button.setEnabled(False)
             self.copy_scale_button.setEnabled(False)
             # Clear measurement text from viewer
-            if hasattr(self.parent(), 'document_viewer'):
+            if hasattr(self.parent(), "document_viewer"):
                 self.parent().document_viewer.set_measurement_text("")
 
     def apply_scale(self):
         """Apply the calculated scale."""
         if not (self.point1 and self.point2 and self.distance_input.text()):
-            QMessageBox.warning(self, "Warning", "Please select two points and enter a distance.")
+            QMessageBox.warning(
+                self, "Warning", "Please select two points and enter a distance."
+            )
             return
 
         try:
             # Calculate pixel distance
             dx = self.point2[0] - self.point1[0]
             dy = self.point2[1] - self.point1[1]
-            pixel_distance = (dx**2 + dy**2)**0.5
+            pixel_distance = (dx**2 + dy**2) ** 0.5
 
             # Get real-world distance
             real_distance = float(self.distance_input.text())
@@ -229,7 +229,7 @@ class ScalingDialog(QDialog):
             # Calculate pixel distance
             dx = self.point2[0] - self.point1[0]
             dy = self.point2[1] - self.point1[1]
-            pixel_distance = (dx**2 + dy**2)**0.5
+            pixel_distance = (dx**2 + dy**2) ** 0.5
 
             # Get real-world distance
             real_distance = float(self.distance_input.text())
@@ -246,7 +246,7 @@ class ScalingDialog(QDialog):
                     self,
                     "Scale Factor Copied",
                     f"Scale factor {scale:.6f} {units}/pixel copied to clipboard.\n\n"
-                    f"You can paste this value when scaling other documents."
+                    f"You can paste this value when scaling other documents.",
                 )
             else:
                 QMessageBox.warning(self, "Warning", "Invalid scale calculation.")
@@ -291,20 +291,20 @@ class ScalingDialog(QDialog):
         self.copy_scale_button.setEnabled(False)
 
         # Clear points in the viewer if parent has document viewer
-        if hasattr(self.parent(), 'document_viewer'):
+        if hasattr(self.parent(), "document_viewer"):
             self.parent().document_viewer.selected_points.clear()
             self.parent().document_viewer._update_display()
 
     def closeEvent(self, event):
         """Handle dialog close event."""
         # Disable point selection mode when dialog is closed
-        if hasattr(self.parent(), 'document_viewer'):
+        if hasattr(self.parent(), "document_viewer"):
             self.parent().document_viewer.set_point_selection_mode(False)
         super().closeEvent(event)
 
     def hideEvent(self, event):
         """Handle dialog hide event."""
         # Disable point selection mode when dialog is hidden
-        if hasattr(self.parent(), 'document_viewer'):
+        if hasattr(self.parent(), "document_viewer"):
             self.parent().document_viewer.set_point_selection_mode(False)
         super().hideEvent(event)

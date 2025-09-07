@@ -6,12 +6,13 @@ This module provides common fixtures and configuration for all OpenTiler tests,
 including plugin system tests.
 """
 
-import pytest
+import shutil
 import sys
 import tempfile
-import shutil
 from pathlib import Path
-from unittest.mock import Mock, MagicMock
+from unittest.mock import MagicMock, Mock
+
+import pytest
 
 # Add project root to Python path
 project_root = Path(__file__).parent.parent
@@ -20,11 +21,13 @@ sys.path.insert(0, str(project_root))
 # Import Qt application for GUI tests
 try:
     import os
-    # Set Qt platform to offscreen for headless testing
-    os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
-    from PySide6.QtWidgets import QApplication
+    # Set Qt platform to offscreen for headless testing
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
     from PySide6.QtCore import QCoreApplication
+    from PySide6.QtWidgets import QApplication
+
     QT_AVAILABLE = True
 except ImportError:
     QT_AVAILABLE = False
@@ -40,7 +43,7 @@ def qapp():
     app = QCoreApplication.instance()
     if app is None:
         # Create app with minimal arguments for testing
-        app = QApplication(['--platform', 'offscreen'])
+        app = QApplication(["--platform", "offscreen"])
 
     yield app
 
@@ -83,12 +86,12 @@ def mock_main_window():
     main_window.tile_preview = Mock()
     main_window.tile_preview.tile_count = 4
     main_window.tile_preview.get_tile_data.return_value = {
-        'position': (0, 0),
-        'bounds': Mock(),
-        'size': (200, 200),
-        'overlap': 10.0,
-        'page_size': (210.0, 297.0),
-        'export_settings': {}
+        "position": (0, 0),
+        "bounds": Mock(),
+        "size": (200, 200),
+        "overlap": 10.0,
+        "page_size": (210.0, 297.0),
+        "export_settings": {},
     }
 
     # Mock measurement system
@@ -110,33 +113,27 @@ def plugin_test_environment(temp_dir, mock_main_window):
     """Create complete plugin test environment."""
     # Create plugin directories
     plugin_dirs = {
-        'builtin': temp_dir / "plugins" / "builtin",
-        'external': temp_dir / "plugins" / "external",
-        'user': temp_dir / "config" / "plugins" / "user"
+        "builtin": temp_dir / "plugins" / "builtin",
+        "external": temp_dir / "plugins" / "external",
+        "user": temp_dir / "config" / "plugins" / "user",
     }
 
     for plugin_dir in plugin_dirs.values():
         plugin_dir.mkdir(parents=True, exist_ok=True)
 
     return {
-        'temp_dir': temp_dir,
-        'main_window': mock_main_window,
-        'plugin_dirs': plugin_dirs
+        "temp_dir": temp_dir,
+        "main_window": mock_main_window,
+        "plugin_dirs": plugin_dirs,
     }
 
 
 # Test markers
 def pytest_configure(config):
     """Configure pytest markers."""
-    config.addinivalue_line(
-        "markers", "integration: mark test as integration test"
-    )
-    config.addinivalue_line(
-        "markers", "gui: mark test as requiring GUI components"
-    )
-    config.addinivalue_line(
-        "markers", "slow: mark test as slow running"
-    )
+    config.addinivalue_line("markers", "integration: mark test as integration test")
+    config.addinivalue_line("markers", "gui: mark test as requiring GUI components")
+    config.addinivalue_line("markers", "slow: mark test as slow running")
 
 
 # Skip GUI tests if PySide6 not available

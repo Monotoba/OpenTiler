@@ -8,9 +8,10 @@ rendering, measurements, and transformations.
 """
 
 from abc import ABC, abstractmethod
-from enum import Enum
-from typing import Dict, List, Any, Optional, Callable, Union
 from dataclasses import dataclass
+from enum import Enum
+from typing import Any, Callable, Dict, List, Optional, Union
+
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QPainter, QTransform
 from PySide6.QtWidgets import QWidget
@@ -83,6 +84,7 @@ class HookType(Enum):
 @dataclass
 class HookContext:
     """Context information passed to hook handlers."""
+
     hook_type: HookType
     data: Dict[str, Any]
     source: Optional[str] = None
@@ -99,6 +101,7 @@ class HookContext:
 @dataclass
 class DocumentContext:
     """Context for document-related operations."""
+
     document_path: Optional[str] = None
     document_data: Optional[Any] = None
     document_type: Optional[str] = None
@@ -110,6 +113,7 @@ class DocumentContext:
 @dataclass
 class RenderContext:
     """Context for rendering operations."""
+
     painter: Optional[QPainter] = None
     transform: Optional[QTransform] = None
     viewport_rect: Optional[tuple] = None
@@ -122,6 +126,7 @@ class RenderContext:
 @dataclass
 class TileContext:
     """Context for tile operations."""
+
     tile_index: Optional[int] = None
     tile_position: Optional[tuple] = None
     tile_size: Optional[tuple] = None
@@ -135,6 +140,7 @@ class TileContext:
 @dataclass
 class MeasurementContext:
     """Context for measurement operations."""
+
     measurement_id: Optional[str] = None
     start_point: Optional[tuple] = None
     end_point: Optional[tuple] = None
@@ -150,6 +156,7 @@ class MeasurementContext:
 @dataclass
 class ViewContext:
     """Context for view operations."""
+
     zoom_level: Optional[float] = None
     pan_offset: Optional[tuple] = None
     rotation: Optional[float] = None
@@ -203,7 +210,9 @@ class HookManager(QObject):
         super().__init__()
 
         # Hook handlers organized by type
-        self.handlers: Dict[HookType, List[tuple]] = {}  # (handler, plugin_name, priority)
+        self.handlers: Dict[HookType, List[tuple]] = (
+            {}
+        )  # (handler, plugin_name, priority)
 
         # Hook execution statistics
         self.execution_stats: Dict[HookType, Dict[str, int]] = {}
@@ -261,7 +270,8 @@ class HookManager(QObject):
             for hook_type in handler.supported_hooks:
                 # Remove handler
                 self.handlers[hook_type] = [
-                    (h, name, priority) for h, name, priority in self.handlers[hook_type]
+                    (h, name, priority)
+                    for h, name, priority in self.handlers[hook_type]
                     if h != handler or name != plugin_name
                 ]
 
@@ -271,8 +281,13 @@ class HookManager(QObject):
             print(f"Failed to unregister hook handler for {plugin_name}: {e}")
             return False
 
-    def execute_hook(self, hook_type: HookType, context_data: Dict[str, Any],
-                    source: Optional[str] = None, can_cancel: bool = False) -> HookContext:
+    def execute_hook(
+        self,
+        hook_type: HookType,
+        context_data: Dict[str, Any],
+        source: Optional[str] = None,
+        can_cancel: bool = False,
+    ) -> HookContext:
         """
         Execute all handlers for a specific hook type.
 
@@ -294,7 +309,7 @@ class HookManager(QObject):
             source=source,
             timestamp=time.time(),
             can_cancel=can_cancel,
-            cancelled=False
+            cancelled=False,
         )
 
         # Execute handlers in priority order
@@ -355,17 +370,21 @@ def create_document_context(**kwargs) -> DocumentContext:
     """Create a document context with the provided parameters."""
     return DocumentContext(**kwargs)
 
+
 def create_render_context(**kwargs) -> RenderContext:
     """Create a render context with the provided parameters."""
     return RenderContext(**kwargs)
+
 
 def create_tile_context(**kwargs) -> TileContext:
     """Create a tile context with the provided parameters."""
     return TileContext(**kwargs)
 
+
 def create_measurement_context(**kwargs) -> MeasurementContext:
     """Create a measurement context with the provided parameters."""
     return MeasurementContext(**kwargs)
+
 
 def create_view_context(**kwargs) -> ViewContext:
     """Create a view context with the provided parameters."""
@@ -374,6 +393,7 @@ def create_view_context(**kwargs) -> ViewContext:
 
 # Global hook manager instance
 _hook_manager = None
+
 
 def get_hook_manager() -> HookManager:
     """Get the global hook manager instance."""

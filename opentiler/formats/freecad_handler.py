@@ -6,10 +6,11 @@ Handles import and export of FreeCAD files for CAD integration.
 import os
 import sys
 import tempfile
-import zipfile
 import xml.etree.ElementTree as ET
-from typing import Optional, Dict, Any
-from PySide6.QtGui import QPixmap, QPainter
+import zipfile
+from typing import Any, Dict, Optional
+
+from PySide6.QtGui import QPainter, QPixmap
 from PySide6.QtWidgets import QMessageBox
 
 # FreeCAD detection variables (will be set lazily)
@@ -32,7 +33,8 @@ def _detect_freecad():
     try:
         # Check for different FreeCAD commands
         import shutil
-        freecad_commands = ['freecad', 'FreeCAD', '/snap/bin/freecad']
+
+        freecad_commands = ["freecad", "FreeCAD", "/snap/bin/freecad"]
 
         for cmd in freecad_commands:
             if shutil.which(cmd):
@@ -43,15 +45,15 @@ def _detect_freecad():
         try:
             # Common FreeCAD installation paths for Python module
             freecad_paths = [
-                '/usr/lib/freecad/lib',
-                '/usr/lib/freecad-python3/lib',
-                '/snap/freecad/current/usr/lib/freecad/lib',
-                '/snap/freecad/current/usr/lib/freecad-python3/lib',
-                '/Applications/FreeCAD.app/Contents/Resources/lib',
-                'C:\\Program Files\\FreeCAD 0.20\\lib',
-                'C:\\Program Files\\FreeCAD 0.21\\lib',
-                'C:\\Program Files (x86)\\FreeCAD 0.20\\lib',
-                'C:\\Program Files (x86)\\FreeCAD 0.21\\lib'
+                "/usr/lib/freecad/lib",
+                "/usr/lib/freecad-python3/lib",
+                "/snap/freecad/current/usr/lib/freecad/lib",
+                "/snap/freecad/current/usr/lib/freecad-python3/lib",
+                "/Applications/FreeCAD.app/Contents/Resources/lib",
+                "C:\\Program Files\\FreeCAD 0.20\\lib",
+                "C:\\Program Files\\FreeCAD 0.21\\lib",
+                "C:\\Program Files (x86)\\FreeCAD 0.20\\lib",
+                "C:\\Program Files (x86)\\FreeCAD 0.21\\lib",
             ]
 
             # Try to find and add FreeCAD to path
@@ -60,10 +62,11 @@ def _detect_freecad():
                     sys.path.append(path)
                     break
 
+            import Draft
             import FreeCAD
             import Part
-            import Draft
             import TechDraw
+
             FREECAD_AVAILABLE = True
         except ImportError:
             # If Python module not available but command exists, we can still use external command
@@ -113,9 +116,12 @@ class FreeCADHandler:
         """
         _detect_freecad()
         if not FREECAD_AVAILABLE:
-            QMessageBox.warning(None, "FreeCAD Support",
-                              "FreeCAD support requires FreeCAD to be installed.\n"
-                              "Please install FreeCAD and ensure it's in your system PATH.")
+            QMessageBox.warning(
+                None,
+                "FreeCAD Support",
+                "FreeCAD support requires FreeCAD to be installed.\n"
+                "Please install FreeCAD and ensure it's in your system PATH.",
+            )
             return None
 
         try:
@@ -132,10 +138,14 @@ class FreeCADHandler:
                 return None
 
         except Exception as e:
-            QMessageBox.critical(None, "FreeCAD Load Error", f"Failed to load FreeCAD file:\n{str(e)}")
+            QMessageBox.critical(
+                None, "FreeCAD Load Error", f"Failed to load FreeCAD file:\n{str(e)}"
+            )
             return None
 
-    def _freecad_to_pixmap(self, doc, width: int = 2000, height: int = 2000) -> Optional[QPixmap]:
+    def _freecad_to_pixmap(
+        self, doc, width: int = 2000, height: int = 2000
+    ) -> Optional[QPixmap]:
         """
         Convert FreeCAD document to QPixmap.
 
@@ -149,21 +159,27 @@ class FreeCADHandler:
         """
         try:
             # Create a TechDraw page for 2D representation
-            page = doc.addObject('TechDraw::DrawPage', 'Page')
-            template = doc.addObject('TechDraw::DrawSVGTemplate', 'Template')
+            page = doc.addObject("TechDraw::DrawPage", "Page")
+            template = doc.addObject("TechDraw::DrawSVGTemplate", "Template")
 
             # Set up template (A4 size)
             template.Template = os.path.join(
-                FreeCAD.getResourceDir(), 'Mod', 'TechDraw', 'Templates', 'A4_Portrait_plain.svg'
+                FreeCAD.getResourceDir(),
+                "Mod",
+                "TechDraw",
+                "Templates",
+                "A4_Portrait_plain.svg",
             )
             page.Template = template
 
             # Add views for all visible objects
             for obj in doc.Objects:
-                if hasattr(obj, 'ViewObject') and obj.ViewObject.Visibility:
-                    if hasattr(obj, 'Shape') and obj.Shape.isValid():
+                if hasattr(obj, "ViewObject") and obj.ViewObject.Visibility:
+                    if hasattr(obj, "Shape") and obj.Shape.isValid():
                         # Create a view of the object
-                        view = doc.addObject('TechDraw::DrawViewPart', f'View_{obj.Name}')
+                        view = doc.addObject(
+                            "TechDraw::DrawViewPart", f"View_{obj.Name}"
+                        )
                         view.Source = [obj]
                         view.Direction = FreeCAD.Vector(0, 0, 1)  # Top view
                         page.addView(view)
@@ -172,7 +188,7 @@ class FreeCADHandler:
             doc.recompute()
 
             # Export page as SVG
-            with tempfile.NamedTemporaryFile(suffix='.svg', delete=False) as tmp_file:
+            with tempfile.NamedTemporaryFile(suffix=".svg", delete=False) as tmp_file:
                 page.exportSvg(tmp_file.name)
                 svg_path = tmp_file.name
 
@@ -213,8 +229,10 @@ class FreeCADHandler:
 
         # Draw simple bounding box representation
         if doc.Objects:
-            painter.drawRect(100, 100, width-200, height-200)
-            painter.drawText(50, height-50, "Simplified representation - use FreeCAD for full view")
+            painter.drawRect(100, 100, width - 200, height - 200)
+            painter.drawText(
+                50, height - 50, "Simplified representation - use FreeCAD for full view"
+            )
 
         painter.end()
         return pixmap
@@ -233,7 +251,7 @@ class FreeCADHandler:
             import subprocess
 
             # Create a temporary Python script for FreeCAD
-            script_content = f'''
+            script_content = f"""
 import FreeCAD
 import TechDraw
 import os
@@ -272,24 +290,29 @@ print(f"EXPORT_PATH:{{output_path}}")
 
 # Close document
 FreeCAD.closeDocument(doc.Name)
-'''
+"""
 
             # Write script to temporary file
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as script_file:
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".py", delete=False
+            ) as script_file:
                 script_file.write(script_content)
                 script_path = script_file.name
 
             try:
                 # Run FreeCAD with the script
-                result = subprocess.run([
-                    FREECAD_COMMAND, '-c', script_path
-                ], capture_output=True, text=True, timeout=30)
+                result = subprocess.run(
+                    [FREECAD_COMMAND, "-c", script_path],
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                )
 
                 # Look for export path in output
                 svg_path = None
-                for line in result.stdout.split('\\n'):
-                    if line.startswith('EXPORT_PATH:'):
-                        svg_path = line.split(':', 1)[1]
+                for line in result.stdout.split("\\n"):
+                    if line.startswith("EXPORT_PATH:"):
+                        svg_path = line.split(":", 1)[1]
                         break
 
                 if svg_path and os.path.exists(svg_path):
@@ -314,7 +337,9 @@ FreeCAD.closeDocument(doc.Name)
             print(f"Command-line FreeCAD load error: {str(e)}")
             return self._create_simple_representation_from_file(file_path)
 
-    def _create_simple_representation_from_file(self, file_path: str, width: int = 800, height: int = 600) -> QPixmap:
+    def _create_simple_representation_from_file(
+        self, file_path: str, width: int = 800, height: int = 600
+    ) -> QPixmap:
         """
         Create a simple visual representation when FreeCAD processing fails.
         """
@@ -324,13 +349,18 @@ FreeCAD.closeDocument(doc.Name)
         painter = QPainter(pixmap)
         painter.drawText(50, 50, f"FreeCAD Document: {os.path.basename(file_path)}")
         painter.drawText(50, 80, "Limited preview - use FreeCAD for full view")
-        painter.drawRect(100, 100, width-200, height-200)
+        painter.drawRect(100, 100, width - 200, height - 200)
         painter.end()
 
         return pixmap
 
-    def save_as_freecad(self, source_pixmap: QPixmap, output_path: str,
-                       scale_factor: float = 1.0, units: str = "mm") -> bool:
+    def save_as_freecad(
+        self,
+        source_pixmap: QPixmap,
+        output_path: str,
+        scale_factor: float = 1.0,
+        units: str = "mm",
+    ) -> bool:
         """
         Save the current document as FreeCAD file with scale information.
 
@@ -345,45 +375,58 @@ FreeCAD.closeDocument(doc.Name)
         """
         _detect_freecad()
         if not FREECAD_AVAILABLE:
-            QMessageBox.warning(None, "FreeCAD Support",
-                              "FreeCAD export requires FreeCAD to be installed.\n"
-                              "Please install FreeCAD and ensure it's in your system PATH.")
+            QMessageBox.warning(
+                None,
+                "FreeCAD Support",
+                "FreeCAD export requires FreeCAD to be installed.\n"
+                "Please install FreeCAD and ensure it's in your system PATH.",
+            )
             return False
 
         try:
             if FREECAD_AVAILABLE is True:
                 # Use Python API
-                return self._save_via_python_api(source_pixmap, output_path, scale_factor, units)
+                return self._save_via_python_api(
+                    source_pixmap, output_path, scale_factor, units
+                )
             elif FREECAD_AVAILABLE == "command_only":
                 # Use command-line approach
-                return self._save_via_command_line(source_pixmap, output_path, scale_factor, units)
+                return self._save_via_command_line(
+                    source_pixmap, output_path, scale_factor, units
+                )
             else:
                 return False
 
         except Exception as e:
-            QMessageBox.critical(None, "FreeCAD Export Error", f"Failed to export FreeCAD file:\n{str(e)}")
+            QMessageBox.critical(
+                None,
+                "FreeCAD Export Error",
+                f"Failed to export FreeCAD file:\n{str(e)}",
+            )
             return False
 
-
-
-    def _save_via_command_line(self, source_pixmap: QPixmap, output_path: str,
-                             scale_factor: float, units: str) -> bool:
+    def _save_via_command_line(
+        self, source_pixmap: QPixmap, output_path: str, scale_factor: float, units: str
+    ) -> bool:
         """Save using simplified FreeCAD file creation."""
         try:
             # For command-line mode, create a simple FreeCAD-compatible file
             # Since external FreeCAD execution is problematic, create a minimal file structure
-            return self._create_simple_freecad_file(source_pixmap, output_path, scale_factor, units)
+            return self._create_simple_freecad_file(
+                source_pixmap, output_path, scale_factor, units
+            )
 
         except Exception as e:
             print(f"Command-line FreeCAD save error: {str(e)}")
             return False
 
-    def _create_simple_freecad_file(self, source_pixmap: QPixmap, output_path: str,
-                                  scale_factor: float, units: str) -> bool:
+    def _create_simple_freecad_file(
+        self, source_pixmap: QPixmap, output_path: str, scale_factor: float, units: str
+    ) -> bool:
         """Create a simple FreeCAD-compatible file without external process."""
         try:
-            import zipfile
             import xml.etree.ElementTree as ET
+            import zipfile
             from datetime import datetime
 
             # Calculate real-world dimensions
@@ -393,7 +436,7 @@ FreeCAD.closeDocument(doc.Name)
             real_height = pixel_height * scale_factor
 
             # Create basic FreeCAD document structure
-            doc_xml = f'''<?xml version='1.0' encoding='utf-8'?>
+            doc_xml = f"""<?xml version='1.0' encoding='utf-8'?>
 <Document SchemaVersion="4" ProgramVersion="0.21" FileVersion="1">
     <Properties Count="5">
         <Property name="Comment" type="App::PropertyString">
@@ -463,10 +506,10 @@ FreeCAD.closeDocument(doc.Name)
             </Properties>
         </Object>
     </ObjectData>
-</Document>'''
+</Document>"""
 
             # Create simple boundary shape data (BREP format)
-            boundary_brep = f'''DBRep_DrawableShape
+            boundary_brep = f"""DBRep_DrawableShape
 
 CASCADE Topology V1, (c) Matra-Datavision
 Locations 0
@@ -555,18 +598,18 @@ Fa
 2  1
 0101000
 +1 0 *
-'''
+"""
 
             # Create the FreeCAD file (ZIP archive)
-            with zipfile.ZipFile(output_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+            with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED) as zf:
                 # Add main document
-                zf.writestr('Document.xml', doc_xml)
+                zf.writestr("Document.xml", doc_xml)
 
                 # Add boundary shape
-                zf.writestr('BoundaryShape.brp', boundary_brep)
+                zf.writestr("BoundaryShape.brp", boundary_brep)
 
                 # Add GuiDocument (optional)
-                gui_doc = '''<?xml version='1.0' encoding='utf-8'?>
+                gui_doc = """<?xml version='1.0' encoding='utf-8'?>
 <Document SchemaVersion="1">
     <ViewProviderData Count="4">
         <ViewProvider name="Boundary" expanded="1">
@@ -598,8 +641,8 @@ Fa
             </Properties>
         </ViewProvider>
     </ViewProviderData>
-</Document>'''
-                zf.writestr('GuiDocument.xml', gui_doc)
+</Document>"""
+                zf.writestr("GuiDocument.xml", gui_doc)
 
             # Verify file was created
             if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
@@ -613,8 +656,9 @@ Fa
             print(f"Simple FreeCAD file creation error: {str(e)}")
             return False
 
-    def _save_via_python_api(self, source_pixmap: QPixmap, output_path: str,
-                           scale_factor: float, units: str) -> bool:
+    def _save_via_python_api(
+        self, source_pixmap: QPixmap, output_path: str, scale_factor: float, units: str
+    ) -> bool:
         """Save using FreeCAD Python API."""
         try:
             # Create new FreeCAD document
@@ -639,7 +683,7 @@ Fa
                 FreeCAD.Vector(real_width, 0, 0),
                 FreeCAD.Vector(real_width, real_height, 0),
                 FreeCAD.Vector(0, real_height, 0),
-                FreeCAD.Vector(0, 0, 0)
+                FreeCAD.Vector(0, 0, 0),
             ]
 
             # Create wire from points
@@ -647,17 +691,23 @@ Fa
             wire.Label = "Document_Boundary"
 
             # Add scale information as text
-            scale_text = Draft.makeText([f"Scale: {scale_factor:.6f} {units}/pixel"],
-                                      FreeCAD.Vector(real_width * 0.02, real_height * 0.98, 0))
+            scale_text = Draft.makeText(
+                [f"Scale: {scale_factor:.6f} {units}/pixel"],
+                FreeCAD.Vector(real_width * 0.02, real_height * 0.98, 0),
+            )
             scale_text.Label = "Scale_Info"
 
             # Add dimension information
-            width_text = Draft.makeText([f"Width: {real_width:.2f} {units}"],
-                                      FreeCAD.Vector(real_width * 0.02, real_height * 0.94, 0))
+            width_text = Draft.makeText(
+                [f"Width: {real_width:.2f} {units}"],
+                FreeCAD.Vector(real_width * 0.02, real_height * 0.94, 0),
+            )
             width_text.Label = "Width_Info"
 
-            height_text = Draft.makeText([f"Height: {real_height:.2f} {units}"],
-                                       FreeCAD.Vector(real_width * 0.02, real_height * 0.90, 0))
+            height_text = Draft.makeText(
+                [f"Height: {real_height:.2f} {units}"],
+                FreeCAD.Vector(real_width * 0.02, real_height * 0.90, 0),
+            )
             height_text.Label = "Height_Info"
 
             # Add reference grid
@@ -668,16 +718,18 @@ Fa
                 x = i * grid_spacing
                 if x < real_width:
                     # Vertical line
-                    line = Draft.makeLine(FreeCAD.Vector(x, 0, 0),
-                                        FreeCAD.Vector(x, real_height, 0))
+                    line = Draft.makeLine(
+                        FreeCAD.Vector(x, 0, 0), FreeCAD.Vector(x, real_height, 0)
+                    )
                     line.Label = f"Grid_V_{i}"
 
             for i in range(1, 20):
                 y = i * grid_spacing
                 if y < real_height:
                     # Horizontal line
-                    line = Draft.makeLine(FreeCAD.Vector(0, y, 0),
-                                        FreeCAD.Vector(real_width, y, 0))
+                    line = Draft.makeLine(
+                        FreeCAD.Vector(0, y, 0), FreeCAD.Vector(real_width, y, 0)
+                    )
                     line.Label = f"Grid_H_{i}"
 
             # Recompute document
@@ -713,23 +765,23 @@ Fa
             # FreeCAD files are ZIP archives, try to read metadata
             info = {}
 
-            with zipfile.ZipFile(file_path, 'r') as zip_file:
+            with zipfile.ZipFile(file_path, "r") as zip_file:
                 # Read document.xml for basic info
-                if 'Document.xml' in zip_file.namelist():
-                    xml_content = zip_file.read('Document.xml')
+                if "Document.xml" in zip_file.namelist():
+                    xml_content = zip_file.read("Document.xml")
                     root = ET.fromstring(xml_content)
 
-                    info['objects'] = len(root.findall('.//Object'))
-                    info['properties'] = len(root.findall('.//Property'))
+                    info["objects"] = len(root.findall(".//Object"))
+                    info["properties"] = len(root.findall(".//Property"))
 
                 # List all files in the archive
-                info['files'] = zip_file.namelist()
-                info['file_count'] = len(info['files'])
+                info["files"] = zip_file.namelist()
+                info["file_count"] = len(info["files"])
 
             return info
 
         except Exception as e:
-            return {'error': str(e)}
+            return {"error": str(e)}
 
 
 def install_freecad_support():

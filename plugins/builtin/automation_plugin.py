@@ -9,30 +9,34 @@ This plugin provides automation capabilities for OpenTiler, including:
 - Automated testing support
 """
 
-import sys
-import time
-import socket
-import threading
 import json
 import logging
+import socket
+import sys
+import threading
+import time
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Callable
-from PySide6.QtCore import QTimer, QThread, Signal, QObject
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox, QCheckBox, QPushButton, QTextEdit, QGroupBox
-from PySide6.QtGui import QKeySequence, QShortcut, QAction
+from typing import Any, Callable, Dict, List, Optional
+
+from PySide6.QtCore import QObject, QThread, QTimer, Signal
+from PySide6.QtGui import QAction, QKeySequence, QShortcut
+from PySide6.QtWidgets import (QCheckBox, QGroupBox, QHBoxLayout, QLabel,
+                               QPushButton, QSpinBox, QTextEdit, QVBoxLayout,
+                               QWidget)
 
 # Add screen capture tool to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "tools" / "screen_capture"))
 
 try:
-    from screen_capture import ScreenCapture, HAS_DEPENDENCIES as _SC_DEPS
+    from screen_capture import HAS_DEPENDENCIES as _SC_DEPS
+    from screen_capture import ScreenCapture
     SCREEN_CAPTURE_AVAILABLE = bool(_SC_DEPS)
 except Exception:
     SCREEN_CAPTURE_AVAILABLE = False
 
 from ..base_plugin import BasePlugin, PluginInfo
-from ..hook_system import HookHandler, HookType, HookContext, get_hook_manager
-from ..content_access import ContentAccessManager, AccessLevel
+from ..content_access import AccessLevel, ContentAccessManager
+from ..hook_system import HookContext, HookHandler, HookType, get_hook_manager
 
 
 class AutomationServer(QThread):
@@ -713,8 +717,8 @@ class AutomationPlugin(BasePlugin):
     def _action_send_keys(self, params: Dict[str, Any]):
         """Send keyboard input to the focused widget."""
         try:
-            from PySide6.QtGui import QKeySequence
             from PySide6.QtCore import QCoreApplication
+            from PySide6.QtGui import QKeySequence
             from PySide6.QtTest import QTest
 
             keys = params.get('keys', '')
@@ -744,8 +748,8 @@ class AutomationPlugin(BasePlugin):
     def _action_click_button(self, params: Dict[str, Any]):
         """Click a button by name or text."""
         try:
-            from PySide6.QtWidgets import QPushButton, QApplication
             from PySide6.QtCore import QCoreApplication
+            from PySide6.QtWidgets import QApplication, QPushButton
 
             button_name = params.get('name', '')
             button_text = params.get('text', '')
@@ -825,8 +829,8 @@ class AutomationPlugin(BasePlugin):
     def _action_dismiss_message_box(self, params: Dict[str, Any]):
         """Dismiss a QMessageBox by clicking OK or specified button."""
         try:
-            from PySide6.QtWidgets import QMessageBox, QApplication
             from PySide6.QtCore import QTimer
+            from PySide6.QtWidgets import QApplication, QMessageBox
 
             button_text = params.get('button', 'OK')
             self.log_info(f"Looking for QMessageBox with button: {button_text}")
@@ -937,7 +941,8 @@ class AutomationPlugin(BasePlugin):
     def _action_dismiss_any_dialog(self, params: Dict[str, Any]):
         """Dismiss any open dialog by finding and clicking common close buttons."""
         try:
-            from PySide6.QtWidgets import QApplication, QPushButton, QDialog, QMessageBox
+            from PySide6.QtWidgets import (QApplication, QDialog, QMessageBox,
+                                           QPushButton)
 
             self.log_info("Looking for any open dialogs to dismiss...")
 
@@ -980,7 +985,7 @@ class AutomationPlugin(BasePlugin):
     def _try_dismiss_dialog(self, dialog):
         """Try to dismiss a specific dialog using various methods."""
         try:
-            from PySide6.QtWidgets import QPushButton, QMessageBox
+            from PySide6.QtWidgets import QMessageBox, QPushButton
 
             dialog_type = type(dialog).__name__
             title = getattr(dialog, 'windowTitle', lambda: 'No Title')()
@@ -1068,9 +1073,8 @@ class AutomationPlugin(BasePlugin):
 
             # Method 5: Send Escape key to dialog
             try:
-                from PySide6.QtCore import Qt
+                from PySide6.QtCore import QCoreApplication, Qt
                 from PySide6.QtGui import QKeyEvent
-                from PySide6.QtCore import QCoreApplication
 
                 self.log_info("Sending Escape key to dialog")
                 key_event = QKeyEvent(QKeyEvent.KeyPress, Qt.Key_Escape, Qt.NoModifier)
@@ -1148,7 +1152,7 @@ class AutomationPlugin(BasePlugin):
     def _action_click_settings_tab(self, params: Dict[str, Any]):
         """Click a settings tab in the settings dialog."""
         try:
-            from PySide6.QtWidgets import QTabWidget, QApplication
+            from PySide6.QtWidgets import QApplication, QTabWidget
 
             tab_name = params.get('tab', '')
             if not tab_name:

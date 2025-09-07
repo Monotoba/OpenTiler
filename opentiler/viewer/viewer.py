@@ -3,28 +3,30 @@ Document viewer widget for OpenTiler.
 """
 
 import os
-from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QScrollArea, QLabel,
-    QMessageBox, QSizePolicy
-)
-from PySide6.QtCore import Qt, QSize, Signal, QPoint, QEvent, QRect
-from PySide6.QtGui import QPixmap, QPainter, QPen, QColor, QCursor, QFont
+
+from PySide6.QtCore import QEvent, QPoint, QRect, QSize, Qt, Signal
+from PySide6.QtGui import QColor, QCursor, QFont, QPainter, QPen, QPixmap
+from PySide6.QtWidgets import (QLabel, QMessageBox, QScrollArea, QSizePolicy,
+                               QVBoxLayout, QWidget)
 
 try:
     import fitz  # PyMuPDF
+
     HAS_PYMUPDF = True
 except ImportError:
     HAS_PYMUPDF = False
 
 try:
-    import rawpy
     import numpy as np
+    import rawpy
+
     HAS_RAWPY = True
 except ImportError:
     HAS_RAWPY = False
 
-from PIL import Image
 import io
+
+from PIL import Image
 
 
 class PanScrollArea(QScrollArea):
@@ -111,7 +113,11 @@ class ClickableLabel(QLabel):
                 self.parent_viewer.setFocus()
             except Exception:
                 pass
-        if event.button() == Qt.LeftButton and self.parent_viewer and self.parent_viewer.point_selection_mode:
+        if (
+            event.button() == Qt.LeftButton
+            and self.parent_viewer
+            and self.parent_viewer.point_selection_mode
+        ):
             mods = event.modifiers()
             # If two points exist, start dragging the nearest endpoint (no modifier required)
             if len(self.parent_viewer.selected_points) >= 2:
@@ -131,16 +137,22 @@ class ClickableLabel(QLabel):
 
                 # Check proximity
                 def within(a: QPoint, b: QPoint, r: int) -> bool:
-                    dx = a.x() - b.x(); dy = a.y() - b.y()
-                    return (dx*dx + dy*dy) <= r*r
+                    dx = a.x() - b.x()
+                    dy = a.y() - b.y()
+                    return (dx * dx + dy * dy) <= r * r
 
                 # Choose nearest endpoint unconditionally to improve grab reliability
-                d1 = (click_disp.x() - p1_disp.x())**2 + (click_disp.y() - p1_disp.y())**2
-                d2 = (click_disp.x() - p2_disp.x())**2 + (click_disp.y() - p2_disp.y())**2
+                d1 = (click_disp.x() - p1_disp.x()) ** 2 + (
+                    click_disp.y() - p1_disp.y()
+                ) ** 2
+                d2 = (click_disp.x() - p2_disp.x()) ** 2 + (
+                    click_disp.y() - p2_disp.y()
+                ) ** 2
                 self.dragging = True
                 self.dragging_index = 0 if d1 <= d2 else 1
                 self.setCursor(QCursor(Qt.ClosedHandCursor))
-                event.accept(); return
+                event.accept()
+                return
             # Otherwise treat as point selection click only if we still need points
             if len(self.parent_viewer.selected_points) < 2:
                 self.clicked.emit(event.pos())
@@ -149,14 +161,19 @@ class ClickableLabel(QLabel):
                 # without requiring precise hit
                 # Compute distance to both and pick if within 2x hit radius
                 try:
-                    d1 = (click_disp.x() - p1_disp.x())**2 + (click_disp.y() - p1_disp.y())**2
-                    d2 = (click_disp.x() - p2_disp.x())**2 + (click_disp.y() - p2_disp.y())**2
+                    d1 = (click_disp.x() - p1_disp.x()) ** 2 + (
+                        click_disp.y() - p1_disp.y()
+                    ) ** 2
+                    d2 = (click_disp.x() - p2_disp.x()) ** 2 + (
+                        click_disp.y() - p2_disp.y()
+                    ) ** 2
                     r2 = (self.hit_radius * 2) ** 2
                     if d1 <= r2 or d2 <= r2:
                         self.dragging = True
                         self.dragging_index = 0 if d1 <= d2 else 1
                         self.setCursor(QCursor(Qt.ClosedHandCursor))
-                        event.accept(); return
+                        event.accept()
+                        return
                 except Exception:
                     pass
         elif event.button() == Qt.LeftButton and self.parent_viewer:
@@ -177,14 +194,16 @@ class ClickableLabel(QLabel):
                 if self.parent_viewer.select_measurement_at(original_x, original_y):
                     # If selection occurred, also check if near an endpoint to start dragging
                     idx = self.parent_viewer.selected_measure_index
-                    if idx is not None and 0 <= idx < len(self.parent_viewer.measurements):
+                    if idx is not None and 0 <= idx < len(
+                        self.parent_viewer.measurements
+                    ):
                         z = max(0.0001, self.parent_viewer.zoom_factor)
                         m = self.parent_viewer.measurements[idx]
-                        p1 = QPoint(int(m['p1'][0]*z), int(m['p1'][1]*z))
-                        p2 = QPoint(int(m['p2'][0]*z), int(m['p2'][1]*z))
+                        p1 = QPoint(int(m["p1"][0] * z), int(m["p1"][1] * z))
+                        p2 = QPoint(int(m["p2"][0] * z), int(m["p2"][1] * z))
                         cur = QPoint(int(image_x), int(image_y))
-                        d1 = (cur.x()-p1.x())**2 + (cur.y()-p1.y())**2
-                        d2 = (cur.x()-p2.x())**2 + (cur.y()-p2.y())**2
+                        d1 = (cur.x() - p1.x()) ** 2 + (cur.y() - p1.y()) ** 2
+                        d2 = (cur.x() - p2.x()) ** 2 + (cur.y() - p2.y()) ** 2
                         r2 = (self.hit_radius) ** 2
                         if d1 <= r2 or d2 <= r2:
                             self.dragging = True
@@ -192,14 +211,20 @@ class ClickableLabel(QLabel):
                             self.dragging_index = 0 if d1 <= d2 else 1
                             self.setCursor(QCursor(Qt.ClosedHandCursor))
                     self.parent_viewer._update_display()
-                    event.accept(); return
+                    event.accept()
+                    return
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
         """Handle mouse move for endpoint dragging and live preview (on label)."""
         # Live preview of measurement when one point is selected
         try:
-            if self.parent_viewer and self.parent_viewer.point_selection_mode and not self.dragging and self.pixmap():
+            if (
+                self.parent_viewer
+                and self.parent_viewer.point_selection_mode
+                and not self.dragging
+                and self.pixmap()
+            ):
                 if len(self.parent_viewer.selected_points) == 1:
                     label_size = self.size()
                     pixmap_size = self.pixmap().size()
@@ -234,8 +259,12 @@ class ClickableLabel(QLabel):
                     x_offset = (label_size.width() - pixmap_size.width()) // 2
                     y_offset = (label_size.height() - pixmap_size.height()) // 2
                     cur_disp = event.pos() - QPoint(x_offset, y_offset)
-                    d1 = (cur_disp.x() - p1_disp.x())**2 + (cur_disp.y() - p1_disp.y())**2
-                    d2 = (cur_disp.x() - p2_disp.x())**2 + (cur_disp.y() - p2_disp.y())**2
+                    d1 = (cur_disp.x() - p1_disp.x()) ** 2 + (
+                        cur_disp.y() - p1_disp.y()
+                    ) ** 2
+                    d2 = (cur_disp.x() - p2_disp.x()) ** 2 + (
+                        cur_disp.y() - p2_disp.y()
+                    ) ** 2
                     r2 = (self.hit_radius) ** 2
                     new_hover = None
                     if d1 <= r2 or d2 <= r2:
@@ -246,7 +275,12 @@ class ClickableLabel(QLabel):
                 except Exception:
                     pass
             # Forgiving capture when moving with button held near an endpoint
-            if (not self.dragging) and (event.buttons() & Qt.LeftButton) and len(self.parent_viewer.selected_points) >= 2 and self.pixmap():
+            if (
+                (not self.dragging)
+                and (event.buttons() & Qt.LeftButton)
+                and len(self.parent_viewer.selected_points) >= 2
+                and self.pixmap()
+            ):
                 p1 = self.parent_viewer.selected_points[0]
                 p2 = self.parent_viewer.selected_points[1]
                 z = max(0.0001, self.parent_viewer.zoom_factor)
@@ -257,8 +291,12 @@ class ClickableLabel(QLabel):
                 x_offset = (label_size.width() - pixmap_size.width()) // 2
                 y_offset = (label_size.height() - pixmap_size.height()) // 2
                 cur_disp = event.pos() - QPoint(x_offset, y_offset)
-                d1 = (cur_disp.x() - p1_disp.x())**2 + (cur_disp.y() - p1_disp.y())**2
-                d2 = (cur_disp.x() - p2_disp.x())**2 + (cur_disp.y() - p2_disp.y())**2
+                d1 = (cur_disp.x() - p1_disp.x()) ** 2 + (
+                    cur_disp.y() - p1_disp.y()
+                ) ** 2
+                d2 = (cur_disp.x() - p2_disp.x()) ** 2 + (
+                    cur_disp.y() - p2_disp.y()
+                ) ** 2
                 r2 = (self.hit_radius * 2) ** 2
                 if d1 <= r2 or d2 <= r2:
                     self.dragging = True
@@ -266,7 +304,14 @@ class ClickableLabel(QLabel):
                     self.setCursor(QCursor(Qt.ClosedHandCursor))
 
         # Update point during drag for scaling selection
-        if self.dragging and not self.dragging_measure and self.parent_viewer and self.parent_viewer.point_selection_mode and self.dragging_index is not None and self.pixmap():
+        if (
+            self.dragging
+            and not self.dragging_measure
+            and self.parent_viewer
+            and self.parent_viewer.point_selection_mode
+            and self.dragging_index is not None
+            and self.pixmap()
+        ):
             # Map cursor to image coords
             label_size = self.size()
             pixmap_size = self.pixmap().size()
@@ -285,14 +330,22 @@ class ClickableLabel(QLabel):
                 pts[self.dragging_index] = (original_x, original_y)
                 self.parent_viewer.selected_points = pts
                 try:
-                    self.parent_viewer.points_updated.emit(original_x, original_y, int(self.dragging_index))
+                    self.parent_viewer.points_updated.emit(
+                        original_x, original_y, int(self.dragging_index)
+                    )
                 except Exception:
                     pass
                 self.parent_viewer._update_display()
-            event.accept(); return
+            event.accept()
+            return
 
         # Update endpoint during drag for a persisted measurement
-        if self.dragging and self.dragging_measure and self.parent_viewer and self.pixmap():
+        if (
+            self.dragging
+            and self.dragging_measure
+            and self.parent_viewer
+            and self.pixmap()
+        ):
             label_size = self.size()
             pixmap_size = self.pixmap().size()
             x_offset = (label_size.width() - pixmap_size.width()) // 2
@@ -308,18 +361,21 @@ class ClickableLabel(QLabel):
             if idx is not None and 0 <= idx < len(self.parent_viewer.measurements):
                 m = dict(self.parent_viewer.measurements[idx])
                 if self.dragging_index == 0:
-                    m['p1'] = (original_x, original_y)
+                    m["p1"] = (original_x, original_y)
                 else:
-                    m['p2'] = (original_x, original_y)
+                    m["p2"] = (original_x, original_y)
                 # Update text based on new geometry
-                m['text'] = self.parent_viewer._format_measurement_text(m['p1'], m['p2'])
+                m["text"] = self.parent_viewer._format_measurement_text(
+                    m["p1"], m["p2"]
+                )
                 self.parent_viewer.measurements[idx] = m
                 self.parent_viewer._update_display()
                 try:
                     self.parent_viewer.measurements_changed.emit()
                 except Exception:
                     pass
-            event.accept(); return
+            event.accept()
+            return
         super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
@@ -332,12 +388,13 @@ class ClickableLabel(QLabel):
                 self.setCursor(QCursor(Qt.CrossCursor))
             else:
                 self.unsetCursor()
-            event.accept(); return
+            event.accept()
+            return
         super().mouseReleaseEvent(event)
 
     def enterEvent(self, event):
         # Ensure cursor reflects selection mode even if outer viewport set a different cursor
-        if getattr(self, 'parent_viewer', None):
+        if getattr(self, "parent_viewer", None):
             if self.parent_viewer.point_selection_mode:
                 self.setCursor(QCursor(Qt.CrossCursor))
             else:
@@ -346,17 +403,16 @@ class ClickableLabel(QLabel):
 
     def leaveEvent(self, event):
         # Clear hover highlight on leave
-        if getattr(self, 'parent_viewer', None) and self.parent_viewer.hover_endpoint is not None:
+        if (
+            getattr(self, "parent_viewer", None)
+            and self.parent_viewer.hover_endpoint is not None
+        ):
             self.parent_viewer.hover_endpoint = None
             try:
                 self.parent_viewer._update_display()
             except Exception:
                 pass
         super().leaveEvent(event)
-
-
-
-
 
 
 class DocumentViewer(QWidget):
@@ -366,7 +422,9 @@ class DocumentViewer(QWidget):
     document_loaded = Signal(str)  # Emitted when a document is loaded
     scale_changed = Signal(float)  # Emitted when scale changes
     point_selected = Signal(float, float)  # Emitted when a point is selected (x, y)
-    points_updated = Signal(float, float, int)  # Emitted when an endpoint is dragged (x, y, index)
+    points_updated = Signal(
+        float, float, int
+    )  # Emitted when an endpoint is dragged (x, y, index)
     measurements_changed = Signal()  # Emitted when measurements change
 
     def __init__(self):
@@ -382,7 +440,7 @@ class DocumentViewer(QWidget):
         self.page_grid = []  # Store page grid for display
         self.gutter_size = 0  # Gutter size in pixels
         self.measurement_text = ""  # Store measurement text for display
-        self.hover_endpoint = None   # which endpoint is hovered (0/1)
+        self.hover_endpoint = None  # which endpoint is hovered (0/1)
         self.temp_cursor_pos = None  # live cursor pos in image coords for preview
         # Safety defaults in case events bubble unexpectedly
         self.dragging = False
@@ -398,7 +456,9 @@ class DocumentViewer(QWidget):
 
         # Create custom scroll area with panning support
         self.scroll_area = PanScrollArea()
-        self.scroll_area.setWidgetResizable(False)  # Don't resize widget to fit - allow scrolling
+        self.scroll_area.setWidgetResizable(
+            False
+        )  # Don't resize widget to fit - allow scrolling
         self.scroll_area.setAlignment(Qt.AlignCenter)
         self.scroll_area.set_parent_viewer(self)
 
@@ -438,20 +498,33 @@ class DocumentViewer(QWidget):
         try:
             file_ext = os.path.splitext(file_path)[1].lower()
 
-            if file_ext == '.pdf':
+            if file_ext == ".pdf":
                 return self._load_pdf(file_path)
-            elif file_ext in ['.png', '.jpg', '.jpeg', '.tiff', '.bmp']:
+            elif file_ext in [".png", ".jpg", ".jpeg", ".tiff", ".bmp"]:
                 return self._load_image(file_path)
-            elif file_ext == '.svg':
+            elif file_ext == ".svg":
                 return self._load_svg(file_path)
-            elif file_ext == '.dxf':
+            elif file_ext == ".dxf":
                 return self._load_dxf(file_path)
-            elif file_ext.lower() == '.fcstd':
+            elif file_ext.lower() == ".fcstd":
                 return self._load_freecad(file_path)
-            elif file_ext.lower() in ['.raw', '.cr2', '.nef', '.arw', '.dng', '.orf', '.rw2', '.pef', '.srw', '.raf']:
+            elif file_ext.lower() in [
+                ".raw",
+                ".cr2",
+                ".nef",
+                ".arw",
+                ".dng",
+                ".orf",
+                ".rw2",
+                ".pef",
+                ".srw",
+                ".raf",
+            ]:
                 return self._load_raw(file_path)
             else:
-                QMessageBox.critical(self, "Error", f"Unsupported file format: {file_ext}")
+                QMessageBox.critical(
+                    self, "Error", f"Unsupported file format: {file_ext}"
+                )
                 return False
 
         except Exception as e:
@@ -461,7 +534,9 @@ class DocumentViewer(QWidget):
     def _load_pdf(self, file_path):
         """Load a PDF document."""
         if not HAS_PYMUPDF:
-            QMessageBox.critical(self, "Error", "PyMuPDF is required to load PDF files.")
+            QMessageBox.critical(
+                self, "Error", "PyMuPDF is required to load PDF files."
+            )
             return False
 
         try:
@@ -499,12 +574,12 @@ class DocumentViewer(QWidget):
             pil_image = Image.open(file_path)
 
             # Convert to RGB if necessary
-            if pil_image.mode != 'RGB':
-                pil_image = pil_image.convert('RGB')
+            if pil_image.mode != "RGB":
+                pil_image = pil_image.convert("RGB")
 
             # Convert PIL image to QPixmap
             img_bytes = io.BytesIO()
-            pil_image.save(img_bytes, format='PNG')
+            pil_image.save(img_bytes, format="PNG")
             img_bytes.seek(0)
 
             qimg = QPixmap()
@@ -588,9 +663,12 @@ class DocumentViewer(QWidget):
     def _load_raw(self, file_path):
         """Load a RAW image file."""
         if not HAS_RAWPY:
-            QMessageBox.critical(self, "RAW Support Required",
-                               "RAW image support requires 'rawpy' package.\n"
-                               "Install with: pip install rawpy")
+            QMessageBox.critical(
+                self,
+                "RAW Support Required",
+                "RAW image support requires 'rawpy' package.\n"
+                "Install with: pip install rawpy",
+            )
             return False
 
         try:
@@ -598,10 +676,10 @@ class DocumentViewer(QWidget):
             with rawpy.imread(file_path) as raw:
                 # Process RAW to RGB
                 rgb = raw.postprocess(
-                    use_camera_wb=True,      # Use camera white balance
-                    half_size=False,         # Full resolution
-                    no_auto_bright=True,     # Disable auto brightness
-                    output_bps=8             # 8-bit output
+                    use_camera_wb=True,  # Use camera white balance
+                    half_size=False,  # Full resolution
+                    no_auto_bright=True,  # Disable auto brightness
+                    output_bps=8,  # 8-bit output
                 )
 
             # Convert numpy array to PIL Image
@@ -610,7 +688,7 @@ class DocumentViewer(QWidget):
             # Convert PIL Image to QPixmap
             # First convert to bytes
             img_buffer = io.BytesIO()
-            pil_image.save(img_buffer, format='PNG')
+            pil_image.save(img_buffer, format="PNG")
             img_buffer.seek(0)
 
             # Load into QPixmap
@@ -649,7 +727,9 @@ class DocumentViewer(QWidget):
             scaled = transform
 
         # Draw selected points if in point selection mode OR if we have scale points to show
-        if (self.point_selection_mode and self.selected_points) or (len(self.selected_points) >= 2):
+        if (self.point_selection_mode and self.selected_points) or (
+            len(self.selected_points) >= 2
+        ):
             scaled = self._draw_selected_points(scaled)
 
         # Draw existing measurements (persisted)
@@ -696,16 +776,30 @@ class DocumentViewer(QWidget):
                     outline = QPen(QColor(0, 0, 0), 2)
                 painter.setPen(outline)
                 painter.setBrush(fill)
-                painter.drawEllipse(int(display_x - handle_radius), int(display_y - handle_radius), handle_radius * 2, handle_radius * 2)
+                painter.drawEllipse(
+                    int(display_x - handle_radius),
+                    int(display_y - handle_radius),
+                    handle_radius * 2,
+                    handle_radius * 2,
+                )
                 painter.setBrush(Qt.NoBrush)
 
                 # Draw point number label slightly offset
                 painter.setPen(QPen(QColor(0, 0, 0), 1))
-                painter.drawText(int(display_x + handle_radius + 4), int(display_y - handle_radius - 2), f"P{i + 1}")
+                painter.drawText(
+                    int(display_x + handle_radius + 4),
+                    int(display_y - handle_radius - 2),
+                    f"P{i + 1}",
+                )
 
         # Live preview: if one point selected and in selection mode, draw a temp line to cursor
-        if self.point_selection_mode and len(self.selected_points) == 1 and self.temp_cursor_pos is not None:
+        if (
+            self.point_selection_mode
+            and len(self.selected_points) == 1
+            and self.temp_cursor_pos is not None
+        ):
             from ..settings.config import config
+
             p1_x = self.selected_points[0][0] * self.zoom_factor
             p1_y = self.selected_points[0][1] * self.zoom_factor
             p2_x = self.temp_cursor_pos[0] * self.zoom_factor
@@ -737,19 +831,22 @@ class DocumentViewer(QWidget):
 
             # Draw datum line if enabled
             if config.get_datum_line_display():
-                datum_pen = QPen(QColor(config.get_datum_line_color()), max(1, config.get_datum_line_width_px()))
+                datum_pen = QPen(
+                    QColor(config.get_datum_line_color()),
+                    max(1, config.get_datum_line_width_px()),
+                )
                 style = str(config.get_datum_line_style()).lower()
-                if style == 'solid':
+                if style == "solid":
                     datum_pen.setStyle(Qt.SolidLine)
-                elif style == 'dash':
+                elif style == "dash":
                     datum_pen.setStyle(Qt.DashLine)
-                elif style == 'dot':
+                elif style == "dot":
                     datum_pen.setStyle(Qt.DotLine)
-                elif style == 'dashdot':
+                elif style == "dashdot":
                     datum_pen.setStyle(Qt.DashDotLine)
-                elif style == 'dashdotdot':
+                elif style == "dashdotdot":
                     datum_pen.setStyle(Qt.DashDotDotLine)
-                elif style == 'dot-dash-dot':
+                elif style == "dot-dash-dot":
                     datum_pen.setStyle(Qt.CustomDashLine)
                     datum_pen.setDashPattern([8, 3, 2, 3, 2, 3])
                 else:
@@ -774,9 +871,9 @@ class DocumentViewer(QWidget):
                 painter.setPen(text_pen)
 
                 # Calculate geometry
-                dx = (p2_x - p1_x)
-                dy = (p2_y - p1_y)
-                dist = max(1.0, (dx*dx + dy*dy) ** 0.5)
+                dx = p2_x - p1_x
+                dy = p2_y - p1_y
+                dist = max(1.0, (dx * dx + dy * dy) ** 0.5)
                 ux, uy = dx / dist, dy / dist
                 # Perpendicular unit vector
                 px, py = -uy, ux
@@ -804,7 +901,9 @@ class DocumentViewer(QWidget):
                 painter.fillRect(bg_rect, QColor(255, 255, 255, 200))
 
                 # Draw text baseline at computed position
-                painter.drawText(int(text_x), int(text_y + text_rect.height()), self.measurement_text)
+                painter.drawText(
+                    int(text_x), int(text_y + text_rect.height()), self.measurement_text
+                )
 
         painter.end()
         return result
@@ -814,23 +913,26 @@ class DocumentViewer(QWidget):
         if not self.measurements:
             return pixmap
         from ..settings.config import config
+
         result = QPixmap(pixmap)
         painter = QPainter(result)
         for idx, m in enumerate(self.measurements):
-            p1_x = m['p1'][0] * self.zoom_factor
-            p1_y = m['p1'][1] * self.zoom_factor
-            p2_x = m['p2'][0] * self.zoom_factor
-            p2_y = m['p2'][1] * self.zoom_factor
+            p1_x = m["p1"][0] * self.zoom_factor
+            p1_y = m["p1"][1] * self.zoom_factor
+            p2_x = m["p2"][0] * self.zoom_factor
+            p2_y = m["p2"][1] * self.zoom_factor
 
             # Line style (always draw measurements on-screen)
-            pen = QPen(QColor(255, 0, 0), 2 if self.selected_measure_index != idx else 3)
+            pen = QPen(
+                QColor(255, 0, 0), 2 if self.selected_measure_index != idx else 3
+            )
             pen.setStyle(Qt.CustomDashLine)
             pen.setDashPattern([8, 3, 2, 3, 2, 3])
             painter.setPen(pen)
             painter.drawLine(int(p1_x), int(p1_y), int(p2_x), int(p2_y))
 
             # Label
-            label = m.get('text', '')
+            label = m.get("text", "")
             if label:
                 font = painter.font()
                 font.setPointSize(12)
@@ -841,7 +943,7 @@ class DocumentViewer(QWidget):
                 mid_x = (p1_x + p2_x) / 2
                 mid_y = (p1_y + p2_y) / 2
                 dx, dy = (p2_x - p1_x), (p2_y - p1_y)
-                dist = max(1.0, (dx*dx + dy*dy) ** 0.5)
+                dist = max(1.0, (dx * dx + dy * dy) ** 0.5)
                 ux, uy = dx / dist, dy / dist
                 px, py = -uy, ux
                 text_rect = painter.fontMetrics().boundingRect(label)
@@ -866,8 +968,18 @@ class DocumentViewer(QWidget):
             else:
                 painter.setBrush(QColor(255, 255, 255, 220))
                 painter.setPen(QPen(QColor(0, 0, 0), 1))
-            painter.drawEllipse(int(p1_x - handle_radius), int(p1_y - handle_radius), handle_radius*2, handle_radius*2)
-            painter.drawEllipse(int(p2_x - handle_radius), int(p2_y - handle_radius), handle_radius*2, handle_radius*2)
+            painter.drawEllipse(
+                int(p1_x - handle_radius),
+                int(p1_y - handle_radius),
+                handle_radius * 2,
+                handle_radius * 2,
+            )
+            painter.drawEllipse(
+                int(p2_x - handle_radius),
+                int(p2_y - handle_radius),
+                handle_radius * 2,
+                handle_radius * 2,
+            )
 
         painter.end()
         return result
@@ -875,8 +987,8 @@ class DocumentViewer(QWidget):
     def _format_measurement_text(self, p1, p2):
         dx = p2[0] - p1[0]
         dy = p2[1] - p1[1]
-        px_dist = (dx*dx + dy*dy) ** 0.5
-        scale = float(getattr(self, 'scale_factor', 1.0) or 1.0)
+        px_dist = (dx * dx + dy * dy) ** 0.5
+        scale = float(getattr(self, "scale_factor", 1.0) or 1.0)
         if scale > 0:
             mm = px_dist * scale
             inches = mm / 25.4
@@ -891,28 +1003,31 @@ class DocumentViewer(QWidget):
         # Tolerance in display pixels
         tol = 12
         z = max(0.0001, self.zoom_factor)
-        click = (x*z, y*z)
+        click = (x * z, y * z)
+
         def dist2(ax, ay, bx, by):
-            dx = ax - bx; dy = ay - by
-            return dx*dx + dy*dy
+            dx = ax - bx
+            dy = ay - by
+            return dx * dx + dy * dy
+
         best_idx = None
-        best_d2 = (tol*tol) + 1
+        best_d2 = (tol * tol) + 1
         for idx, m in enumerate(self.measurements):
-            p1 = (m['p1'][0]*z, m['p1'][1]*z)
-            p2 = (m['p2'][0]*z, m['p2'][1]*z)
+            p1 = (m["p1"][0] * z, m["p1"][1] * z)
+            p2 = (m["p2"][0] * z, m["p2"][1] * z)
             # endpoint proximity
             d2p1 = dist2(click[0], click[1], p1[0], p1[1])
             d2p2 = dist2(click[0], click[1], p2[0], p2[1])
             d2min = min(d2p1, d2p2)
             # line distance (point to segment)
-            vx, vy = (p2[0]-p1[0], p2[1]-p1[1])
-            seg_len2 = max(1.0, vx*vx + vy*vy)
-            t = ((click[0]-p1[0])*vx + (click[1]-p1[1])*vy) / seg_len2
+            vx, vy = (p2[0] - p1[0], p2[1] - p1[1])
+            seg_len2 = max(1.0, vx * vx + vy * vy)
+            t = ((click[0] - p1[0]) * vx + (click[1] - p1[1]) * vy) / seg_len2
             t = max(0.0, min(1.0, t))
-            proj = (p1[0] + t*vx, p1[1] + t*vy)
+            proj = (p1[0] + t * vx, p1[1] + t * vy)
             d2line = dist2(click[0], click[1], proj[0], proj[1])
             d2 = min(d2min, d2line)
-            if d2 <= tol*tol and d2 < best_d2:
+            if d2 <= tol * tol and d2 < best_d2:
                 best_d2 = d2
                 best_idx = idx
         self.selected_measure_index = best_idx
@@ -920,7 +1035,10 @@ class DocumentViewer(QWidget):
 
     def keyPressEvent(self, event):
         if event.key() in (Qt.Key_Delete, Qt.Key_Backspace):
-            if self.selected_measure_index is not None and 0 <= self.selected_measure_index < len(self.measurements):
+            if (
+                self.selected_measure_index is not None
+                and 0 <= self.selected_measure_index < len(self.measurements)
+            ):
                 self.measurements.pop(self.selected_measure_index)
                 self.selected_measure_index = None
                 self._update_display()
@@ -928,7 +1046,8 @@ class DocumentViewer(QWidget):
                     self.measurements_changed.emit()
                 except Exception:
                     pass
-                event.accept(); return
+                event.accept()
+                return
         super().keyPressEvent(event)
 
     def _draw_tile_grid_overlay(self, pixmap):
@@ -953,7 +1072,9 @@ class DocumentViewer(QWidget):
             scaled_height = height * self.zoom_factor
 
             # Draw tile boundary
-            painter.drawRect(int(scaled_x), int(scaled_y), int(scaled_width), int(scaled_height))
+            painter.drawRect(
+                int(scaled_x), int(scaled_y), int(scaled_width), int(scaled_height)
+            )
 
             # Draw tile number in the center
             center_x = scaled_x + scaled_width / 2
@@ -981,8 +1102,8 @@ class DocumentViewer(QWidget):
         # Calculate the canvas size needed to show all pages (including partial ones)
         max_x = max_y = 0
         for page in self.page_grid:
-            page_right = (page['x'] + page['width']) * self.zoom_factor
-            page_bottom = (page['y'] + page['height']) * self.zoom_factor
+            page_right = (page["x"] + page["width"]) * self.zoom_factor
+            page_bottom = (page["y"] + page["height"]) * self.zoom_factor
             max_x = max(max_x, page_right)
             max_y = max(max_y, page_bottom)
 
@@ -1006,11 +1127,11 @@ class DocumentViewer(QWidget):
 
         # Draw each page
         for i, page in enumerate(self.page_grid):
-            x = page['x'] * self.zoom_factor
-            y = page['y'] * self.zoom_factor
-            width = page['width'] * self.zoom_factor
-            height = page['height'] * self.zoom_factor
-            gutter = page['gutter'] * self.zoom_factor
+            x = page["x"] * self.zoom_factor
+            y = page["y"] * self.zoom_factor
+            width = page["width"] * self.zoom_factor
+            height = page["height"] * self.zoom_factor
+            gutter = page["gutter"] * self.zoom_factor
 
             # Omit drawing the outer page boundary in the main viewer
             # (previously a red rectangle around each page).
@@ -1027,7 +1148,12 @@ class DocumentViewer(QWidget):
                 gutter_height = height - (2 * gutter)
 
                 if gutter_width > 0 and gutter_height > 0:
-                    painter.drawRect(int(gutter_x), int(gutter_y), int(gutter_width), int(gutter_height))
+                    painter.drawRect(
+                        int(gutter_x),
+                        int(gutter_y),
+                        int(gutter_width),
+                        int(gutter_height),
+                    )
 
             # Crop marks at printable-area corners (gutter intersections), if enabled
             if config.get_crop_marks_display() and gutter > 0:
@@ -1042,34 +1168,82 @@ class DocumentViewer(QWidget):
                 gutter_bottom = int(y + height - gutter)
 
                 # Top-left
-                painter.drawLine(gutter_left - crop_length, gutter_top, gutter_left + crop_length, gutter_top)
-                painter.drawLine(gutter_left, gutter_top - crop_length, gutter_left, gutter_top + crop_length)
+                painter.drawLine(
+                    gutter_left - crop_length,
+                    gutter_top,
+                    gutter_left + crop_length,
+                    gutter_top,
+                )
+                painter.drawLine(
+                    gutter_left,
+                    gutter_top - crop_length,
+                    gutter_left,
+                    gutter_top + crop_length,
+                )
                 # Top-right
-                painter.drawLine(gutter_right - crop_length, gutter_top, gutter_right + crop_length, gutter_top)
-                painter.drawLine(gutter_right, gutter_top - crop_length, gutter_right, gutter_top + crop_length)
+                painter.drawLine(
+                    gutter_right - crop_length,
+                    gutter_top,
+                    gutter_right + crop_length,
+                    gutter_top,
+                )
+                painter.drawLine(
+                    gutter_right,
+                    gutter_top - crop_length,
+                    gutter_right,
+                    gutter_top + crop_length,
+                )
                 # Bottom-left
-                painter.drawLine(gutter_left - crop_length, gutter_bottom, gutter_left + crop_length, gutter_bottom)
-                painter.drawLine(gutter_left, gutter_bottom - crop_length, gutter_left, gutter_bottom + crop_length)
+                painter.drawLine(
+                    gutter_left - crop_length,
+                    gutter_bottom,
+                    gutter_left + crop_length,
+                    gutter_bottom,
+                )
+                painter.drawLine(
+                    gutter_left,
+                    gutter_bottom - crop_length,
+                    gutter_left,
+                    gutter_bottom + crop_length,
+                )
                 # Bottom-right
-                painter.drawLine(gutter_right - crop_length, gutter_bottom, gutter_right + crop_length, gutter_bottom)
-                painter.drawLine(gutter_right, gutter_bottom - crop_length, gutter_right, gutter_bottom + crop_length)
+                painter.drawLine(
+                    gutter_right - crop_length,
+                    gutter_bottom,
+                    gutter_right + crop_length,
+                    gutter_bottom,
+                )
+                painter.drawLine(
+                    gutter_right,
+                    gutter_bottom - crop_length,
+                    gutter_right,
+                    gutter_bottom + crop_length,
+                )
 
             # Registration marks at printable-area corners (quarters), if enabled
-            if config.get_reg_marks_display() and page.get('gutter', 0) > 0:
+            if config.get_reg_marks_display() and page.get("gutter", 0) > 0:
                 try:
                     # Convert mm to pixels using document scale (mm/px)
                     diameter_mm = config.get_reg_mark_diameter_mm()
                     cross_mm = config.get_reg_mark_crosshair_mm()
-                    scale_factor = getattr(self, 'scale_factor', 1.0)
-                    px_per_mm_doc = (1.0 / scale_factor) if scale_factor and scale_factor > 0 else 2.0
+                    scale_factor = getattr(self, "scale_factor", 1.0)
+                    px_per_mm_doc = (
+                        (1.0 / scale_factor)
+                        if scale_factor and scale_factor > 0
+                        else 2.0
+                    )
                     # Scale by current zoom because we're drawing on the zoomed pixmap
-                    radius_px = int((diameter_mm * px_per_mm_doc * self.zoom_factor) / 2)
+                    radius_px = int(
+                        (diameter_mm * px_per_mm_doc * self.zoom_factor) / 2
+                    )
                     cross_len_px = int(cross_mm * px_per_mm_doc * self.zoom_factor)
 
                     # Clip to printable area so only quarters render per page
                     printable_rect = QRect(
-                        int(x + gutter), int(y + gutter),
-                        int(max(0, width - 2 * gutter)), int(max(0, height - 2 * gutter))
+                        int(x + gutter),
+                        int(y + gutter),
+                        int(max(0, width - 2 * gutter)),
+                        int(max(0, height - 2 * gutter)),
                     )
                     painter.save()
                     painter.setClipRect(printable_rect)
@@ -1084,7 +1258,9 @@ class DocumentViewer(QWidget):
                     ]
 
                     for cx, cy in centers:
-                        painter.drawEllipse(cx - radius_px, cy - radius_px, radius_px * 2, radius_px * 2)
+                        painter.drawEllipse(
+                            cx - radius_px, cy - radius_px, radius_px * 2, radius_px * 2
+                        )
                         painter.drawLine(cx - cross_len_px, cy, cx + cross_len_px, cy)
                         painter.drawLine(cx, cy - cross_len_px, cx, cy + cross_len_px)
 
@@ -1145,12 +1321,16 @@ class DocumentViewer(QWidget):
                 # Draw text with outline for visibility (if alpha is high enough)
                 if alpha > 128:  # Only draw outline if text is reasonably opaque
                     outline_color = QColor(0, 0, 0)
-                    outline_color.setAlpha(min(255, alpha + 50))  # Slightly more opaque outline
+                    outline_color.setAlpha(
+                        min(255, alpha + 50)
+                    )  # Slightly more opaque outline
                     painter.setPen(QPen(outline_color, 1))
                     for dx in [-1, 0, 1]:
                         for dy in [-1, 0, 1]:
                             if dx != 0 or dy != 0:
-                                painter.drawText(int(text_x + dx), int(text_y + dy), text)
+                                painter.drawText(
+                                    int(text_x + dx), int(text_y + dy), text
+                                )
 
                 # Draw main text with alpha
                 painter.setPen(QPen(color, 1))
@@ -1242,7 +1422,11 @@ class DocumentViewer(QWidget):
 
         # Convert click position to image coordinates
         label_size = self.image_label.size()
-        pixmap_size = self.image_label.pixmap().size() if self.image_label.pixmap() else QSize(1, 1)
+        pixmap_size = (
+            self.image_label.pixmap().size()
+            if self.image_label.pixmap()
+            else QSize(1, 1)
+        )
 
         # Calculate the actual image position within the label
         x_offset = (label_size.width() - pixmap_size.width()) // 2
@@ -1266,7 +1450,7 @@ class DocumentViewer(QWidget):
                     p1 = self.selected_points[0]
                     p2 = self.selected_points[1]
                     text = self._format_measurement_text(p1, p2)
-                    self.measurements.append({'p1': p1, 'p2': p2, 'text': text})
+                    self.measurements.append({"p1": p1, "p2": p2, "text": text})
                     try:
                         self.measurements_changed.emit()
                     except Exception:

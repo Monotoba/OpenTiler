@@ -2,13 +2,11 @@
 Scale calculator dialog for OpenTiler.
 """
 
-from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
-    QLabel, QLineEdit, QPushButton, QComboBox,
-    QGroupBox, QTabWidget, QWidget
-)
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QDoubleValidator
+from PySide6.QtWidgets import (QComboBox, QDialog, QFormLayout, QGroupBox,
+                               QHBoxLayout, QLabel, QLineEdit, QPushButton,
+                               QTabWidget, QVBoxLayout, QWidget)
 
 
 class ScaleCalculatorDialog(QDialog):
@@ -62,7 +60,9 @@ class ScaleCalculatorDialog(QDialog):
             "to calculate the scale factor."
         )
         instructions.setWordWrap(True)
-        instructions.setStyleSheet("background-color: #e8e8e8; color: #333; padding: 10px; border: 1px solid #ccc;")
+        instructions.setStyleSheet(
+            "background-color: #e8e8e8; color: #333; padding: 10px; border: 1px solid #ccc;"
+        )
         layout.addWidget(instructions)
 
         # Input group
@@ -126,7 +126,9 @@ class ScaleCalculatorDialog(QDialog):
             "Enter a scale factor and one length to calculate the other length."
         )
         instructions.setWordWrap(True)
-        instructions.setStyleSheet("background-color: #e8e8e8; color: #333; padding: 10px; border: 1px solid #ccc;")
+        instructions.setStyleSheet(
+            "background-color: #e8e8e8; color: #333; padding: 10px; border: 1px solid #ccc;"
+        )
         layout.addWidget(instructions)
 
         # Scale input group
