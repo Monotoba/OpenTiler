@@ -12,6 +12,7 @@ import os
 from pathlib import Path
 from typing import List, Optional
 import tempfile
+import re
 
 from PySide6.QtCore import Qt, QUrl, QSize
 from PySide6.QtGui import QAction, QDesktopServices
@@ -153,16 +154,20 @@ class HelpDialog(QDialog):
         # Add top-level files
         for p in sorted(self.help_dir.iterdir(), key=lambda x: x.name.lower()):
             if p.is_file() and p.suffix.lower() in (".md", ".markdown", ".html", ".htm"):
-                leaf = QTreeWidgetItem([p.name])
+                title = self._display_title_for(p) or p.name
+                leaf = QTreeWidgetItem([title])
                 leaf.setData(0, Qt.UserRole, str(p))
+                leaf.setToolTip(0, p.name)
                 self.topics_tree.addTopLevelItem(leaf)
 
         # Add directories recursively
         def add_dir(parent: QTreeWidgetItem, directory: Path):
             # Add files in this directory
             for f in sorted([x for x in directory.iterdir() if x.is_file() and x.suffix.lower() in (".md", ".markdown", ".html", ".htm")], key=lambda x: x.name.lower()):
-                leaf = QTreeWidgetItem([f.name])
+                title = self._display_title_for(f) or f.name
+                leaf = QTreeWidgetItem([title])
                 leaf.setData(0, Qt.UserRole, str(f))
+                leaf.setToolTip(0, f.name)
                 parent.addChild(leaf)
             # Recurse into subdirectories
             for d in sorted([x for x in directory.iterdir() if x.is_dir()], key=lambda x: x.name.lower()):
@@ -233,9 +238,10 @@ class HelpDialog(QDialog):
             self._select_list_item(p)
 
     def _select_list_item(self, path: Path):
-        base = path.name
+        base_path = str(path.resolve())
         def walk(item: QTreeWidgetItem):
-            if item.text(0) == base and (item.data(0, Qt.UserRole) is not None):
+            data = item.data(0, Qt.UserRole)
+            if data and Path(str(data)).resolve().as_posix() == Path(base_path).as_posix():
                 return item
             for i in range(item.childCount()):
                 res = walk(item.child(i))
@@ -281,7 +287,10 @@ class HelpDialog(QDialog):
                     html_rendered = None
 
                 if html_rendered is not None:
-                    self.viewer.setHtml(html_rendered)
+                    css = self._load_css_text()
+                    base_href = QUrl.fromLocalFile(str(self.help_dir) + os.sep).toString() if self.help_dir else ''
+                    wrapped = self._wrap_html(html_rendered, base_href, css)
+                    self.viewer.setHtml(wrapped)
                 else:
                     # Fallback to Qt Markdown (CommonMark subset)
                     self.viewer.setMarkdown(text)
@@ -344,27 +353,9 @@ class HelpDialog(QDialog):
                     QDesktopServices.openUrl(QUrl.fromLocalFile(str(path)))
                     return
 
-                base_href = ''
-                if self.help_dir:
-                    base_href = QUrl.fromLocalFile(str(self.help_dir) + os.sep).toString()
-                html_doc = f"""<!DOCTYPE html>
-<html>
-<head>
-  <meta charset=\"utf-8\">
-  <base href=\"{base_href}\">
-  <title>{Path(path).name}</title>
-  <style>
-    body {{ font-family: sans-serif; margin: 2rem; }}
-    pre code {{ white-space: pre-wrap; }}
-    code {{ background: #f6f8fa; padding: 0.15rem 0.3rem; }}
-    table {{ border-collapse: collapse; }}
-    th, td {{ border: 1px solid #ddd; padding: 4px 8px; }}
-  </style>
-  </head>
-<body>
-{html_rendered}
-</body>
-</html>"""
+                base_href = QUrl.fromLocalFile(str(self.help_dir) + os.sep).toString() if self.help_dir else ''
+                css = self._load_css_text()
+                html_doc = self._wrap_html(html_rendered, base_href, css, title=Path(path).name)
                 fd, tmp_path = tempfile.mkstemp(suffix=".html", prefix="opentiler-help-")
                 with os.fdopen(fd, "w", encoding="utf-8") as f:
                     f.write(html_doc)
@@ -383,3 +374,58 @@ class HelpDialog(QDialog):
                     pass
         finally:
             super().closeEvent(event)
+
+    # --- Helpers ---------------------------------------------------------
+    def _wrap_html(self, body_html: str, base_href: str, css_text: str, title: str = "OpenTiler Help") -> str:
+        return f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset=\"utf-8\">
+  <base href=\"{base_href}\">
+  <title>{title}</title>
+  <style>
+{css_text}
+  </style>
+</head>
+<body>
+{body_html}
+</body>
+</html>
+"""
+
+    def _load_css_text(self) -> str:
+        # Try help/assets/style/help.css
+        try:
+            if self.help_dir:
+                css_path = self.help_dir / 'assets' / 'style' / 'help.css'
+                if css_path.exists():
+                    return css_path.read_text(encoding='utf-8')
+        except Exception:
+            pass
+        # Fallback minimal CSS
+        return (
+            "body{font-family:sans-serif;margin:2rem;line-height:1.5;}"
+            "pre code{white-space:pre-wrap;} code{background:#f6f8fa;padding:.15rem .3rem;}"
+            "table{border-collapse:collapse;} th,td{border:1px solid #ddd;padding:4px 8px;}"
+            "h1,h2,h3{border-bottom:1px solid #eee;padding-bottom:.3rem;}"
+        )
+
+    def _display_title_for(self, p: Path) -> Optional[str]:
+        try:
+            if p.suffix.lower() in ('.md', '.markdown'):
+                for line in p.read_text(encoding='utf-8', errors='ignore').splitlines():
+                    s = line.strip()
+                    if s.startswith('# '):
+                        return s[2:].strip()
+                return None
+            if p.suffix.lower() in ('.html', '.htm'):
+                text = p.read_text(encoding='utf-8', errors='ignore')
+                m = re.search(r"<h1[^>]*>(.*?)</h1>", text, re.IGNORECASE | re.DOTALL)
+                if m:
+                    # Strip HTML tags from inside h1
+                    inner = re.sub(r"<[^>]+>", "", m.group(1))
+                    return inner.strip()
+                return None
+        except Exception:
+            return None
+        return None

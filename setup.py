@@ -76,6 +76,9 @@ setup(
             'docs/*',
             'docs/images/*',
             'help/*',
+            'help/assets/*',
+            'help/assets/style/*',
+            'help/assets/img/*',
         ],
     },
 
