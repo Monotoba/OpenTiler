@@ -14,6 +14,18 @@ A PySide6-based desktop application for scaling and tiling architectural drawing
 
 *Professional document scaling and tiling for architects, engineers, and technical professionals*
 
+## Download
+
+The [latest GitHub release](https://github.com/Monotoba/OpenTiler/releases/latest) includes prebuilt files for Linux, macOS, and Windows. Choose the file for your platform from **Assets**:
+
+| Platform | Release file |
+| --- | --- |
+| Linux (x86-64) | `OpenTiler-linux-x86_64` |
+| macOS (Intel x86-64) | `OpenTiler-macos-x86_64` |
+| Windows (x86-64) | `OpenTiler-windows-x86_64.exe` |
+
+There is no macOS Apple Silicon build listed in the current release. The Python installation below is available if you prefer to run from source or need another platform.
+
 ## Features
 
 - **Document Support**: Load and view PDF, and many image formats
