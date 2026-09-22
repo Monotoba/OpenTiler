@@ -271,7 +271,7 @@ Provides a standalone calculator for converting between real-world dimensions an
   * `README.md`
   * `CONTRIBUTING.md`
   * `CODE_OF_CONDUCT.md`
-  * `LICENSE` (MIT + attribution)
+  * `LICENSE` (BSD 2-Clause)
   * `CHANGELOG.md`
 
 ---
@@ -291,7 +291,7 @@ Provides a standalone calculator for converting between real-world dimensions an
 
 * **Project Author**: Randall Morgan
 * **GitHub**: [github.com/Monotoba/OpenTiler](https://github.com/Monotoba/OpenTiler)
-* **License**: MIT License with Attribution Requirement
+* **License**: BSD 2-Clause License
 * **Copyright**:
   © 2025 Randall Morgan
 
