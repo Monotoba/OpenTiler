@@ -170,7 +170,9 @@ class SaveAsDialog(QDialog):
             freecad_status = FreeCADHandler.get_availability_status()
             self.status_text.append(f"✅ FreeCAD support available - {freecad_status}")
         else:
-            self.status_text.append("⚠️ FreeCAD support not available - install FreeCAD")
+            self.status_text.append(
+                "⚠️ FreeCAD support not available - install FreeCAD"
+            )
 
         # Disable unavailable formats
         for i in range(self.format_combo.count()):

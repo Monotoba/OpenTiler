@@ -66,8 +66,7 @@ class PageViewerDialog(QDialog):
 
         toolbar_widget = QFrame()
         toolbar_widget.setLayout(toolbar_layout)
-        toolbar_widget.setStyleSheet(
-            """
+        toolbar_widget.setStyleSheet("""
             QFrame {
                 background-color: #2b2b2b;
                 padding: 5px;
@@ -92,8 +91,7 @@ class PageViewerDialog(QDialog):
                 color: white;
                 font-weight: bold;
             }
-        """
-        )
+        """)
         layout.addWidget(toolbar_widget)
 
         # Create custom scroll area with panning support
