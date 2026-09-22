@@ -196,7 +196,7 @@ if window:
 
 ## 📄 License
 
-MIT License - see LICENSE file for details.
+BSD 2-Clause License - see [LICENSE](LICENSE) for details.
 
 ## 🙏 Acknowledgments
 
