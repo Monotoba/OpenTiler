@@ -135,7 +135,7 @@ fpm -s python -t deb -n opentiler -v 1.0.0 \
     --description "Professional Document Scaling and Tiling Application" \
     --url "https://github.com/Monotoba/OpenTiler" \
     --maintainer "Randall Morgan <randall@example.com>" \
-    --license "MIT" \
+    --license "BSD-2-Clause" \
     --depends python3 \
     --depends python3-pip \
     setup.py
@@ -148,7 +148,7 @@ fpm -s python -t rpm -n opentiler -v 1.0.0 \
     --description "Professional Document Scaling and Tiling Application" \
     --url "https://github.com/Monotoba/OpenTiler" \
     --maintainer "Randall Morgan <randall@example.com>" \
-    --license "MIT" \
+    --license "BSD-2-Clause" \
     --depends python3 \
     --depends python3-pip \
     setup.py

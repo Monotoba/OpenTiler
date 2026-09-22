@@ -73,7 +73,7 @@ setup(
     long_description=get_long_description(),
     long_description_content_type="text/markdown",
     url="https://github.com/Monotoba/OpenTiler",
-    license="MIT",
+    license="BSD-2-Clause",
     # Package configuration
     packages=find_packages(),
     include_package_data=True,
@@ -107,7 +107,7 @@ setup(
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: End Users/Desktop",
         "Intended Audience :: Developers",
-        "License :: OSI Approved :: MIT License",
+        "License :: OSI Approved :: BSD License",
         "Operating System :: OS Independent",
         "Operating System :: Microsoft :: Windows",
         "Operating System :: Microsoft :: Windows :: Windows 7",

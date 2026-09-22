@@ -138,7 +138,7 @@ OpenTiler/
 
 ### **GitHub Readiness Checklist**
 - ✅ **README.md** with hero image and complete workflow
-- ✅ **LICENSE** file (MIT with attribution)
+- ✅ **LICENSE** file (BSD 2-Clause)
 - ✅ **requirements.txt** with all dependencies
 - ✅ **setup.py** for pip installation
 - ✅ **.gitignore** with comprehensive exclusions
