@@ -2882,7 +2882,7 @@ class MainWindow(QMainWindow):
             "OpenTiler v1.3.2\n\n"
             "A PySide6-based desktop application for scaling and tiling architectural drawings.\n\n"
             "Author: Randall Morgan\n"
-            "License: MIT License with Attribution Requirement\n"
+            "License: BSD 2-Clause License\n"
             "Copyright: © 2025 Randall Morgan\n\n"
             "Contributors:\n"
             "Get your name listed here by adding features, fixing bugs, or creating a useful plugin.",
