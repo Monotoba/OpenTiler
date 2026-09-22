@@ -35,7 +35,7 @@ class LinuxPackageBuilder:
         self.description = "Professional Document Scaling and Tiling Application"
         self.maintainer = "Randall Morgan <randall@example.com>"
         self.url = "https://github.com/Monotoba/OpenTiler"
-        self.license = "MIT"
+        self.license = "BSD-2-Clause"
 
     def check_fpm(self):
         """Check if fpm is installed."""
