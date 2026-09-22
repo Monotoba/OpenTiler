@@ -126,7 +126,7 @@ class SnapPlugin(BasePlugin):
             description="Intelligent snap functionality for measurements and drawing operations",
             author="OpenTiler Development Team",
             website="https://github.com/opentiler/opentiler",
-            license="MIT",
+            license="BSD-2-Clause",
             dependencies=[],
             min_opentiler_version="1.0.0",
         )
