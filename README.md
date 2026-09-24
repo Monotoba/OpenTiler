@@ -4,6 +4,8 @@
 
 [![CI/CD Pipeline](https://github.com/Monotoba/OpenTiler/actions/workflows/ci.yml/badge.svg)](https://github.com/Monotoba/OpenTiler/actions/workflows/ci.yml)
 [![Basic Tests](https://github.com/Monotoba/OpenTiler/actions/workflows/basic-test.yml/badge.svg)](https://github.com/Monotoba/OpenTiler/actions/workflows/basic-test.yml)
+[![GitHub release](https://img.shields.io/github/v/release/Monotoba/OpenTiler)](https://github.com/Monotoba/OpenTiler/releases/latest)
+[![GitHub downloads](https://img.shields.io/github/downloads/Monotoba/OpenTiler/total)](https://github.com/Monotoba/OpenTiler/releases)
 [![License: BSD 2-Clause](https://img.shields.io/badge/License-BSD--2--Clause-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![PySide6](https://img.shields.io/badge/GUI-PySide6-green.svg)](https://www.qt.io/qt-for-python)
